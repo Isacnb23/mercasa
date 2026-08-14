@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — evolved from the Grupo Inteca / GIPLUS style guide  */
+/* (teal #28989d, navy #22537b, ink #1c2b38) into a richer, more       */
+/* saturated palette with room for gradients and depth.               */
+/* ------------------------------------------------------------------ */
+:root {
+  --background: #f7f9fb;
+  --foreground: #0c1a26;
+
+  /* Deep corporate base */
+  --color-ink: #060f18;
+  --color-navy-950: #081726;
+  --color-navy-900: #0c2236;
+  --color-navy-800: #123249;
+  --color-navy-700: #1a4562;
+  --color-navy-600: #235a7d;
+
+  /* Evolved teal — more saturated / vivid than the GIPLUS #28989d */
+  --color-teal-900: #0a3f42;
+  --color-teal-800: #0b5f61;
+  --color-teal-700: #0d7d80;
+  --color-teal-600: #0fa3a0;
+  --color-teal-500: #1ac9bf;
+  --color-teal-400: #4fe0d3;
+  --color-teal-300: #93f0e4;
+
+  /* Warm accent — amber/gold, not generic orange */
+  --color-gold-600: #b6821f;
+  --color-gold-500: #dba53a;
+  --color-gold-400: #f0c368;
+
+  /* Neutrals */
+  --color-mist-50: #f7f9fb;
+  --color-mist-100: #eef2f5;
+  --color-mist-200: #dde5ea;
+  --color-slate-500: #5b6b78;
+  --color-slate-700: #364957;
+
+  --font-inter: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-spectral: "Spectral", Georgia, serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-ink: var(--color-ink);
+  --color-navy-950: var(--color-navy-950);
+  --color-navy-900: var(--color-navy-900);
+  --color-navy-800: var(--color-navy-800);
+  --color-navy-700: var(--color-navy-700);
+  --color-navy-600: var(--color-navy-600);
+
+  --color-teal-900: var(--color-teal-900);
+  --color-teal-800: var(--color-teal-800);
+  --color-teal-700: var(--color-teal-700);
+  --color-teal-600: var(--color-teal-600);
+  --color-teal-500: var(--color-teal-500);
+  --color-teal-400: var(--color-teal-400);
+  --color-teal-300: var(--color-teal-300);
+
+  --color-gold-600: var(--color-gold-600);
+  --color-gold-500: var(--color-gold-500);
+  --color-gold-400: var(--color-gold-400);
+
+  --color-mist-50: var(--color-mist-50);
+  --color-mist-100: var(--color-mist-100);
+  --color-mist-200: var(--color-mist-200);
+  --color-slate-500: var(--color-slate-500);
+  --color-slate-700: var(--color-slate-700);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-spectral);
+
+  --animate-marquee: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+* {
+  scroll-behavior: auto;
+}
+
+html {
+  background: var(--color-ink);
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-teal-500);
+  color: var(--color-ink);
+}
+
+/* Slim, on-brand scrollbar (webkit) */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-mist-50);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-navy-700);
+  border-radius: 999px;
+  border: 2px solid var(--color-mist-50);
+}
+
+.font-display {
+  font-family: var(--font-display), "Georgia", serif;
+}
+
+/* Reusable gradient text */
+.text-gradient-teal {
+  background: linear-gradient(
+    100deg,
+    var(--color-teal-300) 0%,
+    var(--color-teal-500) 45%,
+    var(--color-gold-400) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Fine grain noise overlay used on dark hero/section surfaces */
+.bg-noise {
+  position: relative;
+}
+.bg-noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Mapa 3D de Contacto (MapLibre / OpenFreeMap) ---------- */
+/* El estilo base "dark" ya es oscuro por diseño (fondo casi negro, agua gris
+   oscuro); solo se sube un poco el contraste/brillo para que se note el
+   relieve de los edificios 3D bajo el panel de vidrio. */
+.mercasa-map .maplibregl-canvas {
+  filter: brightness(1.12) contrast(1.05) saturate(1.1);
+}
+.mercasa-map .maplibregl-ctrl-attrib,
+.mercasa-map .maplibregl-ctrl-attrib a {
+  background: transparent;
+  color: rgba(238, 242, 245, 0.45);
+}
+.mercasa-map .maplibregl-ctrl-attrib.maplibregl-compact {
+  background-color: rgba(6, 15, 24, 0.55);
+}
+.mercasa-map .maplibregl-ctrl-group {
+  background: rgba(8, 23, 38, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+.mercasa-map .maplibregl-ctrl-group button {
+  background: transparent;
+}
+.mercasa-map .maplibregl-ctrl-group button:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.mercasa-map .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.6);
+}
+
+.mercasa-map-pin {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+.mercasa-map-pin__dot {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--color-teal-400);
+  border: 2px solid #06121c;
+  box-shadow: 0 0 0 2px rgba(79, 224, 211, 0.35), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.mercasa-map-pin__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(79, 224, 211, 0.45);
+  animation: mercasa-pin-pulse 2.2s ease-out infinite;
+}
+@keyframes mercasa-pin-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mercasa-map-pin__pulse {
+    animation: none;
+    opacity: 0.35;
+  }
+}
