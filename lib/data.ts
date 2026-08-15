@@ -5,8 +5,7 @@
 export const site = {
   name: "Mercasa",
   parentCompany: "Grupo Inteca",
-  foundedYear: 1963,
-  tagline: "Líderes en la distribución y comercialización masiva de productos de consumo en Costa Rica",
+  foundedYear: 1963, // año de fundación de MERCASA (no de Grupo Inteca)
   phone: "+506 2217-3600",
   phoneHref: "tel:+50622173600",
   phonesExtra: ["2217-3818", "2217-3778"],
@@ -28,6 +27,11 @@ export const site = {
   },
   whatsappHref: "https://wa.me/50622173600",
   facebook: "https://www.facebook.com/mercasacr/",
+  // AJUSTAR: Mercasa todavía no tiene estas cuentas activas — se deja el
+  // botón listo en el footer, pero el link queda vacío ("#") a propósito
+  // hasta que nos pasen la URL real. No inventar una cuenta.
+  linkedin: "#",
+  instagram: "#",
 };
 
 export const navLinks = [
@@ -36,15 +40,6 @@ export const navLinks = [
   { href: "#logistica", label: "Logística" },
   { href: "#marcas", label: "Marcas" },
   { href: "#contacto", label: "Contacto" },
-];
-
-export const stats = [
-  { value: 2300, suffix: "+", label: "Códigos SKU activos en catálogo" },
-  { value: 2, suffix: "", label: "Macro-CEDIs propios en operación" },
-  { value: 10500, suffix: "+", label: "Posiciones de tarima bajo estándar internacional" },
-  { value: 1900, suffix: "+", label: "Contenedores (TEUs) en tránsito internacional al año" },
-  { value: 45, suffix: "+", label: "Proveedores aliados en 30 países" },
-  { value: 2500, suffix: "", label: "Entregas comerciales cada semana" },
 ];
 
 /* Datos destacados de la tarjeta del Hero */
@@ -75,7 +70,10 @@ export const aboutStats = [
   { key: "colaboradores", display: "201 a 500", label: "Colaboradores" },
   { key: "trayectoria", value: 60, suffix: "+", label: "Años de trayectoria" },
   { key: "cedis", value: 2, suffix: "", label: "Macro-CEDIs propios" },
-  { key: "respaldo", display: site.parentCompany, label: `Casa matriz desde ${site.foundedYear}` },
+  // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear), no de
+  // Grupo Inteca — por eso esta tarjeta no lleva año, solo identifica a la
+  // casa matriz (el año ya se cuenta arriba, en "Años de trayectoria").
+  { key: "respaldo", display: site.parentCompany, label: "Casa matriz y respaldo institucional" },
 ];
 
 export const pillars = [
@@ -101,7 +99,7 @@ export const pillars = [
     key: "red",
     title: "Red de Distribución Nacional",
     description:
-      "Cobertura capilar en todo el país, llegando cada semana a supermercados, retail y comercio local.",
+      "Cobertura capilar en todo el país, con rutas propias que llegan cada semana hasta el último punto de venta.",
   },
 ];
 
@@ -114,6 +112,39 @@ export const brandNames = [
   "Ideal", "Selpak", "Koa", "Shave & Go", "Clinx", "BelSpá",
   "Bio EZserv", "EZlight", "EZbags", "EZserv", "EZclean", "EZtape", "B-Healthy",
   "Monday", "Thüringer", "St. Omer", "Tika",
+];
+
+// AJUSTAR: agrupación por categoría para el filtro opcional del muro de marcas.
+// Es una primera clasificación de referencia (no viene del brief del cliente) —
+// pídanle a Grupo Inteca que la confirme o corrija antes de darla por definitiva.
+export const brandCategories = [
+  {
+    key: "alimentos",
+    label: "Alimentos y despensa",
+    brands: [
+      "Nature Valley", "Renata", "Matilde Vicenzi", "Fiber One", "Smucker's",
+      "Pietrobon", "Pomí", "Heinz", "La Costeña", "San Marcos", "MiSabor",
+      "Girol", "Boom Bastic", "Pillsbury", "Betty Crocker", "McCain",
+    ],
+  },
+  {
+    key: "bebe-cuidado",
+    label: "Bebés y cuidado personal",
+    brands: [
+      "Choice Care", "Smarty Baby", "Bebín", "Pelican", "Senior", "Ideal",
+      "Selpak", "Koa", "Shave & Go", "BelSpá", "B-Healthy",
+    ],
+  },
+  {
+    key: "hogar-institucional",
+    label: "Limpieza del hogar e institucional",
+    brands: ["Clinx", "Bio EZserv", "EZlight", "EZbags", "EZserv", "EZclean", "EZtape"],
+  },
+  {
+    key: "bebidas",
+    label: "Bebidas",
+    brands: ["Monday", "Thüringer", "St. Omer", "Tika"],
+  },
 ];
 
 export const brandPillars = [
@@ -133,30 +164,7 @@ export const brandPillars = [
     key: "compromiso",
     title: "Compromiso con el cliente",
     description:
-      "Seguimos creciendo nuestro portafolio para llevarle siempre lo mejor a supermercados, retail y comercio local.",
-  },
-];
-
-export const brandFeatures = [
-  {
-    key: "calidad",
-    title: "Calidad",
-    description: "Productos de las mejores marcas para garantizar excelencia en cada hogar.",
-  },
-  {
-    key: "confianza",
-    title: "Confianza",
-    description: "Marcas reconocidas que nos permiten construir relaciones duraderas con nuestros clientes.",
-  },
-  {
-    key: "variedad",
-    title: "Variedad",
-    description: "Un portafolio completo para satisfacer las necesidades de tu familia y tu negocio.",
-  },
-  {
-    key: "compromiso",
-    title: "Compromiso",
-    description: "Seguimos creciendo para llevarte siempre lo mejor.",
+      "Seguimos ampliando nuestro portafolio para responder a lo que el mercado costarricense necesita.",
   },
 ];
 
@@ -206,7 +214,7 @@ export const logisticsSteps = [
     icon: "store",
     title: "Punto de Venta",
     description:
-      "Llevamos productos de calidad a supermercados, retail y comercio local en todo Costa Rica.",
+      "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
     visual: "store",
     stats: [{ icon: "users", value: "Miles", label: "de clientes atendidos cada semana" }],
   },
@@ -223,7 +231,10 @@ export const logisticsTrustBadges = [
     key: "respaldo",
     icon: "handshake",
     title: "Respaldo institucional",
-    description: `Operamos bajo el respaldo de ${site.parentCompany} desde ${site.foundedYear}.`,
+    // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear, ya
+    // destacado en la tarjeta "Más de 60 años" de este mismo bloque) — no
+    // de Grupo Inteca, así que aquí no se repite esa fecha.
+    description: `Operamos bajo el respaldo corporativo de ${site.parentCompany}, líder regional.`,
   },
   {
     key: "estandares",

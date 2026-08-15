@@ -10,7 +10,12 @@ type RevealProps = {
   y?: number;
   as?: "div" | "span";
   once?: boolean;
+  style?: React.CSSProperties;
 };
+
+/* Por defecto las secciones reaparecen/desaparecen cada vez que cruzan el
+   viewport (subiendo o bajando). `once` sigue disponible para los pocos
+   casos puntuales que deban animarse una sola vez. */
 
 const baseVariants: Variants = {
   hidden: { opacity: 0, y: 28, filter: "blur(6px)" },
@@ -26,11 +31,13 @@ export default function Reveal({
   children,
   className,
   delay = 0,
-  once = true,
+  once = false,
+  style,
 }: RevealProps) {
   return (
     <motion.div
       className={cn(className)}
+      style={style}
       initial="hidden"
       whileInView="visible"
       viewport={{ once, margin: "-80px" }}
@@ -56,7 +63,7 @@ export function RevealGroup({
       className={cn(className)}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-80px" }}
+      viewport={{ once: false, margin: "-80px" }}
       variants={{
         visible: { transition: { staggerChildren: stagger } },
       }}

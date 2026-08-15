@@ -64,7 +64,7 @@ function StepVisual({ visual }: { visual: string }) {
 /* ---------- Sección principal ---------- */
 export default function LogisticsTimeline() {
   return (
-    <section id="logistica" className="relative overflow-hidden py-24 md:py-28">
+    <section id="logistica" className="relative overflow-hidden pt-24 pb-16 md:pt-28 md:pb-20">
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-14">
           <Reveal className="w-full lg:max-w-sm lg:shrink-0">
@@ -155,7 +155,7 @@ export default function LogisticsTimeline() {
         <button
           type="button"
           onClick={() => scrollToId("#marcas")}
-          className="mx-auto mt-14 flex flex-col items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-mist-200/45 transition hover:text-white"
+          className="mx-auto mt-10 flex flex-col items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-mist-200/45 transition hover:text-white"
         >
           Descubra nuestras marcas
           <motion.span

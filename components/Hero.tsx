@@ -1,18 +1,129 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, ChevronDown, Globe2, Play, Truck, Warehouse } from "lucide-react";
+import { ArrowRight, ChevronDown, Boxes, Play, Truck, Warehouse } from "lucide-react";
 import { heroHighlights, site } from "@/lib/data";
 import { scrollToId } from "@/lib/utils";
 import heroPhoto from "@/public/brand/hero-warehouse.jpg";
 
 const highlightIcons = {
-  transito: Globe2,
+  transito: Boxes,
   infraestructura: Warehouse,
   cobertura: Truck,
 } as const;
+
+/* ------------------------------------------------------------------ */
+/*  Curvas decorativas laterales: arcos finos azules que envuelven el   */
+/*  bloque de texto, como trayectorias. Puramente decorativas.          */
+/* ------------------------------------------------------------------ */
+function HeroArcs() {
+  const uid = useId().replace(/[:]/g, "");
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-[2] hidden h-full w-full md:block"
+      viewBox="0 0 1500 1000"
+      preserveAspectRatio="xMidYMid slice"
+      fill="none"
+    >
+      <defs>
+        <linearGradient id={`hero-arc-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4A8DFF" stopOpacity="0" />
+          <stop offset="40%" stopColor="#4A8DFF" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#2F80ED" stopOpacity="0" />
+        </linearGradient>
+        <filter id={`hero-arc-glow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" />
+        </filter>
+      </defs>
+
+      {/* Arco grande que rodea el titular */}
+      <path
+        d="M690,-40 C 520,240 512,520 660,760 C 740,900 860,980 1000,1040"
+        stroke={`url(#hero-arc-${uid})`}
+        strokeWidth={5}
+        filter={`url(#hero-arc-glow-${uid})`}
+        opacity={0.5}
+      />
+      <path
+        d="M690,-40 C 520,240 512,520 660,760 C 740,900 860,980 1000,1040"
+        stroke={`url(#hero-arc-${uid})`}
+        strokeWidth={1.1}
+        opacity={0.9}
+      />
+
+      {/* Arco interior, más corto y tenue */}
+      <path
+        d="M540,80 C 452,300 470,560 600,742"
+        stroke={`url(#hero-arc-${uid})`}
+        strokeWidth={1}
+        opacity={0.45}
+      />
+
+      {/* Puntos de luz sobre la trayectoria */}
+      <circle cx="608" cy="228" r="3" fill="#7FB2FF" opacity="0.85" />
+      <circle cx="527" cy="470" r="2.4" fill="#7FB2FF" opacity="0.6" />
+      <circle cx="662" cy="768" r="2.6" fill="#7FB2FF" opacity="0.7" />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Curva azul inferior: línea fina orgánica con halo, recorriendo el   */
+/*  cierre del hero de lado a lado.                                    */
+/* ------------------------------------------------------------------ */
+function HeroBottomCurve() {
+  const uid = useId().replace(/[:]/g, "");
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-32 w-full sm:h-44"
+      viewBox="0 0 1920 200"
+      preserveAspectRatio="none"
+      fill="none"
+    >
+      <defs>
+        <linearGradient id={`hero-curve-${uid}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#367CFF" stopOpacity="0" />
+          <stop offset="18%" stopColor="#4A8DFF" stopOpacity="0.85" />
+          <stop offset="52%" stopColor="#6BA5FF" stopOpacity="1" />
+          <stop offset="85%" stopColor="#367CFF" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#2F80ED" stopOpacity="0" />
+        </linearGradient>
+        <filter id={`hero-curve-glow-${uid}`} x="-10%" y="-300%" width="120%" height="700%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+      </defs>
+
+      {/* halo */}
+      <path
+        d="M0,142 C 300,80 620,54 980,86 C 1320,116 1620,158 1920,120"
+        stroke={`url(#hero-curve-${uid})`}
+        strokeWidth={7}
+        strokeLinecap="round"
+        filter={`url(#hero-curve-glow-${uid})`}
+        opacity={0.5}
+      />
+      {/* trazo nítido */}
+      <path
+        d="M0,142 C 300,80 620,54 980,86 C 1320,116 1620,158 1920,120"
+        stroke={`url(#hero-curve-${uid})`}
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+      {/* segunda línea, más tenue, para dar profundidad */}
+      <path
+        d="M0,162 C 340,106 660,78 1010,108 C 1350,138 1640,174 1920,142"
+        stroke={`url(#hero-curve-${uid})`}
+        strokeWidth={1}
+        strokeLinecap="round"
+        opacity={0.35}
+      />
+    </svg>
+  );
+}
 
 export default function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,111 +140,211 @@ export default function Hero() {
     <section
       id="inicio"
       ref={ref}
-      className="relative flex min-h-[100svh] items-center overflow-hidden"
+      /* El header sticky ocupa ~70px por encima: se descuentan para que
+         navbar + hero midan exactamente una pantalla y la etiqueta inferior
+         quede siempre visible sin scroll. */
+      className="relative flex min-h-[calc(100svh-64px)] items-center overflow-hidden md:min-h-[calc(100svh-72px)]"
     >
-      {/* Bodega real, con velo suave para que el texto respire */}
+      {/* ---------- Fondo: bodega real ---------- */}
       <motion.div style={{ y: bgY }} className="absolute inset-0 z-0 scale-110">
         <Image
           src={heroPhoto}
           alt="Bodega de Mercasa: montacargas moviendo tarimas entre racks de almacenamiento"
           fill
           priority
-          className="object-cover brightness-[1.08] contrast-[1.05] saturate-[1.06]"
+          className="object-cover brightness-[1.06] contrast-[1.06] saturate-[1.05]"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-navy-950/95 via-navy-950/50 via-48% to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-transparent to-navy-950/25" />
+        {/* Velo navy general: la foto queda dentro del ambiente oscuro */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, rgba(3,20,38,0.55) 0%, rgba(7,27,50,0.30) 42%, rgba(3,17,32,0.72) 100%)" }}
+        />
       </motion.div>
 
-      {/* Luces de acento, muy sutiles */}
-      <motion.div
-        className="pointer-events-none absolute left-[6%] top-[26%] z-0 h-64 w-64 rounded-full bg-teal-500/12 blur-3xl"
-        animate={{ y: [0, 26, 0], x: [0, 16, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      {/* ---------- Volumen curvo oscuro del lado izquierdo ----------
+          Elipse gigante anclada a la izquierda: da el "gran volumen navy
+          envolvente" de la referencia, con borde difuso hacia el centro
+          (no un rectángulo). Va fuera del contenedor con parallax para que
+          quede fija respecto a la sección. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-full md:w-[78%] lg:w-[72%]"
+        style={{
+          background:
+            "radial-gradient(125% 118% at 12% 50%, #031426 0%, rgba(4,20,38,0.94) 38%, rgba(6,24,44,0.72) 58%, rgba(7,27,50,0.30) 78%, transparent 100%)",
+        }}
       />
-      <motion.div
-        className="pointer-events-none absolute right-[14%] top-[10%] z-0 h-72 w-72 rounded-full bg-gold-500/8 blur-3xl"
-        animate={{ y: [0, -22, 0], x: [0, -18, 0] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      {/* Refuerzo lateral: el borde izquierdo siempre llega a navy sólido */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[38%]"
+        style={{
+          background: "linear-gradient(90deg, #031426 0%, rgba(3,20,38,0.55) 55%, transparent 100%)",
+        }}
       />
 
+      {/* Glow azul ambiental, muy suave */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[4%] top-[18%] z-[1] h-[420px] w-[420px] rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(47,128,237,0.16), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[8%] top-[6%] z-[1] h-[380px] w-[380px] rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(74,141,255,0.10), transparent 70%)" }}
+      />
+
+      {/* Trama de puntos muy discreta en el extremo izquierdo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-[14%] z-[2] hidden h-[380px] w-[190px] md:block"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(94,150,255,0.55) 1.1px, transparent 1.6px)",
+          backgroundSize: "26px 26px",
+          maskImage: "linear-gradient(to right, black 0%, transparent 88%)",
+          WebkitMaskImage: "linear-gradient(to right, black 0%, transparent 88%)",
+          opacity: 0.42,
+        }}
+      />
+
+      <HeroArcs />
+
+      {/* Costura con la siguiente sección */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-40 bg-gradient-to-b from-transparent to-navy-950 md:h-56" />
+
+      <HeroBottomCurve />
+
+      {/* ---------- Contenido ---------- */}
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 mx-auto grid w-full max-w-7xl gap-14 px-4 pb-28 pt-32 md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-10 md:px-8 md:pb-32 md:pt-36 lg:gap-16"
+        className="relative z-10 mx-auto grid w-full max-w-[1500px] items-start gap-12 px-5 pb-28 pt-24 md:grid-cols-[1.05fr_0.95fr] md:gap-10 md:px-10 md:pb-28 md:pt-28 lg:gap-16 lg:px-14"
       >
-        <div className="md:pt-10">
-          {/* Badge partido: año + respaldo */}
+        {/* ----- Columna izquierda ----- */}
+        <div>
+          {/* Microencabezado: pill azul + respaldo */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/[0.06] py-1.5 pl-1.5 pr-4 backdrop-blur-md sm:gap-4 sm:pr-5"
+            className="mb-7 flex flex-wrap items-center gap-4"
           >
-            <span className="whitespace-nowrap rounded-full border border-teal-300/40 bg-teal-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-200 sm:px-3.5 sm:text-[11px] sm:tracking-[0.16em]">
+            <span
+              className="whitespace-nowrap rounded-full px-4 py-[7px] text-[11px] font-bold uppercase tracking-[0.16em]"
+              style={{
+                color: "#6BA5FF",
+                border: "1px solid rgba(74,141,255,0.45)",
+                background: "rgba(47,128,237,0.10)",
+                boxShadow: "0 0 22px -6px rgba(74,141,255,0.55)",
+              }}
+            >
               Desde {site.foundedYear}
             </span>
-            <span className="h-4 w-px bg-white/20" />
-            <span className="whitespace-nowrap text-[12px] font-medium text-mist-200/85 sm:text-[13px]">
+            <span className="whitespace-nowrap text-[13.5px] font-medium text-white/70">
               Una empresa de {site.parentCompany}
             </span>
           </motion.div>
 
+          {/* Titular */}
           <motion.h1
             initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-2xl font-display text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.6rem]"
+            className="font-display text-white"
+            style={{
+              fontSize: "clamp(40px, 4.6vw, 74px)",
+              lineHeight: 0.99,
+              fontWeight: 600,
+              letterSpacing: "-0.03em",
+              maxWidth: "17ch",
+            }}
           >
-            <span className="text-teal-300">Líderes</span> en distribución y
-            comercialización masiva de productos de consumo en Costa Rica
+            Líderes en
+            <br className="hidden md:block" />{" "}
+            <span style={{ color: "#367CFF" }}>
+              distribución y
+              <br className="hidden md:block" /> comercialización
+            </span>
+            <br className="hidden md:block" /> masiva de productos
+            <br className="hidden md:block" /> de consumo en
+            <br className="hidden md:block" />{" "}
+            <span style={{ color: "#367CFF" }}>Costa Rica</span>
           </motion.h1>
 
+          {/* Párrafo */}
           <motion.p
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-8 max-w-xl text-[15px] leading-[1.8] text-mist-200/75 sm:text-base"
+            className="mt-7 text-[15.5px] leading-[1.7] md:text-[16.5px]"
+            style={{ color: "rgba(255,255,255,0.78)", maxWidth: "590px" }}
           >
             Importación, logística y distribución mayorista con más de 60 años
             de respaldo institucional. Abastecemos supermercados, retail y
             comercio local en todo el país.
           </motion.p>
 
+          {/* Acciones */}
           <motion.div
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.38, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-11 flex flex-wrap items-center gap-x-8 gap-y-5"
+            className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-5 md:mt-10"
           >
             <button
               onClick={() => scrollToId("#contacto")}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-teal-400 to-teal-500 px-7 py-3.5 text-sm font-semibold text-navy-950 shadow-[0_14px_38px_-12px_rgba(26,201,191,0.75)] transition duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-95"
+              className="group inline-flex items-center gap-2.5 rounded-full text-[14.5px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-95"
+              style={{
+                padding: "15px 30px",
+                background: "linear-gradient(135deg, #2F80ED 0%, #4A8DFF 100%)",
+                boxShadow:
+                  "0 16px 40px -12px rgba(47,128,237,0.85), 0 0 0 1px rgba(120,170,255,0.25) inset",
+              }}
             >
               Hágase Cliente
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              <ArrowRight className="h-[17px] w-[17px] transition group-hover:translate-x-1" />
             </button>
 
             <button
               onClick={() => scrollToId("#nosotros")}
-              className="group inline-flex items-center gap-3.5 text-sm font-medium text-mist-200/85 transition hover:text-white"
+              className="group inline-flex items-center gap-3.5 text-[14.5px] font-medium text-white/85 transition hover:text-white"
             >
-              <span className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/[0.06] backdrop-blur-md transition duration-300 group-hover:border-teal-300/60 group-hover:bg-white/12">
-                <span className="absolute inset-0 animate-ping rounded-full border border-teal-300/25 [animation-duration:2.6s]" />
-                <Play className="h-3.5 w-3.5 translate-x-[1px] fill-current text-white" />
+              <span
+                className="relative flex h-[52px] w-[52px] items-center justify-center rounded-full backdrop-blur-md transition duration-300 group-hover:bg-white/[0.10]"
+                style={{
+                  border: "1px solid rgba(255,255,255,0.28)",
+                  background: "rgba(255,255,255,0.06)",
+                }}
+              >
+                <Play className="h-[15px] w-[15px] translate-x-[1px] fill-current text-white" />
               </span>
               Conozca más sobre nosotros
             </button>
           </motion.div>
         </div>
 
-        {/* Tarjeta de datos destacados */}
+        {/* ----- Panel de métricas (glassmorphism) ----- */}
         <motion.div
           initial={{ opacity: 0, x: 34 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="hidden min-w-0 md:block"
+          className="hidden min-w-0 md:block md:pt-16 lg:pt-20"
         >
-          <div className="ml-auto max-w-[25rem] rounded-[28px] border border-white/12 bg-navy-950/55 p-2.5 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+          <div
+            className="ml-auto w-full max-w-[420px] p-3"
+            style={{
+              background:
+                "linear-gradient(160deg, rgba(16,30,55,0.80) 0%, rgba(9,20,38,0.72) 100%)",
+              backdropFilter: "blur(18px) saturate(120%)",
+              WebkitBackdropFilter: "blur(18px) saturate(120%)",
+              border: "1px solid rgba(120,160,255,0.28)",
+              borderRadius: "28px",
+              boxShadow:
+                "0 22px 60px rgba(0,0,0,0.50), 0 0 28px rgba(60,120,255,0.16), inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
             {heroHighlights.map((item, i) => {
               const Icon = highlightIcons[item.key as keyof typeof highlightIcons];
               return (
@@ -146,20 +357,24 @@ export default function Hero() {
                     delay: 0.55 + i * 0.14,
                     ease: [0.16, 1, 0.3, 1],
                   }}
-                  className={`group flex items-center gap-5 rounded-2xl px-5 py-5 transition duration-300 hover:bg-white/[0.05] ${
-                    i > 0 ? "border-t border-white/8" : ""
-                  }`}
+                  className="group flex items-center gap-5 rounded-2xl px-5 py-[22px] transition duration-300 hover:bg-white/[0.04]"
+                  style={
+                    i > 0
+                      ? { borderTop: "1px solid rgba(255,255,255,0.07)" }
+                      : undefined
+                  }
                 >
                   <Icon
-                    className="h-9 w-9 shrink-0 text-teal-300/90 transition duration-300 group-hover:-translate-y-0.5 group-hover:text-teal-200"
-                    strokeWidth={1.15}
+                    className="h-[30px] w-[30px] shrink-0 transition duration-300 group-hover:-translate-y-0.5"
+                    style={{ color: "#8FB8FF" }}
+                    strokeWidth={1.3}
                     aria-hidden
                   />
                   <div>
-                    <p className="text-[13px] leading-tight text-mist-200/65">
+                    <p className="text-[13px] leading-tight text-white/55">
                       {item.label}
                     </p>
-                    <p className="mt-1 text-[15px] font-semibold leading-snug text-white">
+                    <p className="mt-1.5 text-[16.5px] font-semibold leading-snug text-white">
                       {item.value}
                     </p>
                   </div>
@@ -170,14 +385,25 @@ export default function Hero() {
         </motion.div>
       </motion.div>
 
+      {/* ---------- Etiqueta inferior centrada ---------- */}
       <motion.button
         onClick={() => scrollToId("#nosotros")}
         aria-label="Desplazarse hacia abajo"
-        className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-mist-200/50 transition hover:text-white"
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.9 }}
+        className="absolute bottom-7 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 transition hover:text-white"
+        style={{ color: "rgba(255,255,255,0.42)" }}
       >
-        <ChevronDown className="h-6 w-6" />
+        <span className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.34em]">
+          Conexiones que mueven negocios
+        </span>
+        <motion.span
+          animate={{ y: [0, 6, 0] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <ChevronDown className="h-5 w-5" />
+        </motion.span>
       </motion.button>
     </section>
   );

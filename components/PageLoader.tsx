@@ -5,15 +5,32 @@ import PageLoader3D from "./PageLoader3D";
 import styles from "./PageLoader.module.css";
 import { cn } from "@/lib/utils";
 
-const MIN_TIME = 2200; // tiempo mínimo visible desde el montaje (ms)
+const MIN_TIME = 1800; // tiempo mínimo visible desde el montaje (ms) — rápido pero perceptible
 // Tiempo mínimo que el camión 3D permanece EN PANTALLA desde que el modelo
-// terminó de cargar: cubre la entrada (ENTER_DURATION ~1400ms) + una pausa
-// al centro. Es clave porque el GLB es pesado: si tarda más que MIN_TIME en
-// descargar, sin esto el overlay saldría en el instante en que carga (wait=0)
-// y no se vería ni la entrada ni el camión centrado.
-const SHOWCASE_3D = 3800;
-const LEAVE_DELAY = 1000; // debe calzar con la salida del camión 3D (LEAVE_DURATION)
-const DONE_DELAY = 850; // debe calzar con la transición de .is-done
+// terminó de cargar: cubre la entrada (ENTER_DURATION 1100ms en PageLoader3D)
+// + una pausa breve al centro (~1100ms) antes de salir. Es clave porque el
+// GLB es pesado: si tarda más que MIN_TIME en descargar, sin esto el overlay
+// saldría en el instante en que carga (wait=0) y no se vería ni la entrada
+// ni el camión centrado. Debe mantenerse en sync con ENTER_DURATION.
+const SHOWCASE_3D = 2200;
+// Debe calzar EXACTO con LEAVE_DURATION en PageLoader3D.tsx: ese valor
+// controla cuánto tarda el camión en salir de cuadro (vía rAF), y este
+// temporizador decide cuándo React avanza a "done" — si no coinciden, el
+// camión se corta a medio salir o la transición espera de más sin motivo.
+const LEAVE_DELAY = 620;
+const DONE_DELAY = 650; // debe calzar con la transición de .isDone (ver PageLoader.module.css)
+
+// ---- Barra de progreso "viva" ----
+// El progreso real de descarga del GLB llega a saltos (o ni siquiera llega si
+// el servidor no manda Content-Length). En vez de pintar ese valor crudo,
+// suavizamos hacia un objetivo con una animación de rAF: nunca se ve
+// congelada y, al resolver el modelo, completa del valor actual a 100% con
+// una curva controlada en vez de saltar de golpe.
+const COMPLETE_DURATION = 700; // ms — cierre visual ágil hasta 100%
+
+function easeInOutCubic(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 
 type Phase = "loading" | "leaving" | "done" | "hidden";
 // "pending": aún no se decidió 3D vs 2D — no debe montarse NADA que dispare
@@ -26,8 +43,9 @@ type Mode = "pending" | "three" | "fallback";
 export default function PageLoader() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [mode, setMode] = useState<Mode>("pending");
-  const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(true);
+  const [visualProgress, setVisualProgress] = useState(6);
+  const [modelReady, setModelReady] = useState(false);
 
   const startRef = useRef(0);
   const reducedRef = useRef(false);
@@ -40,6 +58,47 @@ export default function PageLoader() {
     done?: ReturnType<typeof setTimeout>;
     hide?: ReturnType<typeof setTimeout>;
   }>({});
+
+  // Progreso "objetivo" (crudo, puede saltar) vs. "visual" (suavizado, el que
+  // se pinta). completionStartRef marca cuándo empezó el cierre a 100%.
+  const progressRef = useRef(6);
+  const targetRef = useRef(12);
+  const completionStartRef = useRef(0);
+  const completionFromRef = useRef(6);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+
+      let next = progressRef.current;
+
+      if (modelReady && completionStartRef.current > 0) {
+        const t = Math.min(1, (now - completionStartRef.current) / COMPLETE_DURATION);
+        next = completionFromRef.current + (100 - completionFromRef.current) * easeInOutCubic(t);
+        if (t >= 1) next = 100;
+      } else {
+        // Sin Content-Length (indeterminado): sigue avanzando despacio hasta
+        // 84% para no verse congelada mientras se espera la descarga real.
+        if (indeterminate) {
+          targetRef.current = Math.min(84, targetRef.current + dt * 5.4);
+        }
+        const target = Math.min(90, targetRef.current);
+        const smoothing = 1 - Math.exp(-dt * 4.2);
+        next += (target - next) * smoothing;
+      }
+
+      progressRef.current = next;
+      setVisualProgress(next);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [modelReady, indeterminate]);
 
   // Se cumple cuando el modelo 3D ya resolvió (cargó o cayó al fallback 2D) Y
   // la página terminó de cargar. Gobierna cuándo pasa a "leaving" — ni el
@@ -70,6 +129,11 @@ export default function PageLoader() {
         resolvedRef.current = true;
         resolvedAtRef.current = Date.now();
         showcaseRef.current = isThreeTruck;
+        // Dispara el cierre suave de la barra hasta 100% desde el valor
+        // actual, en vez de dejarla clavada o saltar de golpe.
+        completionFromRef.current = progressRef.current;
+        completionStartRef.current = performance.now();
+        setModelReady(true);
       }
       tryFinish();
     },
@@ -137,9 +201,16 @@ export default function PageLoader() {
           phase={phase}
           onProgress={(p) => {
             setIndeterminate(false);
-            setProgress(p);
+            // El progreso de red llega 0..100. Se reserva el último tramo
+            // (90..100) para el cierre suave que dispara handleResolved, así
+            // la barra nunca "toca" el 100% antes de que el camión esté listo.
+            const mapped = Math.min(90, 8 + p * 0.82);
+            targetRef.current = Math.max(targetRef.current, mapped);
           }}
-          onIndeterminate={() => setIndeterminate(true)}
+          onIndeterminate={() => {
+            setIndeterminate(true);
+            targetRef.current = Math.max(targetRef.current, 18);
+          }}
           onResolved={() => handleResolved(true)}
           onFallback={handleFallback}
         />
@@ -154,18 +225,34 @@ export default function PageLoader() {
       )}
       {/* mode === "pending": aún resolviendo reduced-motion, no se monta ninguna escena */}
 
-      <div className={cn(styles.ui, mode === "three" && styles.uiBottom)}>
-        <div className={styles.brand}>MERCASA</div>
-        {mode === "three" && <div className={styles.sub}>Logística &amp; Distribución</div>}
-        <div className={styles.bar}>
-          {indeterminate ? (
-            <span className={styles.barFillSweep} />
-          ) : (
-            <span className={styles.barFillReal} style={{ width: `${Math.round(progress)}%` }} />
-          )}
-        </div>
-        <div className={styles.caption}>Preparando su pedido</div>
-      </div>
+      {(() => {
+        const complete = visualProgress >= 99.95;
+        return (
+          <div className={cn(styles.ui, mode === "three" && styles.uiBottom, complete && styles.isComplete)}>
+            <div className={styles.uiPanel}>
+              <div className={styles.uiKicker}>
+                <span className={styles.uiDot} /> Experiencia de carga
+              </div>
+              <div className={styles.brand}>MERCASA</div>
+              {mode === "three" && <div className={styles.sub}>Logística &amp; Distribución</div>}
+              <div className={styles.panelLine} />
+              <div className={styles.progressTrack}>
+                {indeterminate ? (
+                  <span className={cn(styles.progressFill, styles.sweep)} />
+                ) : (
+                  <span className={styles.progressFill} style={{ width: `${visualProgress.toFixed(1)}%` }} />
+                )}
+              </div>
+              <div className={styles.loaderMeta}>
+                <div className={styles.caption}>
+                  {complete ? "Listo para continuar" : "Preparando su pedido..."}
+                </div>
+                {mode === "three" && <div className={styles.percent}>{Math.round(visualProgress)}%</div>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

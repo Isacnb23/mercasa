@@ -1,6 +1,11 @@
-import { MapPin, Mail, Phone, Truck } from "lucide-react";
+import Image from "next/image";
+import { useId } from "react";
+import { ChevronRight, MapPin, Mail, Phone } from "lucide-react";
 import { navLinks, site } from "@/lib/data";
+import logo from "@/public/brand/mercasa-logo-white.png";
 
+/* lucide-react ya no incluye íconos de marcas (Facebook/LinkedIn/Instagram),
+   así que los tres se dibujan a mano como SVG simples, mismo trazo. */
 function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -9,44 +14,175 @@ function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M6.94 8.5H4.06V19.5h2.88V8.5ZM5.5 4a1.66 1.66 0 1 0 0 3.32A1.66 1.66 0 0 0 5.5 4ZM19.94 19.5v-6.06c0-3.25-1.74-4.76-4.06-4.76-1.87 0-2.71 1.03-3.18 1.75V8.5H9.82c.04.83 0 11 0 11h2.88v-6.14c0-.33.02-.66.12-.9.26-.66.86-1.35 1.87-1.35 1.32 0 1.85.99 1.85 2.45v5.94Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/* Círculo con borde azul #2F8CFF, ~43px, mismo tratamiento para los tres,
+   aunque LinkedIn/Instagram todavía no tengan URL real. */
+function SocialIcon({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  const isPlaceholder = href === "#";
+  return (
+    <a
+      href={href}
+      target={isPlaceholder ? undefined : "_blank"}
+      rel={isPlaceholder ? undefined : "noopener noreferrer"}
+      aria-label={label}
+      title={isPlaceholder ? `${label} (pendiente de link)` : label}
+      className="flex h-[43px] w-[43px] items-center justify-center rounded-full border border-[rgba(47,140,255,0.65)] text-[#2F8CFF] transition duration-300 hover:-translate-y-px hover:border-[#2F8CFF] hover:bg-[rgba(47,140,255,0.08)]"
+    >
+      {children}
+    </a>
+  );
+}
+
+/* Curva de costura azul, propia del footer: trazo fino + halo de brillo
+   suave, con la ligera curva orgánica de la referencia (no una línea recta). */
+function FooterTopCurve() {
+  const uid = useId().replace(/[:]/g, "");
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-0 h-14 w-full sm:h-16"
+      viewBox="0 0 1920 80"
+      preserveAspectRatio="none"
+      fill="none"
+    >
+      <defs>
+        <linearGradient id={`footer-curve-${uid}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#248BFF" stopOpacity="0" />
+          <stop offset="50%" stopColor="#248BFF" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#248BFF" stopOpacity="0" />
+        </linearGradient>
+        <filter id={`footer-curve-glow-${uid}`} x="-20%" y="-200%" width="140%" height="500%">
+          <feGaussianBlur stdDeviation="4" />
+        </filter>
+      </defs>
+      {/* halo desenfocado */}
+      <path
+        d="M0,46 C 420,4 1180,72 1920,30"
+        stroke={`url(#footer-curve-${uid})`}
+        strokeWidth={6}
+        strokeLinecap="round"
+        filter={`url(#footer-curve-glow-${uid})`}
+        opacity={0.35}
+      />
+      {/* trazo nítido, ~1px */}
+      <path
+        d="M0,46 C 420,4 1180,72 1920,30"
+        stroke={`url(#footer-curve-${uid})`}
+        strokeWidth={1.1}
+      />
+    </svg>
+  );
+}
+
+/* Puntos decorativos: solo en los extremos, desaparecen hacia el centro. */
+function FooterDots({ side }: { side: "left" | "right" }) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute top-0 hidden h-full w-[220px] sm:block ${
+        side === "left" ? "left-0" : "right-0"
+      }`}
+      style={{
+        backgroundImage:
+          "radial-gradient(circle, rgba(59,123,255,0.7) 1.1px, transparent 1.6px)",
+        backgroundSize: "24px 24px",
+        maskImage:
+          side === "left"
+            ? "linear-gradient(to right, black 0%, transparent 92%)"
+            : "linear-gradient(to left, black 0%, transparent 92%)",
+        WebkitMaskImage:
+          side === "left"
+            ? "linear-gradient(to right, black 0%, transparent 92%)"
+            : "linear-gradient(to left, black 0%, transparent 92%)",
+        opacity: 0.55,
+      }}
+    />
+  );
+}
+
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden px-4 pb-10 pt-6 md:px-8 md:pb-14">
-      <div className="relative z-10 mx-auto max-w-7xl rounded-[40px] border border-white/10 bg-gradient-to-b from-navy-900/90 to-navy-950 p-8 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.6)] md:p-12">
-        <div className="grid gap-10 border-b border-white/10 pb-12 md:grid-cols-[1.3fr_0.8fr_1fr]">
-          <div>
-            <div className="flex items-center gap-2.5 text-white">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-700">
-                <Truck className="h-5 w-5 text-white" />
-              </span>
-              <span className="font-display text-lg font-semibold">
-                {site.name}
-              </span>
-            </div>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-mist-200/65">
-              Empresa de {site.parentCompany}, fundada en {site.foundedYear}.
+    <footer
+      className="relative overflow-hidden pb-[35px] pt-[46px] sm:pt-[55px]"
+      style={{
+        background:
+          "radial-gradient(circle at 50% 0%, rgba(36,139,255,0.1), transparent 45%)," +
+          /* Sutil profundización hacia el cierre — translúcida sobre el mismo
+             lienzo navy compartido (AmbientBackdrop), no un relleno opaco
+             nuevo, para que no exista una costura de color con Contacto. */
+          "linear-gradient(180deg, rgba(4,14,26,0) 0%, rgba(3,10,20,0.4) 55%, rgba(2,8,16,0.62) 100%)",
+      }}
+    >
+      <FooterTopCurve />
+      <FooterDots side="left" />
+      <FooterDots side="right" />
+
+      <div className="relative z-10 mx-auto max-w-[1120px] px-6 md:px-0">
+        <div className="grid grid-cols-1 gap-x-[55px] gap-y-10 sm:grid-cols-2 md:grid-cols-[1.25fr_0.7fr_1.25fr]">
+          {/* Columna 1 — Mercasa */}
+          <div className="sm:col-span-2 md:col-span-1">
+            <Image src={logo} alt="Mercasa" className="h-auto w-[135px] md:w-[165px]" />
+            <p className="mt-[22px] text-[14px] font-medium text-[#2F8CFF] md:text-[15px]">
+              Distribuyendo confianza desde {site.foundedYear}
+            </p>
+            <span
+              aria-hidden
+              className="mt-[14px] block h-[2px] w-[48px] rounded-full"
+              style={{ background: "#2F8CFF" }}
+            />
+            <p
+              className="mt-4 max-w-sm text-[14px] leading-[1.7] md:text-[15px]"
+              style={{ color: "rgba(255,255,255,0.70)" }}
+            >
               Importación, logística y distribución mayorista de consumo
               masivo en todo Costa Rica.
             </p>
-            <a
-              href={site.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-mist-200/70 transition duration-300 hover:-translate-y-1 hover:bg-white/10 hover:text-white"
-              aria-label="Mercasa en Facebook"
-            >
-              <FacebookIcon className="h-4 w-4" />
-            </a>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-mist-200/40">
+          {/* Columna 2 — Navegación */}
+          <div className="md:border-l md:pl-12" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+            <p
+              className="text-[13px] font-bold uppercase md:text-[14px]"
+              style={{ letterSpacing: "0.07em", color: "#2F8CFF" }}
+            >
               Navegación
             </p>
-            <ul className="mt-4 space-y-2.5 text-sm text-mist-200/70">
+            <ul className="mt-5 flex flex-col gap-[17px] text-[15px] leading-none md:text-[16px]">
               {navLinks.map((link) => (
                 <li key={link.href}>
-                  <a href={link.href} className="transition hover:text-white">
+                  <a
+                    href={link.href}
+                    className="group inline-flex items-center gap-2 transition hover:text-white"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
+                  >
+                    <ChevronRight
+                      className="h-[14px] w-[14px] shrink-0 text-[#2F8CFF] transition group-hover:translate-x-0.5"
+                    />
                     {link.label}
                   </a>
                 </li>
@@ -54,24 +190,36 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-mist-200/40">
+          {/* Columna 3 — Contacto */}
+          <div className="md:border-l md:pl-12" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+            <p
+              className="text-[13px] font-bold uppercase md:text-[14px]"
+              style={{ letterSpacing: "0.07em", color: "#2F8CFF" }}
+            >
               Contacto
             </p>
-            <ul className="mt-4 space-y-3 text-sm text-mist-200/70">
-              <li className="flex items-start gap-2.5">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-teal-400" />
-                <span>{site.address.line1}</span>
+            <ul className="mt-5 flex flex-col gap-[19px] text-[15px]">
+              <li className="flex items-start gap-[14px]">
+                <MapPin className="mt-0.5 h-[19px] w-[19px] shrink-0 text-[#2F8CFF]" />
+                <span style={{ color: "rgba(255,255,255,0.85)" }}>{site.address.line1}</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Phone className="h-4 w-4 shrink-0 text-teal-400" />
-                <a href={site.phoneHref} className="hover:text-white">
+              <li className="flex items-center gap-[14px]">
+                <Phone className="h-[19px] w-[19px] shrink-0 text-[#2F8CFF]" />
+                <a
+                  href={site.phoneHref}
+                  className="transition hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
                   {site.phone}
                 </a>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Mail className="h-4 w-4 shrink-0 text-teal-400" />
-                <a href={`mailto:${site.emails.comunicaciones}`} className="hover:text-white">
+              <li className="flex items-center gap-[14px]">
+                <Mail className="h-[19px] w-[19px] shrink-0 text-[#2F8CFF]" />
+                <a
+                  href={`mailto:${site.emails.comunicaciones}`}
+                  className="transition hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
                   {site.emails.comunicaciones}
                 </a>
               </li>
@@ -79,10 +227,26 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 pt-6 text-xs text-mist-200/35 md:flex-row md:items-center md:justify-between">
-          <p>
-            © {new Date().getFullYear()} {site.name} · {site.parentCompany}. Todos los derechos reservados.
-          </p>
+        <div
+          className="mt-[35px] border-t pt-6"
+          style={{ borderColor: "rgba(255,255,255,0.13)" }}
+        >
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] md:text-[13px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+              © {new Date().getFullYear()} {site.name} - {site.parentCompany}. Todos los derechos reservados.
+            </p>
+            <div className="flex items-center gap-[14px]">
+              <SocialIcon href={site.facebook} label="Mercasa en Facebook">
+                <FacebookIcon className="h-[17px] w-[17px]" />
+              </SocialIcon>
+              <SocialIcon href={site.linkedin} label="Mercasa en LinkedIn">
+                <LinkedinIcon className="h-[17px] w-[17px]" />
+              </SocialIcon>
+              <SocialIcon href={site.instagram} label="Mercasa en Instagram">
+                <InstagramIcon className="h-[17px] w-[17px]" />
+              </SocialIcon>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

@@ -70,7 +70,12 @@ export default function Header() {
             <button
               type="button"
               onClick={() => scrollToId("#contacto")}
-              className="hidden items-center gap-2 rounded-full border border-teal-300/35 bg-teal-400/[0.08] px-5 py-2.5 text-[13px] font-semibold text-white transition duration-300 hover:border-teal-300/70 hover:bg-teal-400/15 md:inline-flex"
+              className="group hidden items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-semibold text-white transition duration-300 hover:-translate-y-px hover:brightness-110 md:inline-flex"
+              style={{
+                background: "linear-gradient(135deg, #2F80ED 0%, #4A8DFF 100%)",
+                boxShadow:
+                  "0 10px 26px -10px rgba(47,128,237,0.85), inset 0 0 0 1px rgba(120,170,255,0.28)",
+              }}
             >
               Hágase Cliente
               <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import styles from "./PageLoader3D.module.css";
 
 type Phase = "loading" | "leaving" | "done" | "hidden";
@@ -22,13 +23,22 @@ type Props = {
 const MODEL_URL = "/models/mercasa-truck.glb";
 const MODEL_TIMEOUT = 9000; // ms — si no carga en este tiempo, se cae al loader 2D
 
-const ENTER_DURATION = 1650; // ms — entrada con easeOutCubic (elegante, sin prisa)
-const LEAVE_DURATION = 1100; // ms — salida con easeInCubic
-const RIG_BASE_Y = -0.62; // altura del camión sobre el piso
+const ENTER_DURATION = 1100; // ms — entrada ágil, sin crawl al llegar al centro
+const LEAVE_DURATION = 620; // ms — salida rápida con easeInCubic (acelera al "jalar")
+const RIG_BASE_Y = -0.74; // altura del camión sobre el piso: apoyado pero con aire de estudio
 // Posición central en X. Ligeramente a la derecha para compensar el sesgo
 // visual del remolque (largo hacia -X) y centrar la masa del camión en cuadro.
-const CENTER_X = 0.2;
+const CENTER_X = 0;
 
+// easeOutQuint (potencia 5) prácticamente ya llegó al 99.99% del recorrido a
+// t=0.9 pero con velocidad casi nula ahí — el resultado es "coastear" casi
+// sin moverse durante el último tramo, que se lee como que se quedó pegado
+// en vez de llegar y frenar. Probamos un overshoot (easeOutBack) para darle
+// energía, pero eso generó DOS frenados visibles (uno al pasarse del centro,
+// otro al corregir de vuelta) — se sentía igual de pegado, solo que dos
+// veces. easeOutCubic resuelve ambos problemas: sigue moviéndose con
+// velocidad perceptible hasta bien entrado el final del recorrido y luego
+// se detiene en un solo frenado limpio, sin arrastre y sin rebote.
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeInCubic = (t: number) => t * t * t;
 
@@ -63,15 +73,15 @@ function webglAvailable(): boolean {
 // eléctricos del prototipo. El teal es el glow protagonista; el gold es una
 // luz cálida secundaria muy sutil.
 const COLOR = {
-  hemiSky: 0xbfe9e4, // niebla con tinte teal
-  hemiGround: 0x0c2236, // navy-900
-  key: 0xfff3e6, // blanco cálido neutro
-  rim: 0x4fe0d3, // teal-400 (glow principal)
-  gold: 0xf0c368, // gold-400 (relleno cálido secundario)
-  point: 0x1ac9bf, // teal-500 (halo bajo el camión)
-  glowCore: "rgba(79,224,211,0.85)", // teal-400
-  glowMid: "rgba(26,201,191,0.26)", // teal-500
-  smoke: 0xdfeeea, // vapor blanco-gris con un hilo de teal
+  hemiSky: 0xc8dbef, // niebla azul-corporativa más profesional
+  hemiGround: 0x0a2033, // navy profundo corporativo
+  key: 0xf7fbff, // blanco neutro frío y limpio
+  rim: 0x7db6ff, // azul corporativo como glow principal
+  gold: 0xc8d7ea, // relleno frío muy suave, más sobrio
+  point: 0x3f8fe2, // azul eléctrico contenido bajo el camión
+  glowCore: "rgba(120,180,255,0.38)", // azul corporativo contenido
+  glowMid: "rgba(53,122,204,0.16)", // azul medio para el halo
+  smoke: 0xe8eef5, // vapor frío muy sutil
 };
 
 type TruckState = "waiting" | "entering" | "idle" | "leaving" | "gone";
@@ -163,8 +173,8 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     // FOV estrecho (teleobjetivo): con la cámara más lejos, aplana la
     // perspectiva y el camión (largo) deja de verse "doblado"/curvado. Look de
     // fotografía de producto, más limpio y premium.
-    const camera = new THREE.PerspectiveCamera(22, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.set(0, 1.8, 9);
+    const camera = new THREE.PerspectiveCamera(6, container.clientWidth / container.clientHeight, 0.1, 500);
+    camera.position.set(0, 1.58, 9);
     // Sin lookAt: la cámara mira horizontal a la altura y=1.8; como el camión
     // vive por debajo (RIG_BASE_Y), queda en el tercio inferior-centro, que es
     // la composición del prototipo de referencia (camión sobre la carretera,
@@ -174,37 +184,65 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.82;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.VSMShadowMap;
     container.appendChild(renderer.domElement);
 
-    // ---- Iluminación de estudio (teal principal, gold secundario) ----
-    scene.add(new THREE.HemisphereLight(COLOR.hemiSky, COLOR.hemiGround, 1.5));
+    // Entorno de estudio para reflejos y respuesta más realista del material.
+    // sigma=0.045 pedía más muestras de blur (22) de las que three.js permite
+    // (20): se recortaba en cada carga (warning en consola) sin ganar nada,
+    // solo gastando GPU de más antes del primer frame — justo el tipo de
+    // costo que puede sentirse como un "enganchón" al arrancar en equipos
+    // modestos. 0.035 cae dentro del límite y se ve igual de suave.
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envRT = pmrem.fromScene(new RoomEnvironment(), 0.035);
+    scene.environment = envRT.texture;
 
-    const key = new THREE.DirectionalLight(COLOR.key, 2.5);
-    key.position.set(3, 5, 8);
+    // ---- Iluminación de estudio más sobria y contrastada ----
+    scene.add(new THREE.HemisphereLight(0xc6dbef, COLOR.hemiGround, 0.72));
+
+    const key = new THREE.DirectionalLight(0xfffbf4, 1.42);
+    key.position.set(4.2, 6.2, 7.8);
     key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.near = 1;
-    key.shadow.camera.far = 30;
-    key.shadow.bias = -0.0005;
+    // Mapa de sombra + VSM son lo más caro de la escena por lejos. 2048px con
+    // radius/blurSamples altos se ve idéntico a esta escala (el camión ocupa
+    // una franja angosta de la pantalla) pero le exige mucho más a equipos
+    // sin GPU dedicada — justo donde se reportó que "se ve pegado". 1280px y
+    // un blur más liviano mantienen la sombra suave sin ese costo extra.
+    key.shadow.mapSize.set(1280, 1280);
+    key.shadow.camera.near = 0.5;
+    key.shadow.camera.far = 34;
+    key.shadow.radius = 4;
+    key.shadow.blurSamples = 4;
+    key.shadow.bias = -0.00045;
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(COLOR.rim, 1.7); // rim teal detrás/lateral
-    rim.position.set(-5, 3, -3);
+    const fill = new THREE.DirectionalLight(0xdbe9f5, 0.42);
+    fill.position.set(-4.5, 2.2, 5.6);
+    scene.add(fill);
+
+    const rim = new THREE.DirectionalLight(0x8bbcff, 0.18); // recorte frío más sobrio
+    rim.position.set(-5.6, 3.2, -4.2);
     scene.add(rim);
 
-    const goldFill = new THREE.DirectionalLight(COLOR.gold, 0.5); // cálido, muy sutil
-    goldFill.position.set(2, 1.4, 4);
+    const goldFill = new THREE.DirectionalLight(COLOR.gold, 0.05); // relleno frío casi imperceptible
+    goldFill.position.set(2.5, 1.3, 3.4);
     scene.add(goldFill);
 
-    const pointGlow = new THREE.PointLight(COLOR.point, 14, 26, 2); // halo teal bajo el camión
-    pointGlow.position.set(0, 1.1, 0);
+    const pointGlow = new THREE.PointLight(COLOR.point, 0.72, 8.2, 2); // halo muy sutil, casi imperceptible
+    pointGlow.position.set(0, 0.88, 0);
     scene.add(pointGlow);
+
+    // Catch light muy contenida: da vida al parabrisas y bordes sin quemar el blanco.
+    const catchLight = new THREE.PointLight(0xffffff, 0.96, 10.5, 2);
+    catchLight.position.set(0.9, 2.25, 8.5);
+    scene.add(catchLight);
 
     // ---- Piso: sombra proyectada + halo de luz teal ----
     const floorGeo = new THREE.PlaneGeometry(22, 9);
-    const floorMat = new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.32 });
+    const floorMat = new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.22 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1.4;
@@ -227,17 +265,48 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       return tex;
     }
     const glowTex = makeGlowTexture();
-    const floorGlowGeo = new THREE.PlaneGeometry(8.4, 3);
+    const floorGlowGeo = new THREE.PlaneGeometry(6.4, 1.45);
     const floorGlowMat = new THREE.MeshBasicMaterial({
       map: glowTex,
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      opacity: 0.16,
     });
     const floorGlow = new THREE.Mesh(floorGlowGeo, floorGlowMat);
     floorGlow.rotation.x = -Math.PI / 2;
-    floorGlow.position.set(0, -1.35, 0);
+    floorGlow.position.set(0, -1.396, 0.015);
     scene.add(floorGlow);
+
+    // ---- Sombra de contacto (AO falso) ----
+    // Una elipse oscura y nítida justo bajo las ruedas, superpuesta a la
+    // sombra proyectada del ShadowMaterial: sin esto el camión "flota" en
+    // vez de apoyarse en el piso — es lo que más vende el realismo.
+    function makeContactShadowTexture() {
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 256;
+      const ctx = c.getContext("2d")!;
+      const g = ctx.createRadialGradient(256, 128, 4, 256, 128, 250);
+      g.addColorStop(0, "rgba(0,0,0,0.14)");
+      g.addColorStop(0.36, "rgba(0,0,0,0.06)");
+      g.addColorStop(0.72, "rgba(0,0,0,0.015)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 512, 256);
+      return new THREE.CanvasTexture(c);
+    }
+    const contactTex = makeContactShadowTexture();
+    const contactGeo = new THREE.PlaneGeometry(6.8, 0.42);
+    const contactMat = new THREE.MeshBasicMaterial({
+      map: contactTex,
+      transparent: true,
+      depthWrite: false,
+    });
+    const contactShadow = new THREE.Mesh(contactGeo, contactMat);
+    contactShadow.rotation.x = -Math.PI / 2;
+    contactShadow.position.set(0, -1.397, 0.02);
+    scene.add(contactShadow);
 
     // ---- Sistema de humo (sprites, muy sutil, sin tocar el GLB) ----
     function makeSmokeTexture() {
@@ -327,11 +396,10 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
 
     // ---- Rig del camión ----
     const truckRig = new THREE.Group();
-    // Perfil lateral con un 3/4 frontal muy ligero. Este GLB (el de ruedas
-    // separadas) trae una orientación base distinta al branded, por eso su
-    // ángulo óptimo es ~-0.5 en vez de -0.22.
-    truckRig.rotation.y = -0.5;
-    truckRig.position.set(animRef.current.framing.enterX, RIG_BASE_Y, 0.25);
+    // El rig se mantiene a 0°. Al cargar el GLB quitamos el giro Y que viene
+    // horneado en su nodo raíz (~62°), así la vista queda REALMENTE de perfil.
+    truckRig.rotation.y = 0;
+    truckRig.position.set(animRef.current.framing.enterX, RIG_BASE_Y, 0.14);
     scene.add(truckRig);
     animRef.current.truckRig = truckRig;
     animRef.current.floorGlow = floorGlow;
@@ -347,18 +415,18 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       // Fracción del ancho que debe ocupar el camión: menos en pantallas anchas
       // (protagonista pero con aire), más en pantallas estrechas/verticales
       // para que no se pierda. Encuadramos SIEMPRE al ancho → tamaño coherente.
-      const targetFrac = THREE.MathUtils.clamp(1.0 - 0.24 * aspect, 0.56, 0.72);
+      const targetFrac = THREE.MathUtils.clamp(0.84 - 0.18 * aspect, 0.42, 0.56);
       const halfWNeeded = truckHalfX / targetFrac;
-      const dist = THREE.MathUtils.clamp(halfWNeeded / (tan * Math.max(aspect, 0.4)), 10, 70);
-      camera.position.z = dist + 0.25;
+      const dist = THREE.MathUtils.clamp(halfWNeeded / (tan * Math.max(aspect, 0.4)), 10, 220);
+      camera.position.z = dist + 1.25;
       // Apuntar un poco por debajo del camión lo eleva al medio-superior del
       // cuadro (independiente del aspect), dejando el tercio inferior libre
       // para la carretera y los textos. Sin esto, en viewports estrechos el
       // camión baja demasiado y solapa la marca.
-      camera.lookAt(CENTER_X, RIG_BASE_Y + 0.25, 0.25);
+      camera.lookAt(CENTER_X, RIG_BASE_Y + 0.44, 0.08);
       camera.updateMatrixWorld(true);
       const halfW = dist * tan * aspect;
-      const off = halfW + truckHalfX + 1.4;
+      const off = halfW + truckHalfX + 2.1;
       animRef.current.framing = { enterX: -off, centerX: CENTER_X, exitX: off };
     }
     computeFraming();
@@ -386,30 +454,64 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         clearTimeout(timeoutId);
 
         const model = gltf.scene;
+
+        // El GLB fue exportado con un giro Y de ~62° en el nodo raíz "Camion con remolque".
+        // Ese era el motivo real por el que, aunque el rig estuviera casi a 0°, seguía
+        // viéndose en 3/4 y "doblado". Neutralizamos SOLO ese giro de presentación.
+        const importedRoot = model.getObjectByName("Camion con remolque") ?? model.children[0];
+        if (importedRoot) {
+          const q = importedRoot.quaternion;
+          const e = new THREE.Euler().setFromQuaternion(q, "YXZ");
+          e.y = 0;
+          importedRoot.quaternion.setFromEuler(e);
+          importedRoot.updateMatrixWorld(true);
+        }
+
         const wheels: Wheel[] = [];
         const wheelRaw: { obj: THREE.Object3D; size: THREE.Vector3 }[] = [];
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             obj.castShadow = true;
             obj.receiveShadow = true;
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach((m) => {
-              if (!m) return;
-              const std = m as THREE.MeshStandardMaterial;
-              // Blender a veces exporta materiales demasiado metálicos/brillantes:
-              // moderamos sin destruir las texturas base ni el logo incorporado.
-              if ("metalness" in std && std.metalness !== undefined) {
-                std.metalness = Math.min(std.metalness, 0.25);
+
+            // IMPORTANTÍSIMO: el GLB comparte un mismo material PBR/textura entre
+            // carrocería y ruedas. Si modificamos ese material según una rueda,
+            // también oscurecemos TODO el camión. Clonamos por malla antes de ajustar.
+            const srcMats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            const clonedMats = srcMats.map((m) => m.clone());
+            obj.material = Array.isArray(obj.material) ? clonedMats : clonedMats[0];
+
+            clonedMats.forEach((m) => {
+              if (!(m instanceof THREE.MeshStandardMaterial)) return;
+              const label = `${obj.name} ${m.name}`.toLowerCase();
+              const isLogo = /logotipo_mercasa|mercasa/i.test(label);
+              const isWheel = /wheel|rueda|llanta|tire|tyre/i.test(label);
+
+              // Mantener el color y TODAS las texturas originales del GLB.
+              // Solo ajustamos la respuesta física; no "pintamos" la carrocería.
+              m.aoMapIntensity = 1;
+              m.emissive.setHex(0x000000);
+              if (m.map) m.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+              if (isLogo) {
+                m.envMapIntensity = 0.8;
+                m.metalness = Math.min(m.metalness, 0.28);
+                m.roughness = Math.max(0.46, Math.min(m.roughness, 0.62));
+              } else if (isWheel) {
+                // La propia textura ya trae caucho/rines: no alterar color.
+                m.envMapIntensity = 0.24;
+                m.metalness = Math.min(m.metalness, 0.32);
+                m.roughness = Math.max(m.roughness, 0.66);
+              } else {
+                // Pintura blanca: satinado automotriz, no plástico brillante.
+                m.envMapIntensity = 0.34;
+                m.metalness = Math.min(m.metalness, 0.16);
+                m.roughness = Math.max(m.roughness, 0.62);
               }
-              if ("roughness" in std && std.roughness !== undefined) {
-                std.roughness = THREE.MathUtils.clamp(std.roughness, 0.45, 0.98);
-              }
+              m.needsUpdate = true;
             });
           }
-          // Recolecta las ruedas si el GLB las trae como nodos separados
-          // (este modelo trae 10 nombradas "...rueda..."). El eje se resuelve
-          // después por mayoría (ver abajo). Si un GLB no separa las ruedas, no
-          // habrá coincidencias y quedan estáticas (sin deformar).
+
           if (obj instanceof THREE.Mesh && /wheel|rueda|llanta|tire|tyre/i.test(obj.name)) {
             obj.geometry.computeBoundingBox();
             wheelRaw.push({ obj, size: obj.geometry.boundingBox!.getSize(new THREE.Vector3()) });
@@ -441,7 +543,7 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         bounds = new THREE.Box3().setFromObject(model);
         const size = bounds.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        model.scale.setScalar(7.6 / maxDim);
+        model.scale.setScalar(7.0 / maxDim);
         truckRig.add(model);
 
         // Bounds finales (ya escalado) → ancho para el encuadre y origen del humo
@@ -495,9 +597,21 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       const anim = animRef.current;
       const { enterX, centerX, exitX } = anim.framing;
 
+      // enterRateT: 0 al arrancar la entrada, 1 al llegar al centro. Se usa
+      // para que la velocidad de giro de las ruedas decelere EN SINCRONÍA
+      // con el cuerpo del camión (ver más abajo) — sin esto, aunque la
+      // posición del camión frene con una curva perfectamente suave, las
+      // ruedas seguían girando a velocidad de "entrada" hasta el frame
+      // exacto en que el estado cambiaba a "idle", y ahí caían de golpe a
+      // la velocidad de reposo. Ese recorte abrupto en una parte del
+      // camión que SÍ se sigue moviendo (las ruedas) es lo que se leía
+      // como un enganchón justo al llegar al centro, aunque la carrocería
+      // misma nunca saltara.
+      let enterRateT = 1;
       if (anim.state === "entering") {
         const t = Math.min(1, (now - anim.modelReadyAt) / ENTER_DURATION);
-        truckRig.position.x = THREE.MathUtils.lerp(enterX, centerX, easeOutCubic(t));
+        enterRateT = easeOutCubic(t);
+        truckRig.position.x = THREE.MathUtils.lerp(enterX, centerX, enterRateT);
         if (t >= 1) anim.state = "idle";
       } else if (anim.state === "idle") {
         truckRig.position.x = centerX;
@@ -512,17 +626,24 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
 
       if (alive) {
         // suspensión/ralentí: pocos px visuales
-        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0056) * 0.02;
+        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0052) * 0.0035;
         // glow sigue al camión y respira
         floorGlow.position.x = THREE.MathUtils.lerp(floorGlow.position.x, truckRig.position.x * 0.4, 0.1);
-        const s = 1 + Math.sin(now * 0.003) * 0.03 + (leaving ? 0.06 : 0);
+        const s = 1 + Math.sin(now * 0.003) * 0.008 + (leaving ? 0.02 : 0);
         floorGlow.scale.set(s, s, 1);
         pointGlow.position.x = truckRig.position.x * 0.5;
+        // la sombra de contacto sí sigue al camión 1:1 — tiene que quedar
+        // siempre exactamente bajo las ruedas.
+        contactShadow.position.x = truckRig.position.x;
 
         // ruedas (solo si el GLB las trae separadas): giran incluso en idle
         // para acompañar la carretera en movimiento; aceleran al salir.
         if (anim.wheels.length) {
-          const rate = leaving ? 30 : anim.state === "entering" ? 20 : 12; // rad/s
+          // Entrando: interpola de 18 rad/s (llegando) a 7 rad/s (reposo) con
+          // la MISMA curva que frena el cuerpo (enterRateT) — a t=1 da
+          // exactamente 7, igual que el valor fijo de "idle", así que el
+          // cambio de estado no produce ningún salto de velocidad.
+          const rate = leaving ? 32 : anim.state === "entering" ? THREE.MathUtils.lerp(18, 7, enterRateT) : 7; // rad/s
           const step = rate * dt;
           for (const w of anim.wheels) w.obj.rotation[w.axis] += step * w.dir;
         }
@@ -532,7 +653,7 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       // detiene cuando el camión ya salió (las partículas vivas terminan solas).
       if (alive && anim.state !== "entering") {
         anim.emitAcc += dt;
-        const interval = leaving ? 0.09 : 0.17;
+        const interval = leaving ? 0.075 : 0.22;
         while (anim.emitAcc >= interval) {
           anim.emitAcc -= interval;
           emitSmoke(leaving, truckRig.position.x);
@@ -575,10 +696,15 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       smoke.forEach((p) => p.mat.dispose());
       smokeTex.dispose();
       glowTex.dispose();
+      envRT.dispose();
+      pmrem.dispose();
       floorGeo.dispose();
       floorMat.dispose();
       floorGlowGeo.dispose();
       floorGlowMat.dispose();
+      contactGeo.dispose();
+      contactMat.dispose();
+      contactTex.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
@@ -605,17 +731,68 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
 
   return (
     <div className={leaving ? `${styles.stage} ${styles.isLeaving}` : styles.stage} aria-hidden>
+      {/* Fondo premium: aurora + halo central + ondas de marca.
+          Todo esto es CSS/SVG barato; el único elemento 3D pesado sigue siendo el camión. */}
+      <div className={styles.backdrop} />
       <div className={styles.aurora} />
       <div className={styles.radial} />
-      <div className={styles.grid} />
-      {/* piso técnico en perspectiva que se desplaza hacia el espectador */}
+
+      <svg className={styles.waveField} viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="waveGradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#3b7bff" stopOpacity="0" />
+            <stop offset="30%" stopColor="#73aef8" stopOpacity=".24" />
+            <stop offset="68%" stopColor="#9dc5ff" stopOpacity=".20" />
+            <stop offset="100%" stopColor="#3b7bff" stopOpacity="0" />
+          </linearGradient>
+          <filter id="waveGlow" x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <g className={styles.waveBack} fill="none" stroke="url(#waveGradient)" filter="url(#waveGlow)">
+          <path d="M-90 420 C 170 180, 330 600, 620 382 S 1030 170, 1300 390 S 1580 520, 1700 305" />
+          <path d="M-110 455 C 190 230, 355 625, 645 412 S 1050 210, 1310 418 S 1560 552, 1710 342" />
+          <path d="M-120 490 C 210 280, 380 655, 675 442 S 1080 250, 1340 448 S 1580 585, 1720 380" />
+        </g>
+      </svg>
+
+      <div className={styles.skySpecks}>
+        {Array.from({ length: 26 }).map((_, i) => (
+          <i key={i} style={{ ["--i" as string]: i } as CSSProperties} />
+        ))}
+      </div>
+
+      {/* Silueta urbana muy discreta: ayuda a vender logística/corporativo sin competir con el GLB */}
+      <div className={styles.skyline} aria-hidden>
+        <span /><span /><span /><span /><span /><span /><span /><span /><span />
+      </div>
+
       <div className={styles.floor} />
+      <div className={styles.floorReflection} />
+      <div className={styles.stageLight} />
+      <div className={styles.surfacePlate} />
       <div className={styles.horizon} />
+
       <div ref={containerRef} className={styles.canvasHost} />
-      {/* motas de luz flotando: aportan "vida" y profundidad, muy sutiles */}
+
+      <div className={styles.road}>
+        <span className={styles.roadGlow} />
+        <span className={styles.roadEdge} />
+        <span className={styles.roadDash} />
+      </div>
+
+      <div className={styles.speedlines}>
+        <span /><span /><span /><span />
+      </div>
+
       <div className={styles.motes}>
         {Array.from({ length: 18 }).map((_, i) => {
-          const r = ((i * 9301 + 49297) % 233280) / 233280; // pseudo-aleatorio estable
+          const r = ((i * 9301 + 49297) % 233280) / 233280;
           const r2 = ((i * 4523 + 7919) % 100) / 100;
           const size = 1.5 + r2 * 2;
           return (
@@ -632,16 +809,8 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
           );
         })}
       </div>
-      <div className={styles.road}>
-        <span className={styles.roadEdge} />
-        <span className={styles.roadDash} />
-      </div>
-      <div className={styles.speedlines}>
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
+
+      <div className={styles.vignette} />
     </div>
   );
 }

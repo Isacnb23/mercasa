@@ -15,10 +15,10 @@ export default function AmbientBackdrop() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(52% 42% at 16% 6%, rgba(26,201,191,0.075), transparent 62%)," +
-            "radial-gradient(48% 38% at 92% 14%, rgba(79,224,211,0.05), transparent 62%)," +
+            "radial-gradient(52% 42% at 16% 6%, rgba(43,81,201,0.09), transparent 62%)," +
+            "radial-gradient(48% 38% at 92% 14%, rgba(59,123,255,0.06), transparent 62%)," +
             "radial-gradient(46% 42% at 82% 96%, rgba(219,165,58,0.045), transparent 62%)," +
-            "radial-gradient(42% 38% at 4% 88%, rgba(26,201,191,0.05), transparent 62%)",
+            "radial-gradient(42% 38% at 4% 88%, rgba(43,81,201,0.06), transparent 62%)",
         }}
       />
       <ChapterCurves variant={0} className="absolute inset-0 h-full w-full opacity-70" />

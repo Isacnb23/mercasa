@@ -13,22 +13,22 @@ export default function Home() {
       <div className="sticky top-0 z-50">
         <Header />
       </div>
-      <main>
+      <main className="relative" style={{ zIndex: 10 }}>
         <Hero />
-        <SectionReveal>
+        <SectionReveal z={20}>
           <AboutSection />
         </SectionReveal>
-        <SectionReveal>
+        <SectionReveal z={30}>
           <LogisticsTimeline />
         </SectionReveal>
-        <SectionReveal>
+        <SectionReveal z={40}>
           <BrandsSection />
         </SectionReveal>
-        <SectionReveal>
+        <SectionReveal z={50}>
           <ContactSection />
         </SectionReveal>
       </main>
-      <SectionReveal variant="fade">
+      <SectionReveal variant="fade" z={60}>
         <Footer />
       </SectionReveal>
     </>

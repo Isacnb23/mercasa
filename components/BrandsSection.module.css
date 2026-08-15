@@ -191,6 +191,139 @@
   color: rgba(221, 229, 234, 0.62);
 }
 
+/* ===================================================== */
+/*  Explorar por categoría — opcional, cerrado por defecto */
+/* ===================================================== */
+.categoryExplorer {
+  margin-top: 30px;
+  padding: 18px 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(255, 255, 255, 0.015) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 20px 40px -30px rgba(0, 0, 0, 0.6);
+}
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.categorySpark {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-teal-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-teal-400) 22%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--color-teal-400) 55%, transparent);
+}
+.categoryLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(221, 229, 234, 0.55);
+}
+.categoryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(9, 18, 36, 0.55);
+  color: rgba(221, 229, 234, 0.78);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease,
+    box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.categoryChipIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-teal-400) 16%, transparent);
+  color: var(--color-teal-300);
+  flex-shrink: 0;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+.categoryChipIcon svg {
+  width: 12px;
+  height: 12px;
+}
+.categoryChip:hover {
+  border-color: color-mix(in srgb, var(--color-teal-400) 50%, transparent);
+  color: #fff;
+  transform: translateY(-1.5px);
+}
+.categoryChipActive {
+  border-color: color-mix(in srgb, var(--color-teal-400) 65%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--color-teal-600) 55%, transparent) 0%,
+    color-mix(in srgb, var(--color-teal-500) 40%, transparent) 100%
+  );
+  color: #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-teal-400) 30%, transparent),
+    0 10px 28px -14px color-mix(in srgb, var(--color-teal-400) 70%, transparent);
+}
+.categoryChipActive .categoryChipIcon {
+  background: color-mix(in srgb, var(--color-teal-300) 30%, transparent);
+  color: #fff;
+}
+.categoryChevron {
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+  opacity: 0.7;
+  transition: transform 0.3s ease;
+}
+.categoryPanel {
+  overflow: hidden;
+}
+.categoryPanelInner {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.categoryBrandList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.categoryBrandTag {
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(221, 229, 234, 0.85);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.categoryBrandTag:hover {
+  border-color: color-mix(in srgb, var(--color-teal-400) 40%, transparent);
+  background: color-mix(in srgb, var(--color-teal-500) 10%, transparent);
+}
+
 .cta {
   align-self: flex-start;
   display: inline-flex;

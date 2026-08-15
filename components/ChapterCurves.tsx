@@ -46,9 +46,9 @@ export default function ChapterCurves({ variant = 0, className = "" }: ChapterCu
     >
       <defs>
         <linearGradient id={`curve-fade-${uid}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4fe0d3" stopOpacity="0" />
-          <stop offset="45%" stopColor="#4fe0d3" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#4fe0d3" stopOpacity="0" />
+          <stop offset="0%" stopColor="#3b7bff" stopOpacity="0" />
+          <stop offset="45%" stopColor="#3b7bff" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#3b7bff" stopOpacity="0" />
         </linearGradient>
         <filter id={`curve-glow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="5" />

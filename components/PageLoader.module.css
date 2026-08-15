@@ -93,7 +93,9 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  transition: transform 1s cubic-bezier(0.5, 0, 0.75, 0);
+  /* Duración calzada con LEAVE_DELAY (PageLoader.tsx) para que el camión 2D
+     termine de salir de cuadro justo cuando React avanza a la fase "done". */
+  transition: transform 0.62s cubic-bezier(0.5, 0, 0.75, 0);
 }
 
 .truckWrap {
@@ -237,55 +239,94 @@
   }
 }
 
-/* Bloque de textos (marca + subtítulo + barra + caption). En modo 2D es un
-   ítem de flujo centrado; en modo 3D se ancla al tercio inferior para dejar
-   que el camión domine la escena (composición tipo spot corporativo). */
+/* Bloque de textos: tarjeta de vidrio ("glass panel") flotando sobre la
+   escena. En modo 2D es un ítem de flujo centrado; en modo 3D se ancla al
+   tercio inferior para dejar que el camión domine la escena (composición
+   tipo spot corporativo). */
 .ui {
   position: relative;
   z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: min(460px, calc(100% - 36px));
+  transition: opacity 0.34s ease, transform 0.52s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .uiBottom {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
   bottom: 9%;
   z-index: 6;
-}
-.uiBottom .brand {
-  margin-top: 0;
+  transform: translateX(-50%);
 }
 
-/* Subtítulo corporativo (solo en el spot 3D) */
-.sub {
-  margin-top: 10px;
-  display: flex;
+.uiPanel {
+  position: relative;
+  width: 100%;
+  padding: clamp(18px, 2vw, 24px) clamp(22px, 3vw, 34px) 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.012) 26%, rgba(8, 27, 45, 0.82) 100%),
+    radial-gradient(60% 160% at 50% -10%, rgba(118, 176, 255, 0.1), transparent 54%),
+    rgba(9, 31, 50, 0.76);
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(125, 182, 255, 0.1);
+  backdrop-filter: blur(16px) saturate(120%);
+  text-align: center;
+}
+.uiPanel::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 182, 255, 0.36), transparent);
+}
+
+.uiKicker {
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
-  color: color-mix(in srgb, var(--color-teal-300) 78%, #fff);
-  font-size: clamp(10px, 1.5vw, 14px);
+  gap: 8px;
+  color: rgba(196, 224, 255, 0.92);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.22em;
-  text-indent: 0.22em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
 }
-.sub::before,
-.sub::after {
-  content: "";
-  width: min(12vw, 90px);
-  height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-teal-400) 70%, transparent), transparent);
+.uiDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7fb4ff;
+  box-shadow: 0 0 12px rgba(127, 180, 255, 0.42);
+}
+.isComplete .uiDot {
+  animation: completePulse 0.48s ease-out 1;
+}
+@keyframes completePulse {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .brand {
-  margin-top: 34px;
+  margin-top: 12px;
   color: var(--white);
-  font-size: clamp(20px, 4.4vw, 27px);
+  font-size: clamp(22px, 3vw, 32px);
   font-weight: 800;
-  letter-spacing: 0.34em;
-  text-indent: 0.34em;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
   opacity: 0;
   animation: reveal 1s ease 0.25s forwards;
 }
@@ -297,54 +338,102 @@
   }
   to {
     opacity: 1;
-    letter-spacing: 0.34em;
+    letter-spacing: 0.28em;
     filter: blur(0);
   }
 }
 
-.bar {
-  margin-top: 20px;
-  width: min(230px, 56vw);
-  height: 2px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.16);
-  overflow: hidden;
+/* Subtítulo corporativo (solo en el spot 3D) */
+.sub {
+  margin-top: 10px;
+  color: #9cc5ff;
+  font-size: clamp(10px, 1.1vw, 12px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
 }
-/* Indeterminado: barrido infinito (loader 2D, o 3D sin Content-Length). */
-.barFillSweep {
+
+.panelLine {
+  width: min(220px, 48vw);
+  height: 1px;
+  margin: 16px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(145, 191, 255, 0.58), transparent);
+  box-shadow: 0 0 18px rgba(127, 180, 255, 0.08);
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin: 18px auto 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 18px rgba(127, 180, 255, 0.05);
+}
+.progressFill {
   display: block;
   height: 100%;
-  width: 38%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, #fff, transparent);
-  animation: sweep 1.5s ease-in-out infinite;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4a9cff, #8bc0ff 55%, #d7ebff);
+  box-shadow: 0 0 10px rgba(127, 180, 255, 0.24), 0 0 20px rgba(127, 180, 255, 0.14);
+  transition: width 0.18s linear;
+}
+.isComplete .progressFill {
+  box-shadow: 0 0 12px rgba(127, 180, 255, 0.34), 0 0 26px rgba(127, 180, 255, 0.16);
+}
+.progressFill.sweep {
+  width: 34%;
+  animation: sweep 1.15s ease-in-out infinite;
 }
 @keyframes sweep {
-  0% {
-    transform: translateX(-110%);
+  from {
+    transform: translateX(-120%);
   }
-  100% {
+  to {
     transform: translateX(320%);
   }
 }
 
-/* Determinado: progreso real de descarga del GLB (onProgress del GLTFLoader). */
-.barFillReal {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--color-teal-500), var(--color-teal-300));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--color-teal-400) 65%, transparent);
-  transition: width 0.25s ease-out;
+.loaderMeta {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.caption {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.isComplete .caption {
+  color: rgba(202, 226, 255, 0.92);
+}
+.percent {
+  color: #8ec1ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
 }
 
-.caption {
-  margin-top: 14px;
-  font-size: 10px;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+@media (max-width: 640px) {
+  .uiPanel {
+    padding: 16px 16px 18px;
+    border-radius: 22px;
+  }
+  .loaderMeta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .caption,
+  .percent,
+  .uiKicker {
+    text-align: center;
+  }
 }
 
 /* --------- salida --------- */
@@ -360,15 +449,17 @@
 .isLeaving .puff {
   animation-duration: 0.9s;
 }
-.isLeaving .brand,
-.isLeaving .sub,
-.isLeaving .bar,
-.isLeaving .caption {
+.isLeaving .ui {
   opacity: 0;
-  transition: opacity 0.45s ease;
+  transform: translateY(12px) scale(0.985);
+}
+.isLeaving .uiBottom {
+  transform: translateX(-50%) translateY(12px) scale(0.985);
 }
 
 .isDone {
   transform: translateY(-100%);
-  transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1);
+  /* Duración calzada con DONE_DELAY (PageLoader.tsx): el overlay debe
+     terminar de deslizarse justo antes de desmontarse (phase "hidden"). */
+  transition: transform 0.65s cubic-bezier(0.76, 0, 0.24, 1);
 }

@@ -26,6 +26,15 @@ export default function ContactMap() {
     if (!containerRef.current) return;
     let loaded = false;
 
+    // Salvavidas: en redes restringidas (proxy corporativo, firewall) la
+    // petición al tile server a veces queda "colgada" en vez de disparar un
+    // error limpio — el mapa se queda con el lienzo negro para siempre. Si
+    // no terminó de cargar en 6s, se fuerza el fallback a Google Maps para
+    // que la sección nunca se quede con un recuadro vacío.
+    const failSafeTimer = window.setTimeout(() => {
+      if (!loaded) setFailed(true);
+    }, 6000);
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: "https://tiles.openfreemap.org/styles/dark",
@@ -47,6 +56,7 @@ export default function ContactMap() {
 
     map.on("load", () => {
       loaded = true;
+      window.clearTimeout(failSafeTimer);
 
       // Edificios en 3D: el estilo "dark" solo trae la huella plana ("building"),
       // así que agregamos la extrusión encima, justo antes de las capas de
@@ -69,7 +79,7 @@ export default function ContactMap() {
                 20,
                 "#1a4562",
                 60,
-                "#1ac9bf",
+                "#2851c9",
               ],
               "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
               "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
@@ -96,7 +106,10 @@ export default function ContactMap() {
       if (!loaded) setFailed(true);
     });
 
-    return () => map.remove();
+    return () => {
+      window.clearTimeout(failSafeTimer);
+      map.remove();
+    };
   }, []);
 
   if (failed) {

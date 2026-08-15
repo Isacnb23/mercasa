@@ -17,14 +17,18 @@
   --color-navy-700: #1a4562;
   --color-navy-600: #235a7d;
 
-  /* Evolved teal — more saturated / vivid than the GIPLUS #28989d */
-  --color-teal-900: #0a3f42;
-  --color-teal-800: #0b5f61;
-  --color-teal-700: #0d7d80;
-  --color-teal-600: #0fa3a0;
-  --color-teal-500: #1ac9bf;
-  --color-teal-400: #4fe0d3;
-  --color-teal-300: #93f0e4;
+  /* Azul corporativo: eléctrico/neón (--teal-400) para acentos, íconos y
+     brillos, combinado con azul rey oscuro (--teal-600/700) para botones y
+     rellenos sólidos. Reemplaza el turqueza original — se mantienen los
+     nombres "teal-*" para no tener que renombrar cada clase de Tailwind en
+     todos los componentes, pero los valores ya son azules. */
+  --color-teal-900: #0a1638;
+  --color-teal-800: #101f52;
+  --color-teal-700: #172c74;
+  --color-teal-600: #1f3d9e;
+  --color-teal-500: #2851c9;
+  --color-teal-400: #3b7bff;
+  --color-teal-300: #8fb8ff;
 
   /* Warm accent — amber/gold, not generic orange */
   --color-gold-600: #b6821f;
@@ -203,13 +207,13 @@ body {
   border-radius: 50%;
   background: var(--color-teal-400);
   border: 2px solid #06121c;
-  box-shadow: 0 0 0 2px rgba(79, 224, 211, 0.35), 0 2px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 2px rgba(59, 123, 255, 0.35), 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 .mercasa-map-pin__pulse {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgba(79, 224, 211, 0.45);
+  background: rgba(59, 123, 255, 0.45);
   animation: mercasa-pin-pulse 2.2s ease-out infinite;
 }
 @keyframes mercasa-pin-pulse {
