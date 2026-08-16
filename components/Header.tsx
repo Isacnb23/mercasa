@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { navLinks } from "@/lib/data";
 import { cn, scrollToId } from "@/lib/utils";
 import logo from "@/public/brand/mercasa-logo-white.png";
@@ -65,22 +65,8 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Right: CTA (desktop) + hamburger (mobile) */}
+          {/* Right: hamburger (mobile) */}
           <div className="col-start-3 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => scrollToId("#contacto")}
-              className="group hidden items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-semibold text-white transition duration-300 hover:-translate-y-px hover:brightness-110 md:inline-flex"
-              style={{
-                background: "linear-gradient(135deg, #2F80ED 0%, #4A8DFF 100%)",
-                boxShadow:
-                  "0 10px 26px -10px rgba(47,128,237,0.85), inset 0 0 0 1px rgba(120,170,255,0.28)",
-              }}
-            >
-              Hágase Cliente
-              <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-            </button>
-
             <button
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10 md:hidden"
               aria-label={open ? "Cerrar menú" : "Abrir menú"}
@@ -113,14 +99,6 @@ export default function Header() {
                   {link.label}
                 </a>
               ))}
-              <button
-                type="button"
-                onClick={(e) => handleNav(e, "#contacto")}
-                className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-teal-400 to-teal-500 px-5 py-3 text-sm font-semibold text-navy-950"
-              >
-                Hágase Cliente
-                <ArrowRight className="h-4 w-4" />
-              </button>
             </div>
           </motion.div>
         )}

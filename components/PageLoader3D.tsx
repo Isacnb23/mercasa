@@ -558,9 +558,30 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         emitter.z = 0.3;
         computeFraming();
 
+        // --- PRE-CALENTAMIENTO GPU (clave para que la entrada sea fluida) ---
+        // Con un GLB de ~53MB, la subida de geometría/texturas y el PRIMER
+        // render del shadow map (VSM) son lo más caro de toda la escena, y por
+        // defecto ocurrían justo en el primer frame de la entrada visible.
+        // Peor aún: la entrada avanza por reloj de pared, así que si ese primer
+        // frame llegaba tarde por el hitch, el camión "saltaba" a mitad de
+        // camino y luego seguía — exactamente lo que se percibe como que "se
+        // pega". Aquí forzamos esa carga con el camión FUERA de cuadro (en
+        // enterX): compilamos shaders y renderamos un par de frames en caliente
+        // para subir todo a la GPU y poblar el shadow map. Recién después
+        // arrancamos el reloj de la entrada, de modo que empieza limpia.
+        truckRig.position.x = animRef.current.framing.enterX;
+        truckRig.updateWorldMatrix(true, true);
+        try {
+          renderer.compile(scene, camera);
+          renderer.render(scene, camera); // sube geometría/texturas + 1er shadow map
+          renderer.render(scene, camera); // 2º frame: VSM ya estable
+        } catch {
+          /* si compile/render fallara, la animación sigue igualmente */
+        }
+
         onProgressRef.current(100);
         animRef.current.state = "entering";
-        animRef.current.modelReadyAt = performance.now();
+        animRef.current.modelReadyAt = performance.now(); // reloj arranca DESPUÉS del warm-up
         onResolvedRef.current();
       },
       (evt: ProgressEvent) => {
@@ -590,6 +611,8 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     window.addEventListener("resize", resize);
 
     let lastT = performance.now();
+    let arrivedAt = 0; // instante en que el camión llegó al centro (para el settle)
+    let enterElapsed = 0; // tiempo acumulado de entrada (con dt limitado → sin saltos)
     function animate() {
       const now = performance.now();
       const dt = Math.min(0.05, (now - lastT) / 1000);
@@ -609,10 +632,18 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       // misma nunca saltara.
       let enterRateT = 1;
       if (anim.state === "entering") {
-        const t = Math.min(1, (now - anim.modelReadyAt) / ENTER_DURATION);
+        // Tiempo acumulado con dt LIMITADO (ver arriba, tope 50ms): si un frame
+        // se retrasa por un hitch de GPU, la entrada NO salta hacia adelante
+        // como haría con reloj de pared — simplemente continúa suave. Junto con
+        // el pre-calentamiento, esto es lo que hace que la entrada sea fluida.
+        enterElapsed += dt;
+        const t = Math.min(1, enterElapsed / (ENTER_DURATION / 1000));
         enterRateT = easeOutCubic(t);
         truckRig.position.x = THREE.MathUtils.lerp(enterX, centerX, enterRateT);
-        if (t >= 1) anim.state = "idle";
+        if (t >= 1) {
+          anim.state = "idle";
+          arrivedAt = now; // marca el instante de llegada para el "settle" de suspensión
+        }
       } else if (anim.state === "idle") {
         truckRig.position.x = centerX;
       } else if (anim.state === "leaving") {
@@ -625,8 +656,18 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       const alive = anim.state !== "waiting" && anim.state !== "gone";
 
       if (alive) {
+        // "Estabilización" al llegar al centro: la suspensión se comprime un
+        // pelín y se recupera con una oscilación amortiguada (fase 6 del
+        // brief). Va en el eje Y — NO en X — para no reintroducir el doble
+        // frenado horizontal que documentamos arriba con easeOutBack. Arranca
+        // en 0 (sin salto) y se apaga en ~0.7s.
+        let settleY = 0;
+        if (arrivedAt) {
+          const tau = (now - arrivedAt) / 1000;
+          if (tau < 0.75) settleY = -0.028 * Math.exp(-7 * tau) * Math.sin(tau * 17);
+        }
         // suspensión/ralentí: pocos px visuales
-        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0052) * 0.0035;
+        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0052) * 0.0035 + settleY;
         // glow sigue al camión y respira
         floorGlow.position.x = THREE.MathUtils.lerp(floorGlow.position.x, truckRig.position.x * 0.4, 0.1);
         const s = 1 + Math.sin(now * 0.003) * 0.008 + (leaving ? 0.02 : 0);

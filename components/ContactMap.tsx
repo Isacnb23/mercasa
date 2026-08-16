@@ -113,9 +113,10 @@ export default function ContactMap() {
   }, []);
 
   if (failed) {
-    const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(
-      site.address.mapQuery
-    )}&output=embed`;
+    // Fallback: pin en las coordenadas EXACTAS del CEDI (no una búsqueda por
+    // nombre de pueblo, que caería en el centro del poblado). `q=lat,lng` deja
+    // el marcador rojo justo sobre el punto de Mercasa.
+    const mapSrc = `https://www.google.com/maps?q=${site.address.lat},${site.address.lng}&z=17&output=embed`;
     return (
       <div className="absolute inset-0 h-full w-full overflow-hidden">
         <iframe

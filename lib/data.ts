@@ -17,13 +17,13 @@ export const site = {
     line1: "Tejar de El Guarco, Cartago, Costa Rica",
     line2: "800 m sur del Parque Industrial de Cartago",
     postalCode: "30801",
-    mapQuery: "Tejar, El Guarco, Cartago, Costa Rica",
-    // Coordenadas aproximadas de El Tejar / Parque Industrial de Cartago, El Guarco.
-    // AJUSTAR: son una estimación geográfica, no una geocodificación exacta del CEDI.
-    // Para el punto exacto: abre Google Maps, ubica el CEDI, clic derecho → copiar las
-    // coordenadas (lat, lng) que aparecen arriba del menú, y pégalas aquí.
-    lat: 9.8393,
-    lng: -83.9432,
+    mapQuery: "Grupo Inteca CEDI, El Tejar, Cartago, Costa Rica",
+    // Coordenadas EXACTAS del CEDI (Grupo Inteca / Mercasa) en El Tejar de El
+    // Guarco, Cartago — verificadas en Google Maps ("Grupo Inteca CEDI",
+    // tel. 2217-3600, Plus Code R2WX+JX3, Cartago). Este es el punto que marca
+    // el pin del mapa y al que abren "Abrir en Maps" y "Cómo llegar".
+    lat: 9.8465184,
+    lng: -83.9500786,
   },
   whatsappHref: "https://wa.me/50622173600",
   facebook: "https://www.facebook.com/mercasacr/",
@@ -76,32 +76,11 @@ export const aboutStats = [
   { key: "respaldo", display: site.parentCompany, label: "Casa matriz y respaldo institucional" },
 ];
 
-export const pillars = [
-  {
-    key: "compras",
-    title: "Compras Internacionales",
-    description:
-      "Negociación y tráfico internacional con proveedores aliados en distintos países, asegurando abastecimiento constante y competitivo.",
-  },
-  {
-    key: "logistica",
-    title: "Logística Integral",
-    description:
-      "Gestión de punta a punta: importación, aduanas, almacenamiento y distribución, con foco en eficiencia de la cadena de suministro.",
-  },
-  {
-    key: "cedis",
-    title: "Gestión de CEDIs",
-    description:
-      "Macro-centros de distribución propios con control de inventario bajo estándares internacionales de administración de almacenes.",
-  },
-  {
-    key: "red",
-    title: "Red de Distribución Nacional",
-    description:
-      "Cobertura capilar en todo el país, con rutas propias que llegan cada semana hasta el último punto de venta.",
-  },
-];
+// Nota: la antigua lista `pillars` ("Nuestra operación": Compras Internacionales,
+// Logística Integral, Gestión de CEDIs, Red de Distribución) se eliminó porque
+// describía el MISMO recorrido que las 4 etapas de `logisticsSteps` — la
+// operación vive ahora solo en la sección Logística. "Nosotros" queda enfocado
+// en identidad (trayectoria, respaldo, cifras institucionales en `aboutStats`).
 
 // Marcas que Mercasa importa, comercializa y distribuye en Costa Rica.
 // Se listan como texto (además de la foto del muro) para accesibilidad y SEO.

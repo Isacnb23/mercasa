@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { animate, motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
-import { Award, Boxes, Globe2, Handshake, Map, Users, Warehouse } from "lucide-react";
-import { aboutStats, pillars, site } from "@/lib/data";
+import { Award, Handshake, Users, Warehouse } from "lucide-react";
+import { aboutStats, site } from "@/lib/data";
 import cediPhoto from "@/public/brand/cedi-sunset.jpg";
 
 const statIcons = {
@@ -12,13 +12,6 @@ const statIcons = {
   trayectoria: Award,
   cedis: Warehouse,
   respaldo: Handshake,
-} as const;
-
-const pillarIcons = {
-  compras: Globe2,
-  logistica: Warehouse,
-  cedis: Boxes,
-  red: Map,
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -315,75 +308,10 @@ export default function AboutSection() {
           })}
         </motion.div>
 
-        {/* ---------- Bloque inferior: nuestra operación ---------- */}
-        <motion.div
-          initial={{ opacity: 0, y: 26 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, margin: "-60px" }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-6 px-2 py-12 md:px-6 md:py-14 lg:mt-7"
-          style={{
-            background: "rgba(8,18,34,0.74)",
-            border: "1px solid rgba(80,130,255,0.14)",
-            borderRadius: "24px",
-            boxShadow:
-              "0 16px 40px rgba(0,0,0,0.28), 0 0 18px rgba(55,110,255,0.08)",
-          }}
-        >
-          <Eyebrow centered>Nuestra operación</Eyebrow>
-
-          <div className="mt-11 grid grid-cols-1 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-y-0">
-            {pillars.map((pillar, i) => {
-              const Icon = pillarIcons[pillar.key as keyof typeof pillarIcons];
-              return (
-                <motion.div
-                  key={pillar.key}
-                  initial={{ opacity: 0, y: 22 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-50px" }}
-                  transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                  className="group px-6 lg:px-8"
-                  style={
-                    i > 0
-                      ? { borderLeft: "1px solid rgba(255,255,255,0.08)" }
-                      : undefined
-                  }
-                >
-                  <span
-                    className="flex h-[52px] w-[52px] items-center justify-center rounded-full transition duration-500 group-hover:-translate-y-1"
-                    style={{
-                      background: "rgba(62,134,255,0.12)",
-                      border: "1px solid rgba(76,144,255,0.28)",
-                      color: "#6BA5FF",
-                    }}
-                  >
-                    <Icon className="h-[23px] w-[23px]" strokeWidth={1.4} aria-hidden />
-                  </span>
-
-                  <h3 className="mt-6 font-display text-[21px] font-semibold leading-tight text-white lg:min-h-[3.4rem]">
-                    {pillar.title}
-                  </h3>
-
-                  <span
-                    aria-hidden
-                    className="mt-4 block h-px w-9"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, rgba(62,134,255,0.8), rgba(62,134,255,0))",
-                    }}
-                  />
-
-                  <p
-                    className="mt-4 text-[13.5px] leading-[1.65]"
-                    style={{ color: "rgba(255,255,255,0.66)" }}
-                  >
-                    {pillar.description}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
+        {/* La operación (importación → almacenamiento → distribución → punto de
+            venta) se detalla por completo en la sección Logística; aquí ya no se
+            repite ese recorrido para no duplicar contenido. "Nosotros" queda
+            enfocado en identidad: trayectoria, respaldo y cifras institucionales. */}
       </div>
     </section>
   );
