@@ -1,6 +1,8 @@
-// Contenido estructurado del sitio de Mercasa.
-// Fuente: brief proporcionado por el cliente (Grupo Inteca). Editar aquí
-// para actualizar textos/cifras sin tocar los componentes.
+// Datos NO traducibles del sitio de Mercasa: contactos, coordenadas, nombres
+// propios (marcas, empresa) y las claves ("key") que cada componente usa para
+// buscar su copy en /messages/{locale}.json vía useTranslations(). El texto
+// visible (títulos, descripciones, labels) vive en los mensajes — este
+// archivo solo tiene lo que NO cambia entre español e inglés.
 
 export const site = {
   name: "Mercasa",
@@ -36,46 +38,35 @@ export const site = {
   instagram: "#",
 };
 
+// href + key (el label sale de Nav.<key> en los mensajes).
 export const navLinks = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#nosotros", label: "Nosotros" },
-  { href: "#logistica", label: "Logística" },
-  { href: "#marcas", label: "Marcas" },
-  { href: "#contacto", label: "Contacto" },
+  { href: "#inicio", key: "inicio" },
+  { href: "#nosotros", key: "nosotros" },
+  { href: "#logistica", key: "logistica" },
+  { href: "#marcas", key: "marcas" },
+  { href: "#contacto", key: "contacto" },
 ];
 
-/* Datos destacados de la tarjeta del Hero */
+/* Datos destacados de la tarjeta del Hero — label/value en Hero.highlights.<key> */
 export const heroHighlights = [
-  {
-    key: "transito",
-    label: "Tránsito internacional",
-    value: "1,900+ TEUs al año",
-  },
-  {
-    key: "infraestructura",
-    label: "Infraestructura propia",
-    value: "10,500+ posiciones de tarima",
-  },
-  {
-    key: "cobertura",
-    label: "Cobertura nacional",
-    value: "2,500 entregas comerciales por semana",
-  },
+  { key: "transito" },
+  { key: "infraestructura" },
+  { key: "cobertura" },
 ];
 
-/* Cifras institucionales que acompañan el bloque "Nosotros".
+/* Cifras institucionales del bloque "Nosotros" — label en About.stats.<key>.
    Ojo: esta sección es sobre la EMPRESA (identidad, trayectoria, respaldo).
    Las cifras operativas (países, tarima, entregas) viven exclusivamente en
    Logística — no se repiten aquí para no duplicar el mismo dato en dos
    secciones distintas. */
 export const aboutStats = [
-  { key: "colaboradores", display: "+200", label: "Colaboradores" },
-  { key: "trayectoria", value: 60, suffix: "+", label: "Años de trayectoria" },
-  { key: "cedis", value: 2, suffix: "", label: "Macro-CEDIs propios" },
+  { key: "colaboradores", display: "+200" },
+  { key: "trayectoria", value: 60, suffix: "+" },
+  { key: "cedis", value: 2, suffix: "" },
   // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear), no de
   // Grupo Inteca — por eso esta tarjeta no lleva año, solo identifica a la
   // casa matriz (el año ya se cuenta arriba, en "Años de trayectoria").
-  { key: "respaldo", display: site.parentCompany, label: "Casa matriz y respaldo institucional" },
+  { key: "respaldo", display: site.parentCompany },
 ];
 
 // Nota (revisión de contenido): estos 4 pilares describen a Mercasa como
@@ -84,6 +75,8 @@ export const aboutStats = [
 // paso a paso con sus propias cifras y fotos. Se evita deliberadamente
 // repetir aquí los datos (proveedores, países, posiciones de tarima, etc.)
 // que ya se detallan en profundidad en esa sección.
+// AJUSTAR: sin uso actualmente en ningún componente (dead data, se conserva
+// tal cual del brief original) — no se movió a mensajes de i18n a propósito.
 export const pillars = [
   {
     key: "compras",
@@ -112,7 +105,8 @@ export const pillars = [
 ];
 
 // Marcas que Mercasa importa, comercializa y distribuye en Costa Rica.
-// Se listan como texto (además de la foto del muro) para accesibilidad y SEO.
+// Nombres propios: NO se traducen. Se listan como texto (además de la foto
+// del muro) para accesibilidad y SEO.
 export const brandNames = [
   "Nature Valley", "Renata", "Matilde Vicenzi", "Fiber One", "Smucker's", "Pietrobon",
   "Pomí", "Heinz", "La Costeña", "San Marcos", "MiSabor", "Girol", "Boom Bastic",
@@ -125,10 +119,11 @@ export const brandNames = [
 // AJUSTAR: agrupación por categoría para el filtro opcional del muro de marcas.
 // Es una primera clasificación de referencia (no viene del brief del cliente) —
 // pídanle a Grupo Inteca que la confirme o corrija antes de darla por definitiva.
+// El label de cada categoría vive en Brands.categories.<key>; los nombres de
+// marca dentro de `brands` son nombres propios y no se traducen.
 export const brandCategories = [
   {
     key: "alimentos",
-    label: "Alimentos y despensa",
     brands: [
       "Nature Valley", "Renata", "Matilde Vicenzi", "Fiber One", "Smucker's",
       "Pietrobon", "Pomí", "Heinz", "La Costeña", "San Marcos", "MiSabor",
@@ -137,7 +132,6 @@ export const brandCategories = [
   },
   {
     key: "bebe-cuidado",
-    label: "Bebés y cuidado personal",
     brands: [
       "Choice Care", "Smarty Baby", "Bebín", "Pelican", "Senior", "Ideal",
       "Selpak", "Koa", "Shave & Go", "BelSpá", "B-Healthy",
@@ -145,92 +139,60 @@ export const brandCategories = [
   },
   {
     key: "hogar-institucional",
-    label: "Limpieza del hogar e institucional",
     brands: ["Clinx", "Bio EZserv", "EZlight", "EZbags", "EZserv", "EZclean", "EZtape"],
   },
   {
     key: "bebidas",
-    label: "Bebidas",
     brands: ["Monday", "Thüringer", "St. Omer", "Tika"],
   },
 ];
 
-export const brandPillars = [
-  {
-    key: "calidad",
-    title: "Calidad garantizada",
-    description:
-      "Marcas de las mejores casas productoras internacionales, seleccionadas para garantizar excelencia en cada hogar.",
-  },
-  {
-    key: "alianzas",
-    title: "Alianzas estratégicas",
-    description:
-      "Relaciones comerciales duraderas con marcas reconocidas que confían en nuestra red de distribución nacional.",
-  },
-  {
-    key: "compromiso",
-    title: "Compromiso con el cliente",
-    description:
-      "Seguimos ampliando nuestro portafolio para responder a lo que el mercado costarricense necesita.",
-  },
-];
+// title/description en Brands.pillars.<key>
+export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "compromiso" }];
 
-/* Sección "Logística y Cobertura": intro + las 4 etapas de la cadena
-   (importación → almacenamiento → distribución → punto de venta). */
-export const logisticsIntro = {
-  eyebrow: "Logística y cobertura",
-  titleLead: "El motor detrás de cada",
-  titleAccent: "entrega",
-  lead:
-    "Unimos el mundo con Costa Rica a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
-};
-
-// Cifras por etapa: cada paso lleva como máximo UNA cifra propia, distinta a
-// las 3 stats de impacto del Hero (1,900+ TEUs, 10,500+ posiciones de tarima,
-// 2,500 entregas/semana), para no repetir el mismo dato en dos secciones. Los
-// pasos que no tienen una cifra propia real (almacenamiento y distribución ya
-// están cubiertos por el hero) quedan sin stats — mejor sin chip que con el
-// mismo número dos veces.
+// Las 4 etapas de la cadena (importación → almacenamiento → distribución →
+// punto de venta). title/description/statLabel viven en Logistics.steps.<key>.
+// Cada paso lleva como máximo UNA cifra propia (icon+value numéricos, sin
+// label — el label sale de los mensajes), distinta a las 3 stats de impacto
+// del Hero (1,900+ TEUs, 10,500+ posiciones de tarima, 2,500 entregas/semana),
+// para no repetir el mismo dato en dos secciones. Los pasos sin cifra propia
+// real (almacenamiento y distribución ya están cubiertos por el hero) quedan
+// sin stats — mejor sin chip que con el mismo número dos veces.
 export const logisticsSteps = [
   {
     step: "01",
+    key: "importacion",
     icon: "ship",
-    title: "Importación Global",
-    description:
-      "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares.",
     visual: "map-world",
-    stats: [{ icon: "globe", value: "30+", label: "países" }],
+    stats: [{ icon: "globe", value: "30+" }],
   },
   {
     step: "02",
+    key: "almacenamiento",
     icon: "warehouse",
-    title: "Almacenamiento Inteligente",
-    description:
-      "Dos macro-CEDIs propios con más de 10,500 posiciones de tarima y tecnología de gestión de inventarios de clase mundial.",
     visual: "photo-warehouse",
     stats: [],
   },
   {
     step: "03",
+    key: "distribucion",
     icon: "truck",
-    title: "Distribución Nacional",
-    description:
-      "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales.",
     visual: "map-cr",
     stats: [],
   },
   {
     step: "04",
+    key: "puntoDeVenta",
     icon: "store",
-    title: "Punto de Venta",
-    description:
-      "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
     visual: "store",
-    stats: [{ icon: "users", value: "Miles", label: "de clientes atendidos cada semana" }],
+    stats: [{ icon: "users", value: "Miles" }],
   },
 ];
 
+// AJUSTAR: sin uso actualmente (no hay un formulario de contacto montado que
+// lo consuma; /api/contact ya arma sus propias etiquetas internas en
+// español para el correo interno del equipo, que no es contenido visible del
+// sitio) — no se movió a mensajes de i18n a propósito.
 export const contactChannels = [
   {
     key: "proveedor",
@@ -243,4 +205,3 @@ export const contactChannels = [
     description: "Supermercados, retail, mini-súper y comercio local que desean abastecerse con Mercasa.",
   },
 ];
-

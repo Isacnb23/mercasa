@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { useId } from "react";
+import { getTranslations } from "next-intl/server";
 import { ChevronRight, MapPin, Mail, Phone } from "lucide-react";
 import { navLinks, site } from "@/lib/data";
 import logo from "@/public/brand/mercasa-logo-white.png";
@@ -37,10 +38,12 @@ function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
 function SocialIcon({
   href,
   label,
+  pendingLabel,
   children,
 }: {
   href: string;
   label: string;
+  pendingLabel: string;
   children: React.ReactNode;
 }) {
   const isPlaceholder = href === "#";
@@ -50,7 +53,7 @@ function SocialIcon({
       target={isPlaceholder ? undefined : "_blank"}
       rel={isPlaceholder ? undefined : "noopener noreferrer"}
       aria-label={label}
-      title={isPlaceholder ? `${label} (pendiente de link)` : label}
+      title={isPlaceholder ? pendingLabel : label}
       className="flex h-[43px] w-[43px] items-center justify-center rounded-full border border-[rgba(47,140,255,0.65)] text-[#2F8CFF] transition duration-300 hover:-translate-y-px hover:border-[#2F8CFF] hover:bg-[rgba(47,140,255,0.08)]"
     >
       {children}
@@ -125,7 +128,11 @@ function FooterDots({ side }: { side: "left" | "right" }) {
   );
 }
 
-export default function Footer() {
+export default async function Footer() {
+  const t = await getTranslations("Footer");
+  const tNav = await getTranslations("Nav");
+  const year = new Date().getFullYear();
+
   return (
     <footer
       className="relative overflow-hidden pb-[35px] pt-[46px] sm:pt-[55px]"
@@ -148,7 +155,7 @@ export default function Footer() {
           <div className="sm:col-span-2 md:col-span-1">
             <Image src={logo} alt="Mercasa" className="h-auto w-[135px] md:w-[165px]" />
             <p className="mt-[22px] text-[14px] font-medium text-[#2F8CFF] md:text-[15px]">
-              Distribuyendo confianza desde {site.foundedYear}
+              {t("tagline", { year: site.foundedYear })}
             </p>
             <span
               aria-hidden
@@ -159,8 +166,7 @@ export default function Footer() {
               className="mt-4 max-w-sm text-[14px] leading-[1.7] md:text-[15px]"
               style={{ color: "rgba(255,255,255,0.70)" }}
             >
-              Importación, logística y distribución mayorista de consumo
-              masivo en todo Costa Rica.
+              {t("description")}
             </p>
           </div>
 
@@ -170,7 +176,7 @@ export default function Footer() {
               className="text-[13px] font-bold uppercase md:text-[14px]"
               style={{ letterSpacing: "0.07em", color: "#2F8CFF" }}
             >
-              Navegación
+              {t("navTitle")}
             </p>
             <ul className="mt-5 flex flex-col gap-[17px] text-[15px] leading-none md:text-[16px]">
               {navLinks.map((link) => (
@@ -183,7 +189,7 @@ export default function Footer() {
                     <ChevronRight
                       className="h-[14px] w-[14px] shrink-0 text-[#2F8CFF] transition group-hover:translate-x-0.5"
                     />
-                    {link.label}
+                    {tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}
                   </a>
                 </li>
               ))}
@@ -196,7 +202,7 @@ export default function Footer() {
               className="text-[13px] font-bold uppercase md:text-[14px]"
               style={{ letterSpacing: "0.07em", color: "#2F8CFF" }}
             >
-              Contacto
+              {t("contactTitle")}
             </p>
             <ul className="mt-5 flex flex-col gap-[19px] text-[15px]">
               <li className="flex items-start gap-[14px]">
@@ -233,16 +239,28 @@ export default function Footer() {
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[12px] md:text-[13px]" style={{ color: "rgba(255,255,255,0.55)" }}>
-              © {new Date().getFullYear()} {site.name} - {site.parentCompany}. Todos los derechos reservados.
+              {t("copyright", { year, name: site.name, parent: site.parentCompany })}
             </p>
             <div className="flex items-center gap-[14px]">
-              <SocialIcon href={site.facebook} label="Mercasa en Facebook">
+              <SocialIcon
+                href={site.facebook}
+                label={t("socialFacebook")}
+                pendingLabel={t("socialPending", { label: t("socialFacebook") })}
+              >
                 <FacebookIcon className="h-[17px] w-[17px]" />
               </SocialIcon>
-              <SocialIcon href={site.linkedin} label="Mercasa en LinkedIn">
+              <SocialIcon
+                href={site.linkedin}
+                label={t("socialLinkedin")}
+                pendingLabel={t("socialPending", { label: t("socialLinkedin") })}
+              >
                 <LinkedinIcon className="h-[17px] w-[17px]" />
               </SocialIcon>
-              {/* <SocialIcon href={site.instagram} label="Mercasa en Instagram">
+              {/* <SocialIcon
+                href={site.instagram}
+                label={t("socialInstagram")}
+                pendingLabel={t("socialPending", { label: t("socialInstagram") })}
+              >
                 <InstagramIcon className="h-[17px] w-[17px]" />
               </SocialIcon> */}
             </div>

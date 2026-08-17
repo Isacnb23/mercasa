@@ -1,0 +1,169 @@
+{
+  "Metadata": {
+    "title": "Mercasa | Distribución mayorista de consumo masivo en Costa Rica",
+    "description": "Mercasa, empresa de Grupo Inteca, es líder en importación, comercialización y distribución mayorista de productos de consumo masivo en Costa Rica. Más de 60 años de trayectoria, 2 CEDIs propios y cobertura nacional.",
+    "ogDescription": "Importación, logística y distribución mayorista de consumo masivo. Una empresa de Grupo Inteca, con más de 60 años de trayectoria.",
+    "keywords": [
+      "Mercasa",
+      "Distribuidora Mercasa",
+      "Grupo Inteca",
+      "distribución mayorista Costa Rica",
+      "consumo masivo",
+      "FMCG Costa Rica",
+      "Cartago",
+      "El Guarco"
+    ]
+  },
+  "Nav": {
+    "inicio": "Inicio",
+    "nosotros": "Nosotros",
+    "logistica": "Logística",
+    "marcas": "Marcas",
+    "contacto": "Contacto"
+  },
+  "Header": {
+    "logoAria": "Mercasa — Inicio",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "LocaleSwitcher": {
+    "ariaLabel": "Cambiar idioma"
+  },
+  "PageLoader": {
+    "ariaLabel": "Cargando Mercasa",
+    "kicker": "Experiencia de carga",
+    "sub": "Logística & Distribución",
+    "captionLoading": "Preparando su pedido...",
+    "captionReady": "Listo para continuar"
+  },
+  "Hero": {
+    "badgeSince": "Desde {year}",
+    "badgeParent": "Una empresa de {parent}",
+    "title": "Líderes en <accent>distribución y comercialización</accent> masiva de productos de consumo en <accent>Costa Rica</accent>",
+    "paragraph": "Importación, logística y distribución mayorista de productos de consumo masivo, con cobertura en supermercados, retail y comercio local en todo el país.",
+    "scrollLabel": "Conexiones que mueven negocios",
+    "scrollAria": "Desplazarse hacia abajo",
+    "photoAlt": "Bodega de Mercasa: montacargas moviendo tarimas entre racks de almacenamiento",
+    "highlights": {
+      "transito": {
+        "label": "Tránsito internacional",
+        "value": "1,900+ TEUs al año"
+      },
+      "infraestructura": {
+        "label": "Infraestructura propia",
+        "value": "10,500+ posiciones de tarima"
+      },
+      "cobertura": {
+        "label": "Cobertura nacional",
+        "value": "2,500 entregas comerciales por semana"
+      }
+    }
+  },
+  "About": {
+    "eyebrow": "Nosotros",
+    "title": "Trayectoria que <accent>respalda</accent> cada entrega",
+    "paragraph": "En el mercado costarricense de consumo masivo, Mercasa es el puente entre las marcas internacionales y el comercio local: una misma operación que negocia, importa y entrega, sin intermediarios adicionales en el camino. Esa integración es lo que nos distingue, y se sostiene sobre la escala y disciplina corporativa de <strong>{parent}</strong>, corporación de capital privado con presencia regional.",
+    "stats": {
+      "colaboradores": { "label": "Colaboradores" },
+      "trayectoria": { "label": "Años de trayectoria" },
+      "cedis": { "label": "Macro-CEDIs propios" },
+      "respaldo": { "label": "Casa matriz y respaldo institucional" }
+    },
+    "photoAlt": "Centro de distribución de Mercasa al atardecer: andenes de carga, tarimas y camión de reparto"
+  },
+  "Logistics": {
+    "eyebrow": "Logística y cobertura",
+    "titleLead": "El motor detrás de cada",
+    "titleAccent": "entrega",
+    "lead": "Unimos el mundo con Costa Rica a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
+    "steps": {
+      "importacion": {
+        "title": "Importación Global",
+        "description": "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares.",
+        "statLabel": "países"
+      },
+      "almacenamiento": {
+        "title": "Almacenamiento Inteligente",
+        "description": "Dos macro-CEDIs propios con más de 10,500 posiciones de tarima y tecnología de gestión de inventarios de clase mundial."
+      },
+      "distribucion": {
+        "title": "Distribución Nacional",
+        "description": "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales."
+      },
+      "puntoDeVenta": {
+        "title": "Punto de Venta",
+        "description": "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
+        "statLabel": "de clientes atendidos cada semana"
+      }
+    },
+    "cta": "Descubra nuestras marcas",
+    "heroBandAlt": "Cadena logística de Mercasa: importación por barco, almacenamiento en bodega, transporte por camión y punto de venta"
+  },
+  "Brands": {
+    "titleLead": "Marcas que",
+    "titleWord1": "construyen",
+    "titleWord2": "confianza",
+    "paragraph": "Trabajamos con marcas líderes que garantizan calidad, innovación y bienestar para nuestros clientes.",
+    "pillars": {
+      "calidad": {
+        "title": "Calidad garantizada",
+        "description": "Marcas de las mejores casas productoras internacionales, seleccionadas para garantizar excelencia en cada hogar."
+      },
+      "alianzas": {
+        "title": "Alianzas estratégicas",
+        "description": "Relaciones comerciales duraderas con marcas reconocidas que confían en nuestra red de distribución nacional."
+      },
+      "compromiso": {
+        "title": "Compromiso con el cliente",
+        "description": "Seguimos ampliando nuestro portafolio para responder a lo que el mercado costarricense necesita."
+      }
+    },
+    "explorerLabel": "Explorar por categoría",
+    "categories": {
+      "alimentos": { "label": "Alimentos y despensa" },
+      "bebe-cuidado": { "label": "Bebés y cuidado personal" },
+      "hogar-institucional": { "label": "Limpieza del hogar e institucional" },
+      "bebidas": { "label": "Bebidas" }
+    },
+    "showroomAlt": "Portafolio de marcas distribuidas por Mercasa"
+  },
+  "Contact": {
+    "eyebrow": "Contacto",
+    "title": "Hablemos de negocios",
+    "paragraph": "Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o escríbanos directamente — atendemos proveedores internacionales y clientes locales.",
+    "sedeTitle": "Sede central (CEDI)",
+    "telefonoTitle": "Teléfono central",
+    "correosTitle": "Correos oficiales",
+    "correosRh": "(RH)",
+    "horarioTitle": "Horario de atención",
+    "horarioWeekdays": "Lunes a viernes: 8:00 a.m. – 6:00 p.m.",
+    "horarioSaturday": "Sábados: 8:00 a.m. – 12:00 m.d.",
+    "whatsappCta": "Escríbanos por WhatsApp",
+    "callCta": "Llamar ahora",
+    "mapCardTitle": "CEDI - El Guarco",
+    "directionsCta": "Cómo llegar",
+    "openInGoogleMaps": "Abrir en Google Maps",
+    "openInWaze": "Abrir en Waze"
+  },
+  "ContactMap": {
+    "iframeTitle": "Ubicación de Mercasa en El Guarco, Cartago"
+  },
+  "Recruitment": {
+    "navLabel": "Reclutamiento",
+    "title": "Reclutamiento",
+    "intro": "¿Querés sumarte a nuestro equipo? Escribinos a este correo.",
+    "emailLabel": "Correo",
+    "close": "Cerrar"
+  },
+  "Footer": {
+    "tagline": "Distribuyendo confianza desde {year}",
+    "description": "Importación, logística y distribución mayorista de consumo masivo en todo Costa Rica.",
+    "navTitle": "Navegación",
+    "contactTitle": "Contacto",
+    "copyright": "© {year} {name} - {parent}. Todos los derechos reservados.",
+    "socialFacebook": "Mercasa en Facebook",
+    "socialLinkedin": "Mercasa en LinkedIn",
+    "socialInstagram": "Mercasa en Instagram",
+    "socialPending": "{label} (pendiente de link)"
+  }
+}

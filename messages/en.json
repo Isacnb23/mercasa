@@ -1,0 +1,169 @@
+{
+  "Metadata": {
+    "title": "Mercasa | Wholesale Distribution of Consumer Goods in Costa Rica",
+    "description": "Mercasa, a Grupo Inteca company, is a leading importer, marketer, and wholesale distributor of consumer goods in Costa Rica. Over 60 years in the market, 2 owned distribution centers, and nationwide coverage.",
+    "ogDescription": "Import, logistics, and wholesale distribution of consumer goods. A Grupo Inteca company with over 60 years in the market.",
+    "keywords": [
+      "Mercasa",
+      "Mercasa Distributor",
+      "Grupo Inteca",
+      "wholesale distribution Costa Rica",
+      "consumer goods",
+      "FMCG Costa Rica",
+      "Cartago",
+      "El Guarco"
+    ]
+  },
+  "Nav": {
+    "inicio": "Home",
+    "nosotros": "About",
+    "logistica": "Logistics",
+    "marcas": "Brands",
+    "contacto": "Contact"
+  },
+  "Header": {
+    "logoAria": "Mercasa — Home",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "LocaleSwitcher": {
+    "ariaLabel": "Switch language"
+  },
+  "PageLoader": {
+    "ariaLabel": "Loading Mercasa",
+    "kicker": "Loading experience",
+    "sub": "Logistics & Distribution",
+    "captionLoading": "Preparing your order...",
+    "captionReady": "Ready to continue"
+  },
+  "Hero": {
+    "badgeSince": "Since {year}",
+    "badgeParent": "A {parent} company",
+    "title": "<accent>Costa Rica's leader</accent> in mass-market distribution and commercialization of consumer goods",
+    "paragraph": "Import, logistics, and wholesale distribution of consumer goods, reaching supermarkets, retail, and local trade nationwide.",
+    "scrollLabel": "Connections that move business",
+    "scrollAria": "Scroll down",
+    "photoAlt": "Mercasa warehouse: forklift moving pallets between storage racks",
+    "highlights": {
+      "transito": {
+        "label": "International freight",
+        "value": "1,900+ TEUs per year"
+      },
+      "infraestructura": {
+        "label": "Owned infrastructure",
+        "value": "10,500+ pallet positions"
+      },
+      "cobertura": {
+        "label": "Nationwide coverage",
+        "value": "2,500 weekly deliveries"
+      }
+    }
+  },
+  "About": {
+    "eyebrow": "About Us",
+    "title": "The <accent>reliability</accent> behind every delivery",
+    "paragraph": "In Costa Rica's mass-consumption market, Mercasa is the bridge between international brands and local trade: a single operation that negotiates, imports, and delivers, with no extra intermediaries along the way. That integration is what sets us apart, backed by the scale and corporate discipline of <strong>{parent}</strong>, a privately held corporation with a regional footprint.",
+    "stats": {
+      "colaboradores": { "label": "Employees" },
+      "trayectoria": { "label": "Years in the market" },
+      "cedis": { "label": "Owned distribution centers" },
+      "respaldo": { "label": "Parent company & institutional backing" }
+    },
+    "photoAlt": "Mercasa distribution center at sunset: loading docks, pallets, and a delivery truck"
+  },
+  "Logistics": {
+    "eyebrow": "Logistics & Coverage",
+    "titleLead": "The engine behind every",
+    "titleAccent": "delivery",
+    "lead": "We connect the world with Costa Rica through an efficient, modern, and reliable logistics chain that guarantees availability and speed on every delivery.",
+    "steps": {
+      "importacion": {
+        "title": "Global Import",
+        "description": "We work with more than 45 suppliers across 30 countries, managing international freight and customs to the highest standards.",
+        "statLabel": "countries"
+      },
+      "almacenamiento": {
+        "title": "Smart Warehousing",
+        "description": "Two owned macro distribution centers with more than 10,500 pallet positions and world-class inventory management technology."
+      },
+      "distribucion": {
+        "title": "Nationwide Distribution",
+        "description": "Our own logistics network covering the entire country, optimizing routes for efficient, on-time deliveries."
+      },
+      "puntoDeVenta": {
+        "title": "Point of Sale",
+        "description": "We close the loop by getting every product into the hands of the end consumer, in every corner of the country.",
+        "statLabel": "customers served every week"
+      }
+    },
+    "cta": "Discover our brands",
+    "heroBandAlt": "Mercasa's logistics chain: ocean import, warehouse storage, truck transport, and point of sale"
+  },
+  "Brands": {
+    "titleLead": "Brands that",
+    "titleWord1": "build",
+    "titleWord2": "trust",
+    "paragraph": "We work with leading brands that guarantee quality, innovation, and wellbeing for our customers.",
+    "pillars": {
+      "calidad": {
+        "title": "Guaranteed quality",
+        "description": "Brands from the world's best manufacturers, selected to bring excellence into every home."
+      },
+      "alianzas": {
+        "title": "Strategic partnerships",
+        "description": "Long-standing commercial relationships with recognized brands that trust our nationwide distribution network."
+      },
+      "compromiso": {
+        "title": "Commitment to our customers",
+        "description": "We keep expanding our portfolio to meet what the Costa Rican market needs."
+      }
+    },
+    "explorerLabel": "Browse by category",
+    "categories": {
+      "alimentos": { "label": "Food & pantry" },
+      "bebe-cuidado": { "label": "Baby & personal care" },
+      "hogar-institucional": { "label": "Home & institutional cleaning" },
+      "bebidas": { "label": "Beverages" }
+    },
+    "showroomAlt": "Portfolio of brands distributed by Mercasa"
+  },
+  "Contact": {
+    "eyebrow": "Contact",
+    "title": "Let's talk business",
+    "paragraph": "Visit us at our distribution center in El Tejar, El Guarco, Cartago, or reach out directly — we serve international suppliers and local customers alike.",
+    "sedeTitle": "Head office (CEDI)",
+    "telefonoTitle": "Main phone line",
+    "correosTitle": "Official emails",
+    "correosRh": "(HR)",
+    "horarioTitle": "Business hours",
+    "horarioWeekdays": "Monday to Friday: 8:00 AM – 6:00 PM",
+    "horarioSaturday": "Saturdays: 8:00 AM – 12:00 PM",
+    "whatsappCta": "Message us on WhatsApp",
+    "callCta": "Call now",
+    "mapCardTitle": "CEDI - El Guarco",
+    "directionsCta": "Get directions",
+    "openInGoogleMaps": "Open in Google Maps",
+    "openInWaze": "Open in Waze"
+  },
+  "ContactMap": {
+    "iframeTitle": "Mercasa's location in El Guarco, Cartago"
+  },
+  "Recruitment": {
+    "navLabel": "Careers",
+    "title": "Careers",
+    "intro": "Interested in joining our team? Reach out to us at this email.",
+    "emailLabel": "Email",
+    "close": "Close"
+  },
+  "Footer": {
+    "tagline": "Distributing trust since {year}",
+    "description": "Import, logistics, and wholesale distribution of consumer goods across Costa Rica.",
+    "navTitle": "Navigation",
+    "contactTitle": "Contact",
+    "copyright": "© {year} {name} - {parent}. All rights reserved.",
+    "socialFacebook": "Mercasa on Facebook",
+    "socialLinkedin": "Mercasa on LinkedIn",
+    "socialInstagram": "Mercasa on Instagram",
+    "socialPending": "{label} (link coming soon)"
+  }
+}

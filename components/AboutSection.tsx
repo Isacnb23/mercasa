@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { animate, motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Award, Handshake, Users, Warehouse } from "lucide-react";
 import { aboutStats, site } from "@/lib/data";
 import cediPhoto from "@/public/brand/cedi-sunset.jpg";
@@ -159,6 +160,7 @@ function StatValue({
 }
 
 export default function AboutSection() {
+  const t = useTranslations("About");
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -184,7 +186,7 @@ export default function AboutSection() {
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.35fr] lg:gap-[34px]">
           {/* Izquierda */}
           <div>
-            <Eyebrow>Nosotros</Eyebrow>
+            <Eyebrow>{t("eyebrow")}</Eyebrow>
 
             <motion.h2
               initial={{ opacity: 0, y: 26 }}
@@ -199,8 +201,9 @@ export default function AboutSection() {
                 letterSpacing: "-0.03em",
               }}
             >
-              Trayectoria que{" "}
-              <span style={{ color: "#3A86FF" }}>respalda</span> cada entrega
+              {t.rich("title", {
+                accent: (chunks) => <span style={{ color: "#3A86FF" }}>{chunks}</span>,
+              })}
             </motion.h2>
 
             <motion.p
@@ -211,14 +214,10 @@ export default function AboutSection() {
               className="mt-7 text-[15.5px] leading-[1.75] md:text-[17px]"
               style={{ color: "rgba(255,255,255,0.76)", maxWidth: "620px" }}
             >
-              En el mercado costarricense de consumo masivo, Mercasa es el
-              puente entre las marcas internacionales y el comercio local: una
-              misma operación que negocia, importa y entrega, sin
-              intermediarios adicionales en el camino. Esa integración es lo
-              que nos distingue, y se sostiene sobre la escala y disciplina
-              corporativa de{" "}
-              <strong className="font-semibold text-white">{site.parentCompany}</strong>,
-              corporación de capital privado con presencia regional.
+              {t.rich("paragraph", {
+                parent: site.parentCompany,
+                strong: (chunks) => <strong className="font-semibold text-white">{chunks}</strong>,
+              })}
             </motion.p>
           </div>
 
@@ -239,7 +238,7 @@ export default function AboutSection() {
             <motion.div style={{ y: photoY }} className="relative aspect-[16/10] w-full scale-105">
               <Image
                 src={cediPhoto}
-                alt="Centro de distribución de Mercasa al atardecer: andenes de carga, tarimas y camión de reparto"
+                alt={t("photoAlt")}
                 fill
                 placeholder="blur"
                 className="object-cover object-center"
@@ -303,7 +302,7 @@ export default function AboutSection() {
                     className="mt-2 text-[10.5px] font-semibold uppercase leading-snug"
                     style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.62)" }}
                   >
-                    {stat.label}
+                    {t(`stats.${stat.key}.label`)}
                   </p>
                 </div>
               </div>

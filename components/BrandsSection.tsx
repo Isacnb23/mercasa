@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   Award,
   Baby,
@@ -56,6 +57,7 @@ function BrandsDots() {
    nunca un paso obligatorio para ver el muro de marcas. Vive debajo del
    showroom, ocupando todo el ancho de esa columna. */
 function CategoryExplorer() {
+  const t = useTranslations("Brands");
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   return (
@@ -82,11 +84,11 @@ function CategoryExplorer() {
           className="text-[11px] font-semibold uppercase"
           style={{ letterSpacing: "0.14em", color: "rgba(221,229,234,0.55)" }}
         >
-          Explorar por categoría
+          {t("explorerLabel")}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-[10px]">
+      <div className="flex flex-wrap gap-[12px]">
         {brandCategories.map((cat) => {
           const isOpen = openKey === cat.key;
           const Icon = categoryIcons[cat.key as keyof typeof categoryIcons];
@@ -96,9 +98,9 @@ function CategoryExplorer() {
                 type="button"
                 onClick={() => setOpenKey(isOpen ? null : cat.key)}
                 aria-expanded={isOpen}
-                className="flex w-full items-center gap-3 rounded-full px-[16px] text-left transition duration-300"
+                className="flex w-full items-center gap-3.5 rounded-full px-[19px] text-left transition duration-300"
                 style={{
-                  minHeight: "40px",
+                  minHeight: "48px",
                   border: `1px solid ${isOpen ? "rgba(56,140,255,0.55)" : "rgba(255,255,255,0.10)"}`,
                   background: isOpen
                     ? "linear-gradient(120deg, rgba(36,104,232,0.35), rgba(47,128,237,0.22))"
@@ -107,22 +109,22 @@ function CategoryExplorer() {
                 }}
               >
                 <span
-                  className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full"
+                  className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full"
                   style={{
                     background: isOpen ? "rgba(255,255,255,0.18)" : "rgba(56,140,255,0.16)",
                     color: isOpen ? "#fff" : "#7fb0ff",
                   }}
                 >
-                  <Icon className="h-[13px] w-[13px]" strokeWidth={1.8} aria-hidden />
+                  <Icon className="h-[16px] w-[16px]" strokeWidth={1.8} aria-hidden />
                 </span>
                 <span
-                  className="flex-1 text-[12.5px] font-medium"
+                  className="flex-1 text-[14px] font-medium"
                   style={{ color: isOpen ? "#fff" : "rgba(221,229,234,0.82)" }}
                 >
-                  {cat.label}
+                  {t(`categories.${cat.key}.label`)}
                 </span>
                 <ChevronDown
-                  className="h-[13px] w-[13px] shrink-0 opacity-70 transition-transform duration-300"
+                  className="h-[14px] w-[14px] shrink-0 opacity-70 transition-transform duration-300"
                   style={{ transform: isOpen ? "rotate(180deg)" : "none" }}
                 />
               </button>
@@ -167,6 +169,7 @@ function CategoryExplorer() {
 }
 
 export default function BrandsSection() {
+  const t = useTranslations("Brands");
   return (
     <section
       id="marcas"
@@ -200,19 +203,18 @@ export default function BrandsSection() {
                 letterSpacing: "-0.03em",
               }}
             >
-              Marcas que
+              {t("titleLead")}
               <br />
-              <span style={{ color: "#388CFF" }}>construyen</span>
+              <span style={{ color: "#388CFF" }}>{t("titleWord1")}</span>
               <br />
-              <span style={{ color: "#388CFF" }}>confianza</span>
+              <span style={{ color: "#388CFF" }}>{t("titleWord2")}</span>
             </h2>
 
             <p
               className="mt-4 max-w-[320px] text-[15px] leading-[1.65]"
               style={{ color: "rgba(255,255,255,0.72)" }}
             >
-              Trabajamos con marcas líderes que garantizan calidad, innovación
-              y bienestar para nuestros clientes.
+              {t("paragraph")}
             </p>
 
             <ul className="mt-5 flex flex-col">
@@ -239,13 +241,13 @@ export default function BrandsSection() {
                         className="text-[13px] font-bold uppercase"
                         style={{ letterSpacing: "0.06em", color: "#fff" }}
                       >
-                        {pillar.title}
+                        {t(`pillars.${pillar.key}.title`)}
                       </h3>
                       <p
                         className="mt-1 text-[13.5px] leading-[1.4]"
                         style={{ color: "rgba(221,229,234,0.62)" }}
                       >
-                        {pillar.description}
+                        {t(`pillars.${pillar.key}.description`)}
                       </p>
                     </div>
                   </motion.li>
@@ -274,7 +276,7 @@ export default function BrandsSection() {
             >
               <Image
                 src={wallPhoto}
-                alt="Portafolio de marcas distribuidas por Mercasa"
+                alt={t("showroomAlt")}
                 placeholder="blur"
                 sizes="(max-width: 1023px) 100vw, 76vw"
                 className="block h-auto w-full rounded-[22px]"

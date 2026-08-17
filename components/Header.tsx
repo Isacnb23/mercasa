@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "@/lib/data";
 import { cn, scrollToId } from "@/lib/utils";
 import logo from "@/public/brand/mercasa-logo-white.png";
+import LocaleSwitcher from "./LocaleSwitcher";
+import RecruitmentPopover from "./RecruitmentPopover";
 
 export default function Header() {
+  const t = useTranslations("Header");
+  const tNav = useTranslations("Nav");
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -44,7 +49,7 @@ export default function Header() {
           <a
             href="#inicio"
             onClick={(e) => handleNav(e, "#inicio")}
-            aria-label="Mercasa — Inicio"
+            aria-label={t("logoAria")}
             className="flex shrink-0 items-center transition active:scale-95"
           >
             <Image src={logo} alt="Mercasa" priority className="h-7 w-auto md:h-8" />
@@ -59,17 +64,19 @@ export default function Header() {
                 onClick={(e) => handleNav(e, link.href)}
                 className={linkClass}
               >
-                {link.label}
+                {tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}
                 <span className="absolute -bottom-2 left-1/2 h-px w-0 -translate-x-1/2 bg-teal-400 transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
+            <RecruitmentPopover variant="desktop" />
           </nav>
 
-          {/* Right: hamburger (mobile) */}
-          <div className="col-start-3 flex items-center justify-end gap-2">
+          {/* Right: toggle de idioma + hamburger (mobile) */}
+          <div className="col-start-3 flex items-center justify-end gap-3">
+            <LocaleSwitcher />
             <button
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10 md:hidden"
-              aria-label={open ? "Cerrar menú" : "Abrir menú"}
+              aria-label={open ? t("closeMenu") : t("openMenu")}
               onClick={() => setOpen((v) => !v)}
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -96,9 +103,10 @@ export default function Header() {
                   onClick={(e) => handleNav(e, link.href)}
                   className="rounded-2xl px-4 py-3 text-base font-medium text-white/90 transition hover:bg-white/10"
                 >
-                  {link.label}
+                  {tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}
                 </a>
               ))}
+              <RecruitmentPopover variant="mobile" />
             </div>
           </motion.div>
         )}

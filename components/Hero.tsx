@@ -3,6 +3,7 @@
 import { useId, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { ChevronDown, Boxes, Truck, Warehouse } from "lucide-react";
 import { heroHighlights, site } from "@/lib/data";
 import { scrollToId } from "@/lib/utils";
@@ -72,14 +73,17 @@ function HeroArcs() {
 
 /* ------------------------------------------------------------------ */
 /*  Curva azul inferior: línea fina orgánica con halo, recorriendo el   */
-/*  cierre del hero de lado a lado.                                    */
+/*  cierre del hero de lado a lado. Baja y angosta (h-14/h-20, pegada   */
+/*  al borde inferior) para que quede claramente por debajo del texto  */
+/*  del hero — nunca cruzándolo — sin importar cuántas líneas ocupe el  */
+/*  título/párrafo en cada idioma (ver nota en maxWidth del H1 abajo).  */
 /* ------------------------------------------------------------------ */
 function HeroBottomCurve() {
   const uid = useId().replace(/[:]/g, "");
   return (
     <svg
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-32 w-full sm:h-44"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-14 w-full sm:h-20"
       viewBox="0 0 1920 200"
       preserveAspectRatio="none"
       fill="none"
@@ -126,6 +130,7 @@ function HeroBottomCurve() {
 }
 
 export default function Hero() {
+  const t = useTranslations("Hero");
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -149,7 +154,7 @@ export default function Hero() {
       <motion.div style={{ y: bgY }} className="absolute inset-0 z-0 scale-110">
         <Image
           src={heroPhoto}
-          alt="Bodega de Mercasa: montacargas moviendo tarimas entre racks de almacenamiento"
+          alt={t("photoAlt")}
           fill
           priority
           className="object-cover brightness-[1.06] contrast-[1.06] saturate-[1.05]"
@@ -220,7 +225,7 @@ export default function Hero() {
       {/* ---------- Contenido ---------- */}
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 mx-auto grid w-full max-w-[1500px] items-start gap-12 px-5 pb-28 pt-24 md:grid-cols-[1.05fr_0.95fr] md:gap-10 md:px-10 md:pb-28 md:pt-28 lg:gap-16 lg:px-14"
+        className="relative z-10 mx-auto grid w-full max-w-[1500px] items-start gap-12 px-5 pb-32 pt-24 md:grid-cols-[1.05fr_0.95fr] md:gap-10 md:px-10 md:pb-32 md:pt-28 lg:gap-16 lg:px-14"
       >
         {/* ----- Columna izquierda ----- */}
         <div>
@@ -240,14 +245,24 @@ export default function Hero() {
                 boxShadow: "0 0 22px -6px rgba(74,141,255,0.55)",
               }}
             >
-              Desde {site.foundedYear}
+              {t("badgeSince", { year: site.foundedYear })}
             </span>
             <span className="whitespace-nowrap text-[13.5px] font-medium text-white/70">
-              Una empresa de {site.parentCompany}
+              {t("badgeParent", { parent: site.parentCompany })}
             </span>
           </motion.div>
 
-          {/* Titular */}
+          {/* Titular — <accent> es un tag de rich text (t.rich): permite que
+              cada idioma resalte su propio fragmento en azul sin forzar la
+              MISMA estructura de frase/salto de línea que el español
+              (traducciones naturales tienen largos de palabra distintos).
+              maxWidth en "ch" estaba en 17 (ajustado a mano para las 4 líneas
+              cortas del español) — con la traducción al inglés, una frase más
+              larga en la misma columna angosta se partía en muchas más
+              líneas de lo previsto y el párrafo terminaba empujado hacia
+              abajo, hasta cruzar la curva decorativa del cierre del hero.
+              23ch da lugar de sobra para ambos idiomas sin perder el aire de
+              titular editorial. */}
           <motion.h1
             initial={{ opacity: 0, y: 26 }}
             animate={{ opacity: 1, y: 0 }}
@@ -258,19 +273,12 @@ export default function Hero() {
               lineHeight: 0.99,
               fontWeight: 600,
               letterSpacing: "-0.03em",
-              maxWidth: "17ch",
+              maxWidth: "23ch",
             }}
           >
-            Líderes en
-            <br className="hidden md:block" />{" "}
-            <span style={{ color: "#367CFF" }}>
-              distribución y
-              <br className="hidden md:block" /> comercialización
-            </span>
-            <br className="hidden md:block" /> masiva de productos
-            <br className="hidden md:block" /> de consumo en
-            <br className="hidden md:block" />{" "}
-            <span style={{ color: "#367CFF" }}>Costa Rica</span>
+            {t.rich("title", {
+              accent: (chunks) => <span style={{ color: "#367CFF" }}>{chunks}</span>,
+            })}
           </motion.h1>
 
           {/* Párrafo */}
@@ -281,9 +289,7 @@ export default function Hero() {
             className="mt-7 text-[15.5px] leading-[1.7] md:text-[16.5px]"
             style={{ color: "rgba(255,255,255,0.78)", maxWidth: "590px" }}
           >
-            Importación, logística y distribución mayorista de productos de
-            consumo masivo, con cobertura en supermercados, retail y comercio
-            local en todo el país.
+            {t("paragraph")}
           </motion.p>
         </div>
 
@@ -334,10 +340,10 @@ export default function Hero() {
                   />
                   <div>
                     <p className="text-[13px] leading-tight text-white/55">
-                      {item.label}
+                      {t(`highlights.${item.key}.label`)}
                     </p>
                     <p className="mt-1.5 text-[16.5px] font-semibold leading-snug text-white">
-                      {item.value}
+                      {t(`highlights.${item.key}.value`)}
                     </p>
                   </div>
                 </motion.div>
@@ -350,7 +356,7 @@ export default function Hero() {
       {/* ---------- Etiqueta inferior centrada ---------- */}
       <motion.button
         onClick={() => scrollToId("#nosotros")}
-        aria-label="Desplazarse hacia abajo"
+        aria-label={t("scrollAria")}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.9 }}
@@ -358,7 +364,7 @@ export default function Hero() {
         style={{ color: "rgba(255,255,255,0.42)" }}
       >
         <span className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.34em]">
-          Conexiones que mueven negocios
+          {t("scrollLabel")}
         </span>
         <motion.span
           animate={{ y: [0, 6, 0] }}

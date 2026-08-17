@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import PageLoader3D from "./PageLoader3D";
 import styles from "./PageLoader.module.css";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ type Phase = "loading" | "leaving" | "done" | "hidden";
 type Mode = "pending" | "three" | "fallback";
 
 export default function PageLoader() {
+  const t = useTranslations("PageLoader");
   const [phase, setPhase] = useState<Phase>("loading");
   const [mode, setMode] = useState<Mode>("pending");
   const [indeterminate, setIndeterminate] = useState(true);
@@ -187,7 +189,7 @@ export default function PageLoader() {
     <div
       role="status"
       aria-live="polite"
-      aria-label="Cargando Mercasa"
+      aria-label={t("ariaLabel")}
       className={cn(styles.loader, leavingOrDone && styles.isLeaving, phase === "done" && styles.isDone)}
     >
       <div className={styles.vignette} />
@@ -231,10 +233,10 @@ export default function PageLoader() {
           <div className={cn(styles.ui, mode === "three" && styles.uiBottom, complete && styles.isComplete)}>
             <div className={styles.uiPanel}>
               <div className={styles.uiKicker}>
-                <span className={styles.uiDot} /> Experiencia de carga
+                <span className={styles.uiDot} /> {t("kicker")}
               </div>
               <div className={styles.brand}>MERCASA</div>
-              {mode === "three" && <div className={styles.sub}>Logística &amp; Distribución</div>}
+              {mode === "three" && <div className={styles.sub}>{t("sub")}</div>}
               <div className={styles.panelLine} />
               <div className={styles.progressTrack}>
                 {indeterminate ? (
@@ -245,7 +247,7 @@ export default function PageLoader() {
               </div>
               <div className={styles.loaderMeta}>
                 <div className={styles.caption}>
-                  {complete ? "Listo para continuar" : "Preparando su pedido..."}
+                  {complete ? t("captionReady") : t("captionLoading")}
                 </div>
                 {mode === "three" && <div className={styles.percent}>{Math.round(visualProgress)}%</div>}
               </div>

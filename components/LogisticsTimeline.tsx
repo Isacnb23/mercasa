@@ -3,9 +3,10 @@
 import { useId } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Boxes, ChevronDown, ChevronRight, Globe2, Ship, Truck, Users } from "lucide-react";
 import Reveal, { RevealGroup, RevealItem } from "./Reveal";
-import { logisticsIntro, logisticsSteps } from "@/lib/data";
+import { logisticsSteps } from "@/lib/data";
 import { scrollToId } from "@/lib/utils";
 import heroLogisticaPhoto from "@/public/brand/herologistica.jpg";
 import step1Photo from "@/public/brand/1.jpg";
@@ -121,7 +122,7 @@ function LogisticsDots() {
 }
 
 /* ---------- Banda hero: collage ya compuesto (barco → bodega → camión → tienda) ---------- */
-function HeroBand() {
+function HeroBand({ alt }: { alt: string }) {
   return (
     <div
       className="relative aspect-[1942/809] w-full overflow-hidden"
@@ -134,7 +135,7 @@ function HeroBand() {
     >
       <Image
         src={heroLogisticaPhoto}
-        alt="Cadena logística de Mercasa: importación por barco, almacenamiento en bodega, transporte por camión y punto de venta"
+        alt={alt}
         fill
         className="object-cover"
         sizes="(min-width: 1280px) 900px, (min-width: 768px) calc(100vw - 4rem), calc(100vw - 2rem)"
@@ -173,6 +174,7 @@ function StepVisual({ visual }: { visual: string }) {
 
 /* ---------- Sección principal ---------- */
 export default function LogisticsTimeline() {
+  const t = useTranslations("Logistics");
   return (
     <section
       id="logistica"
@@ -200,7 +202,7 @@ export default function LogisticsTimeline() {
                   className="whitespace-nowrap text-[13px] font-bold uppercase"
                   style={{ letterSpacing: "0.18em", color: "#3A86FF" }}
                 >
-                  {logisticsIntro.eyebrow}
+                  {t("eyebrow")}
                 </span>
                 <span
                   aria-hidden
@@ -221,20 +223,20 @@ export default function LogisticsTimeline() {
                   fontWeight: 600,
                 }}
               >
-                {logisticsIntro.titleLead}{" "}
-                <span style={{ color: "#3A86FF" }}>{logisticsIntro.titleAccent}</span>
+                {t("titleLead")}{" "}
+                <span style={{ color: "#3A86FF" }}>{t("titleAccent")}</span>
               </h2>
 
               <p
                 className="mt-6 text-[15.5px] leading-[1.7] md:text-[16px]"
                 style={{ color: "rgba(255,255,255,0.68)", maxWidth: "500px" }}
               >
-                {logisticsIntro.lead}
+                {t("lead")}
               </p>
             </Reveal>
 
             <Reveal delay={0.12}>
-              <HeroBand />
+              <HeroBand alt={t("heroBandAlt")} />
             </Reveal>
           </div>
         </div>
@@ -270,14 +272,14 @@ export default function LogisticsTimeline() {
                     métricas queden alineadas horizontalmente. */}
                 <div className="flex-1">
                   <h3 className="mt-4 text-[19px] font-semibold leading-tight text-white">
-                    {step.title}
+                    {t(`steps.${step.key}.title`)}
                   </h3>
 
                   <p
                     className="mt-3 text-[14px] leading-[1.65]"
                     style={{ color: "rgba(255,255,255,0.62)" }}
                   >
-                    {step.description}
+                    {t(`steps.${step.key}.description`)}
                   </p>
                 </div>
 
@@ -290,7 +292,7 @@ export default function LogisticsTimeline() {
                   {step.stats.map((stat) => {
                     const StatIcon = statIcons[stat.icon as keyof typeof statIcons];
                     return (
-                      <div key={stat.label} className="flex items-center gap-2.5">
+                      <div key={stat.icon} className="flex items-center gap-2.5">
                         <StatIcon
                           className="h-[19px] w-[19px] shrink-0"
                           style={{ color: "#4C90FF" }}
@@ -305,7 +307,7 @@ export default function LogisticsTimeline() {
                             className="mt-0.5 block text-[11.5px]"
                             style={{ color: "rgba(255,255,255,0.48)" }}
                           >
-                            {stat.label}
+                            {t(`steps.${step.key}.statLabel`)}
                           </span>
                         </div>
                       </div>
@@ -342,7 +344,7 @@ export default function LogisticsTimeline() {
           style={{ color: "rgba(255,255,255,0.45)" }}
         >
           <span className="whitespace-nowrap text-[11px] font-semibold uppercase" style={{ letterSpacing: "0.28em" }}>
-            Descubra nuestras marcas
+            {t("cta")}
           </span>
           <motion.span
             animate={{ y: [0, 6, 0] }}

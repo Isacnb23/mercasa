@@ -2,8 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
-import { Clock, Mail, MapPin, Navigation, Phone } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+import { Clock, Compass, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import Reveal from "./Reveal";
 import SeamArc from "./SeamArc";
 import { site } from "@/lib/data";
@@ -82,6 +83,90 @@ function ContactDots({ side }: { side: "left" | "right" }) {
   );
 }
 
+/* Menú "Cómo llegar": un solo botón que despliega dos opciones (Google Maps /
+   Waze) en vez de un link directo — coordenadas puras en ambos links, nunca
+   el nombre "Mercasa" como búsqueda de texto, por la ferretería homónima en
+   Agua Caliente que Google prioriza por reseñas. Se cierra al hacer clic
+   fuera (listener en document, solo mientras está abierto). */
+function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
+  const t = useTranslations("Contact");
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  const googleHref = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const wazeHref = `https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex h-8 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
+        style={{ borderRadius: "8px", background: "#2468E8" }}
+      >
+        {t("directionsCta")}
+        <Navigation className="h-3 w-3" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden"
+            style={{
+              borderRadius: "10px",
+              border: "1px solid rgba(56,140,255,0.25)",
+              background: "#0c1a2e",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.45), 0 0 0 1px rgba(56,140,255,0.06)",
+            }}
+          >
+            <a
+              role="menuitem"
+              href={googleHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(56,140,255,0.14)]"
+            >
+              <Navigation className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
+              {t("openInGoogleMaps")}
+            </a>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+            <a
+              role="menuitem"
+              href={wazeHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(56,140,255,0.14)]"
+            >
+              <Compass className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
+              {t("openInWaze")}
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /**
  * Marcas, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
  * fijo de AmbientBackdrop) — el "cambio de capítulo" se logra con tarjetas
@@ -90,11 +175,7 @@ function ContactDots({ side }: { side: "left" | "right" }) {
  * clara tipo mapa impreso, no como fondo de toda la sección.
  */
 export default function ContactSection() {
-  // Único link a Maps de toda la sección (la card flotante sobre el mapa):
-  // directo a direcciones, coordenadas puras — nunca el nombre "Mercasa"
-  // como búsqueda de texto, por la ferretería homónima en Agua Caliente que
-  // Google prioriza por reseñas.
-  const googleDirectionsHref = `https://www.google.com/maps/dir/?api=1&destination=${site.address.lat},${site.address.lng}`;
+  const t = useTranslations("Contact");
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
   // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
@@ -145,22 +226,20 @@ export default function ContactSection() {
             style={{ letterSpacing: "0.22em", color: "#388CFF" }}
           >
             <span className="h-px w-6" style={{ background: "rgba(56,140,255,0.5)" }} />
-            Contacto
+            {t("eyebrow")}
             <span className="h-px w-6" style={{ background: "rgba(56,140,255,0.5)" }} />
           </span>
           <h2
             className="mt-5 font-display font-medium tracking-tight"
             style={{ fontSize: "48px", lineHeight: 1.05, color: "rgba(255,255,255,0.96)" }}
           >
-            Hablemos de negocios
+            {t("title")}
           </h2>
           <p
             className="mx-auto mt-4 max-w-[700px] text-[15px] leading-[1.55] md:text-[16px]"
             style={{ color: "rgba(255,255,255,0.70)" }}
           >
-            Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o
-            escríbanos directamente — atendemos proveedores internacionales y
-            clientes locales.
+            {t("paragraph")}
           </p>
         </Reveal>
 
@@ -174,18 +253,18 @@ export default function ContactSection() {
             }}
           >
             <div>
-              <InfoRow icon={MapPin} title="Sede central (CEDI)">
+              <InfoRow icon={MapPin} title={t("sedeTitle")}>
                 {site.address.line1}
                 <br />
                 {site.address.line2} · CP {site.address.postalCode}
               </InfoRow>
-              <InfoRow icon={Phone} title="Teléfono central">
+              <InfoRow icon={Phone} title={t("telefonoTitle")}>
                 <a href={site.phoneHref} className="transition hover:text-[#2468E8]">
                   {site.phone}
                 </a>{" "}
                 · {site.phonesExtra.join(" · ")}
               </InfoRow>
-              <InfoRow icon={Mail} title="Correos oficiales">
+              <InfoRow icon={Mail} title={t("correosTitle")}>
                 <a
                   href={`mailto:${site.emails.comunicaciones}`}
                   className="transition hover:text-[#2468E8]"
@@ -196,10 +275,12 @@ export default function ContactSection() {
                 <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#2468E8]">
                   {site.emails.rh}
                 </a>{" "}
-                (RH)
+                {t("correosRh")}
               </InfoRow>
-              <InfoRow icon={Clock} title="Horario de atención" last>
-                Lunes a viernes, horario de oficina
+              <InfoRow icon={Clock} title={t("horarioTitle")} last>
+                {t("horarioWeekdays")}
+                <br />
+                {t("horarioSaturday")}
               </InfoRow>
             </div>
 
@@ -217,7 +298,7 @@ export default function ContactSection() {
                 }}
               >
                 <WhatsAppIcon className="h-[18px] w-[18px]" />
-                Escríbanos por WhatsApp
+                {t("whatsappCta")}
               </motion.a>
               <motion.a
                 href={site.phoneHref}
@@ -231,7 +312,7 @@ export default function ContactSection() {
                 }}
               >
                 <Phone className="h-4 w-4" style={{ color: "#2468E8" }} />
-                Llamar ahora
+                {t("callCta")}
               </motion.a>
             </div>
           </Reveal>
@@ -241,9 +322,10 @@ export default function ContactSection() {
             delay={0.1}
             className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
             style={{
-              borderRadius: "16px",
-              border: "1px solid rgba(80,135,235,0.55)",
-              boxShadow: "0 15px 40px rgba(0,0,0,0.20), 0 0 20px rgba(35,105,245,0.06)",
+              borderRadius: "20px",
+              border: "1px solid rgba(90,150,255,0.45)",
+              boxShadow:
+                "0 22px 55px rgba(0,0,0,0.30), 0 0 0 1px rgba(60,130,255,0.10), 0 0 26px rgba(50,120,255,0.10), inset 0 1px 0 rgba(255,255,255,0.06)",
             }}
           >
             <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-navy-950 lg:min-h-0">
@@ -263,23 +345,14 @@ export default function ContactSection() {
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 shrink-0" style={{ color: "#12233f" }} />
                   <p className="text-[13px] font-bold" style={{ color: "#12233f", letterSpacing: "0.02em" }}>
-                    CEDI - El Guarco
+                    {t("mapCardTitle")}
                   </p>
                 </div>
                 <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: "rgba(18,35,63,0.65)" }}>
                   {site.address.line1}
                 </p>
                 <div className="mt-3">
-                  <a
-                    href={googleDirectionsHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-8 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
-                    style={{ borderRadius: "8px", background: "#2468E8" }}
-                  >
-                    Cómo llegar
-                    <Navigation className="h-3 w-3" />
-                  </a>
+                  <DirectionsMenu lat={site.address.lat} lng={site.address.lng} />
                 </div>
               </div>
             </div>

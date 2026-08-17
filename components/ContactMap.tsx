@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import { useTranslations } from "next-intl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { site } from "@/lib/data";
 
@@ -35,6 +36,7 @@ maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
  * cae a un iframe simple de Google Maps para que la sección nunca quede vacía.
  */
 export default function ContactMap() {
+  const t = useTranslations("ContactMap");
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -79,10 +81,16 @@ export default function ContactMap() {
     // El estilo "dark" de OpenFreeMap deja las vías casi en el mismo negro
     // que el fondo (fondo rgb(12,12,12); calles en #181818, hsl(0,0%,7%), o
     // incluso #000 en la Interamericana a este zoom) — se lee "apagado", no
-    // elegante. Se sube el contraste SOLO de vías/rótulos (lo que hace falta
-    // para leer la zona) vía setPaintProperty, en cuanto el estilo remoto
-    // termina de cargar — se mantiene el resto del estilo (y el mood oscuro)
-    // tal cual lo sirve OpenFreeMap.
+    // elegante. Confirmé los layer IDs reales del estilo remoto (GET
+    // https://tiles.openfreemap.org/styles/dark → 47 layers) antes de
+    // tocarlos — son los mismos que ya se usaban acá, no nombres genéricos
+    // inventados ("road"/"transportation" NO son IDs reales de este estilo).
+    // Se sube el contraste de vías/rótulos vía setPaintProperty en cuanto el
+    // estilo remoto termina de cargar, y se lleva el fondo al navy de marca
+    // (--color-navy-950) en vez del negro neutro por defecto: mismo mood
+    // oscuro, pero ahora es UNA paleta (fondo/agua/edificios en navy, vías en
+    // azul-gris cada vez más claro por jerarquía) en vez de negro plano +
+    // vías casi invisibles.
     map.on("style.load", () => {
       // setPaintProperty exige el nombre de capa en pantalla (getLayer) antes
       // de tocarla, por si el estilo remoto la renombró o quitó.
@@ -93,23 +101,29 @@ export default function ContactMap() {
         if (map.getLayer(layerId)) map.setPaintProperty(layerId, "text-color", color);
       };
 
+      if (map.getLayer("background")) {
+        map.setPaintProperty("background", "background-color", "#081726");
+      }
+
       // Jerarquía por brillo: cuanto más importante la vía, más clara — igual
       // que cualquier mapa dark-mode legible (Interamericana = motorway =
-      // la más brillante).
-      setLineColor("highway_path", "#2c3e52");
-      setLineColor("highway_minor", "#3d5470");
-      setLineColor("highway_major_casing", "rgba(80,110,150,0.85)");
-      setLineColor("highway_major_inner", "#7fa8d6");
-      setLineColor("highway_major_subtle", "#4a6580");
-      setLineColor("highway_motorway_casing", "rgba(90,130,180,0.9)");
-      setLineColor("highway_motorway_inner", "#9fc4f0");
-      setLineColor("highway_motorway_subtle", "#5580aa");
-      setTextColor("highway_name_other", "rgba(150,165,185,0.9)");
-      setTextColor("highway_name_motorway", "#bcd4f0");
+      // la más brillante). Valores subidos otra vuelta más: la primera pasada
+      // (grises/azules muy apagados) seguía leyéndose plana contra el fondo.
+      setLineColor("highway_path", "#3a5068");
+      setLineColor("highway_minor", "#5b7fa8");
+      setLineColor("highway_major_casing", "rgba(110,145,185,0.9)");
+      setLineColor("highway_major_inner", "#8fb8e8");
+      setLineColor("highway_major_subtle", "#6688aa");
+      setLineColor("highway_motorway_casing", "rgba(130,165,205,0.95)");
+      setLineColor("highway_motorway_inner", "#aed0f5");
+      setLineColor("highway_motorway_subtle", "#7098bc");
+      setTextColor("highway_name_other", "rgba(190,205,220,0.95)");
+      setTextColor("highway_name_motorway", "#d4e4f7");
 
       // Un toque en agua/edificios para que el "contexto" (qué es calle, qué
       // es agua, qué es construido) también se distinga, sin acercarse al
-      // brillo de las vías.
+      // brillo de las vías. Áreas verdes (landuse_park) NO se tocan a
+      // propósito — el pedido es legibilidad de vías, no repintar el resto.
       if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#0f2233");
       if (map.getLayer("building")) {
         map.setPaintProperty("building", "fill-color", "#0e1a2a");
@@ -154,7 +168,7 @@ export default function ContactMap() {
     return (
       <div className="absolute inset-0 h-full w-full overflow-hidden">
         <iframe
-          title="Ubicación de Mercasa en El Guarco, Cartago"
+          title={t("iframeTitle")}
           src={mapSrc}
           className="h-full w-full opacity-90 grayscale-[20%]"
           loading="lazy"
