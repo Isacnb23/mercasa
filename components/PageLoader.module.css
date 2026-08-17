@@ -95,7 +95,7 @@
   justify-content: center;
   /* Duración calzada con LEAVE_DELAY (PageLoader.tsx) para que el camión 2D
      termine de salir de cuadro justo cuando React avanza a la fase "done". */
-  transition: transform 0.62s cubic-bezier(0.5, 0, 0.75, 0);
+  transition: transform 0.46s cubic-bezier(0.5, 0, 0.75, 0);
 }
 
 .truckWrap {
@@ -461,5 +461,5 @@
   transform: translateY(-100%);
   /* Duración calzada con DONE_DELAY (PageLoader.tsx): el overlay debe
      terminar de deslizarse justo antes de desmontarse (phase "hidden"). */
-  transition: transform 0.65s cubic-bezier(0.76, 0, 0.24, 1);
+  transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
 }

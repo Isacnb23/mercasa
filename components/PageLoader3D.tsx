@@ -3,6 +3,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import styles from "./PageLoader3D.module.css";
 
@@ -21,10 +22,16 @@ type Props = {
 // ningún PNG ni se crea un PlaneGeometry para el branding: el modelo se pinta
 // tal cual viene de Blender.
 const MODEL_URL = "/models/mercasa-truck.glb";
-const MODEL_TIMEOUT = 9000; // ms — si no carga en este tiempo, se cae al loader 2D
+// El GLB se re-exportó con compresión de geometría Draco (55.9MB → 7.8MB, sin
+// tocar UVs/normales visibles ni la jerarquía de nodos/nombres que usa este
+// archivo para identificar ruedas y el chasis). El decoder wasm se sirve
+// desde /public/draco (copiado de three/examples/jsm/libs/draco/gltf) para no
+// depender de un CDN externo en el camino crítico del loader.
+const DRACO_DECODER_PATH = "/draco/";
+const MODEL_TIMEOUT = 7000; // ms — si no carga en este tiempo, se cae al loader 2D
 
-const ENTER_DURATION = 1100; // ms — entrada ágil, sin crawl al llegar al centro
-const LEAVE_DURATION = 620; // ms — salida rápida con easeInCubic (acelera al "jalar")
+const ENTER_DURATION = 820; // ms — entrada ágil, sin crawl al llegar al centro
+const LEAVE_DURATION = 460; // ms — salida rápida con easeInCubic (acelera al "jalar")
 const RIG_BASE_Y = -0.74; // altura del camión sobre el piso: apoyado pero con aire de estudio
 // Posición central en X. Ligeramente a la derecha para compensar el sesgo
 // visual del remolque (largo hacia -X) y centrar la masa del camión en cuadro.
@@ -84,7 +91,7 @@ const COLOR = {
   smoke: 0xe8eef5, // vapor frío muy sutil
 };
 
-type TruckState = "waiting" | "entering" | "idle" | "leaving" | "gone";
+type TruckState = "waiting" | "warming" | "entering" | "idle" | "leaving" | "gone";
 
 type Framing = { enterX: number; centerX: number; exitX: number };
 
@@ -110,9 +117,10 @@ type AnimState = {
   emitAcc: number;
   framing: Framing;
   state: TruckState;
-  modelReadyAt: number;
+  enterElapsedMs: number;
   leaveStartAt: number;
   leaveStartX: number;
+  warmupFramesLeft: number;
 };
 
 export default function PageLoader3D({ phase, onProgress, onIndeterminate, onResolved, onFallback }: Props) {
@@ -125,9 +133,10 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     emitAcc: 0,
     framing: { enterX: -11.5, centerX: -0.2, exitX: 14.6 },
     state: "waiting",
-    modelReadyAt: 0,
+    enterElapsedMs: 0,
     leaveStartAt: 0,
     leaveStartX: -11.5,
+    warmupFramesLeft: 0,
   });
 
   // Refs para callbacks: el efecto de montaje de Three.js corre una sola vez,
@@ -181,13 +190,20 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     // textos debajo).
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Cap 1.5 en vez de 2: en pantallas de alta densidad (la mayoría de equipos
+    // hoy) el render a devicePixelRatio 2 casi duplica los píxeles a sombrear
+    // sin ganancia visible perceptible en una escena que dura ~1s en pantalla.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.82;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap;
+    // Sin shadow map real (shadowMap.enabled queda en su default: false).
+    // Ver la nota junto a la luz `key`: recalcularlo cada frame porque el
+    // caster (camión) se mueve durante toda la entrada era un costo
+    // por-frame que competía justo con la hidratación de la página real por
+    // debajo — la sombra de contacto falsa (más abajo) resuelve lo mismo a
+    // costo ~0.
     container.appendChild(renderer.domElement);
 
     // Entorno de estudio para reflejos y respuesta más realista del material.
@@ -205,18 +221,12 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
 
     const key = new THREE.DirectionalLight(0xfffbf4, 1.42);
     key.position.set(4.2, 6.2, 7.8);
-    key.castShadow = true;
-    // Mapa de sombra + VSM son lo más caro de la escena por lejos. 2048px con
-    // radius/blurSamples altos se ve idéntico a esta escala (el camión ocupa
-    // una franja angosta de la pantalla) pero le exige mucho más a equipos
-    // sin GPU dedicada — justo donde se reportó que "se ve pegado". 1280px y
-    // un blur más liviano mantienen la sombra suave sin ese costo extra.
-    key.shadow.mapSize.set(1280, 1280);
-    key.shadow.camera.near = 0.5;
-    key.shadow.camera.far = 34;
-    key.shadow.radius = 4;
-    key.shadow.blurSamples = 4;
-    key.shadow.bias = -0.00045;
+    // Sin castShadow: un shadow map real se recalcula cada frame porque el
+    // caster (camión) se mueve durante toda la entrada/salida — ese costo
+    // por-frame, no la compilación única de shaders, era lo que seguía
+    // sintiéndose como jank en la entrada aun con el warm-up. La sombra de
+    // contacto (elipse falsa, más abajo) vende el "apoyado en el piso" sin
+    // recomputar nada por frame.
     scene.add(key);
 
     const fill = new THREE.DirectionalLight(0xdbe9f5, 0.42);
@@ -240,15 +250,11 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     catchLight.position.set(0.9, 2.25, 8.5);
     scene.add(catchLight);
 
-    // ---- Piso: sombra proyectada + halo de luz teal ----
-    const floorGeo = new THREE.PlaneGeometry(22, 9);
-    const floorMat = new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.22 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -1.4;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
+    // ---- Halo de luz teal en el piso ----
+    // (El plano ShadowMaterial que recibía la sombra proyectada real se
+    // quitó junto con castShadow en la luz `key` — ver esa nota. Sin un
+    // shadow map generándolo, ese plano quedaba invisible pero seguía
+    // costando un draw call por frame.)
     function makeGlowTexture() {
       const c = document.createElement("canvas");
       c.width = 512;
@@ -279,9 +285,11 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     scene.add(floorGlow);
 
     // ---- Sombra de contacto (AO falso) ----
-    // Una elipse oscura y nítida justo bajo las ruedas, superpuesta a la
-    // sombra proyectada del ShadowMaterial: sin esto el camión "flota" en
-    // vez de apoyarse en el piso — es lo que más vende el realismo.
+    // Elipse oscura y nítida justo bajo las ruedas: es la ÚNICA sombra de la
+    // escena (no hay shadow map real, ver notas junto a la luz `key`). Solo
+    // sigue la posición X del camión cada frame — sin relighting, sin
+    // recomputar nada — así que vende el "apoyado en el piso" a costo ~0
+    // incluso durante todo el recorrido de entrada.
     function makeContactShadowTexture() {
       const c = document.createElement("canvas");
       c.width = 512;
@@ -323,7 +331,7 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       return new THREE.CanvasTexture(c);
     }
     const smokeTex = makeSmokeTexture();
-    const SMOKE_COUNT = 18;
+    const SMOKE_COUNT = 11; // menos sprites activos a la vez → menos trabajo por frame
     const smokeGroup = new THREE.Group();
     scene.add(smokeGroup);
     const smoke: Smoke[] = [];
@@ -445,7 +453,15 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
 
     timeoutId = setTimeout(fallbackToLoader2D, MODEL_TIMEOUT);
 
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+    // El decoder .wasm es ~190KB pero solo se descarga cuando el propio GLB
+    // trae geometría comprimida con Draco: no añade peso al camino crítico
+    // para nadie que no vaya a ver el camión 3D.
+    dracoLoader.setDecoderConfig({ type: "wasm" });
+
     const gltfLoader = new GLTFLoader(manager);
+    gltfLoader.setDRACOLoader(dracoLoader);
     gltfLoader.load(
       MODEL_URL,
       (gltf: GLTF) => {
@@ -471,9 +487,6 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         const wheelRaw: { obj: THREE.Object3D; size: THREE.Vector3 }[] = [];
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
-            obj.castShadow = true;
-            obj.receiveShadow = true;
-
             // IMPORTANTÍSIMO: el GLB comparte un mismo material PBR/textura entre
             // carrocería y ruedas. Si modificamos ese material según una rueda,
             // también oscurecemos TODO el camión. Clonamos por malla antes de ajustar.
@@ -557,31 +570,30 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         emitter.y = RIG_BASE_Y + fSize.y * 0.52;
         emitter.z = 0.3;
         computeFraming();
-
-        // --- PRE-CALENTAMIENTO GPU (clave para que la entrada sea fluida) ---
-        // Con un GLB de ~53MB, la subida de geometría/texturas y el PRIMER
-        // render del shadow map (VSM) son lo más caro de toda la escena, y por
-        // defecto ocurrían justo en el primer frame de la entrada visible.
-        // Peor aún: la entrada avanza por reloj de pared, así que si ese primer
-        // frame llegaba tarde por el hitch, el camión "saltaba" a mitad de
-        // camino y luego seguía — exactamente lo que se percibe como que "se
-        // pega". Aquí forzamos esa carga con el camión FUERA de cuadro (en
-        // enterX): compilamos shaders y renderamos un par de frames en caliente
-        // para subir todo a la GPU y poblar el shadow map. Recién después
-        // arrancamos el reloj de la entrada, de modo que empieza limpia.
+        // Asegura que el camión esté en su posición real de entrada (fuera
+        // de cuadro) ANTES del warm-up de abajo — computeFraming() recién
+        // recalculó enterX con los bounds reales del modelo, distintos del
+        // estimado usado al montar la escena.
         truckRig.position.x = animRef.current.framing.enterX;
-        truckRig.updateWorldMatrix(true, true);
-        try {
-          renderer.compile(scene, camera);
-          renderer.render(scene, camera); // sube geometría/texturas + 1er shadow map
-          renderer.render(scene, camera); // 2º frame: VSM ya estable
-        } catch {
-          /* si compile/render fallara, la animación sigue igualmente */
-        }
 
         onProgressRef.current(100);
-        animRef.current.state = "entering";
-        animRef.current.modelReadyAt = performance.now(); // reloj arranca DESPUÉS del warm-up
+
+        // ---- Warm-up explícito y determinista ----
+        // El salto/tirón al arrancar la entrada no era el easing (ya era
+        // ease-out): era que three.js compila los shaders de los materiales
+        // del camión en el primer frame que los incluye. Ese trabajo
+        // síncrono se comía tiempo real de reloj mientras el hilo principal
+        // estaba bloqueado. Forzamos compile() + un render AHORA, con el
+        // camión quieto en enterX (fuera de cuadro, invisible), para que ese
+        // costo quede pagado antes de arrancar el conteo de ENTER_DURATION.
+        renderer.compile(scene, camera); // precompila/enlaza los shaders de todos los materiales
+        renderer.render(scene, camera); // primer render "en frío", con el camión ya en escena
+
+        // Red de seguridad: 2 frames de rAF más quietos (el camión sigue en
+        // enterX) antes de arrancar el travel, por si el navegador todavía
+        // necesita asentar/pintar el frame recién forzado.
+        animRef.current.state = "warming";
+        animRef.current.warmupFramesLeft = 2;
         onResolvedRef.current();
       },
       (evt: ProgressEvent) => {
@@ -611,11 +623,15 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
     window.addEventListener("resize", resize);
 
     let lastT = performance.now();
-    let arrivedAt = 0; // instante en que el camión llegó al centro (para el settle)
-    let enterElapsed = 0; // tiempo acumulado de entrada (con dt limitado → sin saltos)
     function animate() {
       const now = performance.now();
-      const dt = Math.min(0.05, (now - lastT) / 1000);
+      // Clamp a ~32ms (2 frames @60fps): si el hilo principal se traba un
+      // instante (compite con la hidratación de la página real por debajo),
+      // este frame avanza como máximo ese tanto en vez del tiempo real
+      // transcurrido. Sin este tope, un hitch de ej. 300ms se traduciría en
+      // un salto de posición de 300ms de recorrido de golpe — un objeto que
+      // se frena un instante se ve fluido, uno que salta se ve roto.
+      const dt = Math.min(0.032, (now - lastT) / 1000);
       lastT = now;
       const anim = animRef.current;
       const { enterX, centerX, exitX } = anim.framing;
@@ -631,19 +647,29 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       // como un enganchón justo al llegar al centro, aunque la carrocería
       // misma nunca saltara.
       let enterRateT = 1;
-      if (anim.state === "entering") {
-        // Tiempo acumulado con dt LIMITADO (ver arriba, tope 50ms): si un frame
-        // se retrasa por un hitch de GPU, la entrada NO salta hacia adelante
-        // como haría con reloj de pared — simplemente continúa suave. Junto con
-        // el pre-calentamiento, esto es lo que hace que la entrada sea fluida.
-        enterElapsed += dt;
-        const t = Math.min(1, enterElapsed / (ENTER_DURATION / 1000));
+      if (anim.state === "warming") {
+        // El costo pesado (compile() + primer shadow map) ya se pagó de
+        // forma síncrona justo antes de entrar a este estado (ver el
+        // callback de carga del GLB) — esto es solo una red de seguridad de
+        // 2 frames quietos en enterX (fuera de cuadro) para que el navegador
+        // termine de asentar/pintar ese frame forzado antes de que el reloj
+        // de ENTER_DURATION arranque.
+        truckRig.position.x = enterX;
+        anim.warmupFramesLeft -= 1;
+        if (anim.warmupFramesLeft <= 0) {
+          anim.state = "entering";
+          anim.enterElapsedMs = 0;
+        }
+      } else if (anim.state === "entering") {
+        // Progreso acumulado por delta (ya clampeado arriba), NO reloj de
+        // pared contra un instante fijo: así un hitch se traduce en una
+        // pausa de este frame, nunca en un salto de posición para "ponerse
+        // al día" con el tiempo real transcurrido.
+        anim.enterElapsedMs += dt * 1000;
+        const t = Math.min(1, anim.enterElapsedMs / ENTER_DURATION);
         enterRateT = easeOutCubic(t);
         truckRig.position.x = THREE.MathUtils.lerp(enterX, centerX, enterRateT);
-        if (t >= 1) {
-          anim.state = "idle";
-          arrivedAt = now; // marca el instante de llegada para el "settle" de suspensión
-        }
+        if (t >= 1) anim.state = "idle";
       } else if (anim.state === "idle") {
         truckRig.position.x = centerX;
       } else if (anim.state === "leaving") {
@@ -653,21 +679,11 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       }
 
       const leaving = anim.state === "leaving";
-      const alive = anim.state !== "waiting" && anim.state !== "gone";
+      const alive = anim.state !== "waiting" && anim.state !== "warming" && anim.state !== "gone";
 
       if (alive) {
-        // "Estabilización" al llegar al centro: la suspensión se comprime un
-        // pelín y se recupera con una oscilación amortiguada (fase 6 del
-        // brief). Va en el eje Y — NO en X — para no reintroducir el doble
-        // frenado horizontal que documentamos arriba con easeOutBack. Arranca
-        // en 0 (sin salto) y se apaga en ~0.7s.
-        let settleY = 0;
-        if (arrivedAt) {
-          const tau = (now - arrivedAt) / 1000;
-          if (tau < 0.75) settleY = -0.028 * Math.exp(-7 * tau) * Math.sin(tau * 17);
-        }
         // suspensión/ralentí: pocos px visuales
-        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0052) * 0.0035 + settleY;
+        truckRig.position.y = RIG_BASE_Y + Math.sin(now * 0.0052) * 0.0035;
         // glow sigue al camión y respira
         floorGlow.position.x = THREE.MathUtils.lerp(floorGlow.position.x, truckRig.position.x * 0.4, 0.1);
         const s = 1 + Math.sin(now * 0.003) * 0.008 + (leaving ? 0.02 : 0);
@@ -739,14 +755,13 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       glowTex.dispose();
       envRT.dispose();
       pmrem.dispose();
-      floorGeo.dispose();
-      floorMat.dispose();
       floorGlowGeo.dispose();
       floorGlowMat.dispose();
       contactGeo.dispose();
       contactMat.dispose();
       contactTex.dispose();
       renderer.dispose();
+      dracoLoader.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
       }
@@ -758,9 +773,10 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
         emitAcc: 0,
         framing: { enterX: -11.5, centerX: -0.2, exitX: 14.6 },
         state: "waiting",
-        modelReadyAt: 0,
+        enterElapsedMs: 0,
         leaveStartAt: 0,
         leaveStartX: -11.5,
+        warmupFramesLeft: 0,
       };
     };
     // El montaje de Three.js debe correr una sola vez; los callbacks se leen

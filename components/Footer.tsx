@@ -242,9 +242,9 @@ export default function Footer() {
               <SocialIcon href={site.linkedin} label="Mercasa en LinkedIn">
                 <LinkedinIcon className="h-[17px] w-[17px]" />
               </SocialIcon>
-              <SocialIcon href={site.instagram} label="Mercasa en Instagram">
+              {/* <SocialIcon href={site.instagram} label="Mercasa en Instagram">
                 <InstagramIcon className="h-[17px] w-[17px]" />
-              </SocialIcon>
+              </SocialIcon> */}
             </div>
           </div>
         </div>

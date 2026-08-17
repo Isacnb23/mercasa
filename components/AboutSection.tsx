@@ -211,11 +211,14 @@ export default function AboutSection() {
               className="mt-7 text-[15.5px] leading-[1.75] md:text-[17px]"
               style={{ color: "rgba(255,255,255,0.76)", maxWidth: "620px" }}
             >
-              Mercasa nació en {site.foundedYear} y hoy opera bajo el respaldo de{" "}
+              En el mercado costarricense de consumo masivo, Mercasa es el
+              puente entre las marcas internacionales y el comercio local: una
+              misma operación que negocia, importa y entrega, sin
+              intermediarios adicionales en el camino. Esa integración es lo
+              que nos distingue, y se sostiene sobre la escala y disciplina
+              corporativa de{" "}
               <strong className="font-semibold text-white">{site.parentCompany}</strong>,
-              corporación de capital privado y líder en la región. Esa trayectoria
-              nos permite sostener una operación de distribución mayorista
-              robusta, confiable y en constante modernización.
+              corporación de capital privado con presencia regional.
             </motion.p>
           </div>
 

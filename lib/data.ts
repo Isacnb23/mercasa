@@ -11,19 +11,21 @@ export const site = {
   phonesExtra: ["2217-3818", "2217-3778"],
   emails: {
     comunicaciones: "comunicaciones.mercasa@grupointeca.com",
-    rh: "rh@grupointeca.com",
+    rh: "reclutamiento@grupointeca.com",
   },
   address: {
     line1: "Tejar de El Guarco, Cartago, Costa Rica",
     line2: "800 m sur del Parque Industrial de Cartago",
     postalCode: "30801",
-    mapQuery: "Grupo Inteca CEDI, El Tejar, Cartago, Costa Rica",
-    // Coordenadas EXACTAS del CEDI (Grupo Inteca / Mercasa) en El Tejar de El
-    // Guarco, Cartago — verificadas en Google Maps ("Grupo Inteca CEDI",
-    // tel. 2217-3600, Plus Code R2WX+JX3, Cartago). Este es el punto que marca
-    // el pin del mapa y al que abren "Abrir en Maps" y "Cómo llegar".
-    lat: 9.8465184,
-    lng: -83.9500786,
+    mapQuery: "Tejar, El Guarco, Cartago, Costa Rica",
+    // Coordenadas EXACTAS del CEDI. Este es el único punto que usan el pin del
+    // mapa, el fallback embebido de Google y los enlaces "Abrir en Maps" /
+    // "Cómo llegar" — todos arman la URL con lat,lng puros (nunca con el
+    // nombre "Mercasa" como búsqueda), porque existe una ferretería no
+    // relacionada con el mismo nombre en Agua Caliente que Google Maps
+    // prioriza por reseñas si se busca por texto.
+    lat: 9.84671923526572,
+    lng: -83.9500356896771,
   },
   whatsappHref: "https://wa.me/50622173600",
   facebook: "https://www.facebook.com/mercasacr/",
@@ -67,7 +69,7 @@ export const heroHighlights = [
    Logística — no se repiten aquí para no duplicar el mismo dato en dos
    secciones distintas. */
 export const aboutStats = [
-  { key: "colaboradores", display: "201 a 500", label: "Colaboradores" },
+  { key: "colaboradores", display: "+200", label: "Colaboradores" },
   { key: "trayectoria", value: 60, suffix: "+", label: "Años de trayectoria" },
   { key: "cedis", value: 2, suffix: "", label: "Macro-CEDIs propios" },
   // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear), no de
@@ -76,11 +78,38 @@ export const aboutStats = [
   { key: "respaldo", display: site.parentCompany, label: "Casa matriz y respaldo institucional" },
 ];
 
-// Nota: la antigua lista `pillars` ("Nuestra operación": Compras Internacionales,
-// Logística Integral, Gestión de CEDIs, Red de Distribución) se eliminó porque
-// describía el MISMO recorrido que las 4 etapas de `logisticsSteps` — la
-// operación vive ahora solo en la sección Logística. "Nosotros" queda enfocado
-// en identidad (trayectoria, respaldo, cifras institucionales en `aboutStats`).
+// Nota (revisión de contenido): estos 4 pilares describen a Mercasa como
+// ORGANIZACIÓN (capacidades y relaciones que la respaldan), a diferencia de
+// los 4 pasos de la sección Logística, que explican el PROCESO operativo
+// paso a paso con sus propias cifras y fotos. Se evita deliberadamente
+// repetir aquí los datos (proveedores, países, posiciones de tarima, etc.)
+// que ya se detallan en profundidad en esa sección.
+export const pillars = [
+  {
+    key: "compras",
+    title: "Compras Internacionales",
+    description:
+      "Relaciones comerciales estables con proveedores aliados en el extranjero, la base de un abastecimiento constante para todo nuestro portafolio.",
+  },
+  {
+    key: "logistica",
+    title: "Logística Integral",
+    description:
+      "Un equipo propio que coordina cada eslabón de la cadena de suministro, desde la negociación hasta la entrega, bajo un mismo estándar de calidad.",
+  },
+  {
+    key: "cedis",
+    title: "Gestión de CEDIs",
+    description:
+      "Infraestructura propia que nos da control total sobre el inventario, la seguridad y la disponibilidad de cada producto.",
+  },
+  {
+    key: "red",
+    title: "Red de Distribución Nacional",
+    description:
+      "Presencia constante en cada región del país, con una red propia que sostiene relaciones cercanas y duraderas con nuestros clientes.",
+  },
+];
 
 // Marcas que Mercasa importa, comercializa y distribuye en Costa Rica.
 // Se listan como texto (además de la foto del muro) para accesibilidad y SEO.
@@ -157,6 +186,12 @@ export const logisticsIntro = {
     "Unimos el mundo con Costa Rica a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
 };
 
+// Cifras por etapa: cada paso lleva como máximo UNA cifra propia, distinta a
+// las 3 stats de impacto del Hero (1,900+ TEUs, 10,500+ posiciones de tarima,
+// 2,500 entregas/semana), para no repetir el mismo dato en dos secciones. Los
+// pasos que no tienen una cifra propia real (almacenamiento y distribución ya
+// están cubiertos por el hero) quedan sin stats — mejor sin chip que con el
+// mismo número dos veces.
 export const logisticsSteps = [
   {
     step: "01",
@@ -165,10 +200,7 @@ export const logisticsSteps = [
     description:
       "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares.",
     visual: "map-world",
-    stats: [
-      { icon: "globe", value: "30+", label: "países" },
-      { icon: "ship", value: "1,900+", label: "TEUs al año" },
-    ],
+    stats: [{ icon: "globe", value: "30+", label: "países" }],
   },
   {
     step: "02",
@@ -177,7 +209,7 @@ export const logisticsSteps = [
     description:
       "Dos macro-CEDIs propios con más de 10,500 posiciones de tarima y tecnología de gestión de inventarios de clase mundial.",
     visual: "photo-warehouse",
-    stats: [{ icon: "boxes", value: "10,500+", label: "posiciones de tarima" }],
+    stats: [],
   },
   {
     step: "03",
@@ -186,7 +218,7 @@ export const logisticsSteps = [
     description:
       "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales.",
     visual: "map-cr",
-    stats: [{ icon: "truck", value: "2,500+", label: "entregas comerciales cada semana" }],
+    stats: [],
   },
   {
     step: "04",
@@ -196,36 +228,6 @@ export const logisticsSteps = [
       "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
     visual: "store",
     stats: [{ icon: "users", value: "Miles", label: "de clientes atendidos cada semana" }],
-  },
-];
-
-export const logisticsTrustBadges = [
-  {
-    key: "experiencia",
-    icon: "shield",
-    title: "Más de 60 años",
-    description: "de experiencia en el mercado.",
-  },
-  {
-    key: "respaldo",
-    icon: "handshake",
-    title: "Respaldo institucional",
-    // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear, ya
-    // destacado en la tarjeta "Más de 60 años" de este mismo bloque) — no
-    // de Grupo Inteca, así que aquí no se repite esa fecha.
-    description: `Operamos bajo el respaldo corporativo de ${site.parentCompany}, líder regional.`,
-  },
-  {
-    key: "estandares",
-    icon: "award",
-    title: "Estándares internacionales",
-    description: "Procesos certificados y control de calidad en toda la cadena.",
-  },
-  {
-    key: "cobertura",
-    icon: "map",
-    title: "Cobertura nacional",
-    description: "Llegamos a cada región del país.",
   },
 ];
 

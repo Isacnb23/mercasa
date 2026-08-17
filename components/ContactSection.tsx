@@ -1,9 +1,9 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { Clock, ExternalLink, Mail, MapPin, Navigation, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import Reveal from "./Reveal";
 import SeamArc from "./SeamArc";
 import { site } from "@/lib/data";
@@ -90,8 +90,37 @@ function ContactDots({ side }: { side: "left" | "right" }) {
  * clara tipo mapa impreso, no como fondo de toda la sección.
  */
 export default function ContactSection() {
-  const googleMapsHref = `https://www.google.com/maps/search/?api=1&query=${site.address.lat},${site.address.lng}`;
+  // Único link a Maps de toda la sección (la card flotante sobre el mapa):
+  // directo a direcciones, coordenadas puras — nunca el nombre "Mercasa"
+  // como búsqueda de texto, por la ferretería homónima en Agua Caliente que
+  // Google prioriza por reseñas.
   const googleDirectionsHref = `https://www.google.com/maps/dir/?api=1&destination=${site.address.lat},${site.address.lng}`;
+
+  // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
+  // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
+  // solo se dispara apenas ContactSection monta en el cliente — es decir, en
+  // la hidratación, sin importar si el usuario todavía está arriba en el
+  // Hero. Este observer retrasa el montaje real (y por lo tanto la descarga
+  // del chunk) hasta que el host del mapa está a punto de entrar en
+  // viewport, no en el load inicial de la página.
+  const mapHostRef = useRef<HTMLDivElement>(null);
+  const [mapInView, setMapInView] = useState(false);
+
+  useEffect(() => {
+    const el = mapHostRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setMapInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "400px 0px" } // precarga un poco antes de que sea visible, no en el load inicial
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section
@@ -217,8 +246,8 @@ export default function ContactSection() {
               boxShadow: "0 15px 40px rgba(0,0,0,0.20), 0 0 20px rgba(35,105,245,0.06)",
             }}
           >
-            <div className="relative h-full min-h-[420px] w-full bg-navy-950 lg:min-h-0">
-              <ContactMap />
+            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-navy-950 lg:min-h-0">
+              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-navy-950" />}
               {/* Viñeta sutil para que el marco se sienta intencional aun si
                   el mapa todavía está cargando teselas. */}
               <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_20px_rgba(6,15,24,0.4)]" />
@@ -240,27 +269,16 @@ export default function ContactSection() {
                 <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: "rgba(18,35,63,0.65)" }}>
                   {site.address.line1}
                 </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <a
-                    href={googleMapsHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
-                    style={{ borderRadius: "8px", background: "#2468E8" }}
-                  >
-                    Abrir en Maps
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                <div className="mt-3">
                   <a
                     href={googleDirectionsHref}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label="Cómo llegar"
-                    title="Cómo llegar"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center transition hover:bg-[rgba(36,104,232,0.08)]"
-                    style={{ borderRadius: "8px", border: "1px solid rgba(36,104,232,0.35)" }}
+                    className="inline-flex h-8 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
+                    style={{ borderRadius: "8px", background: "#2468E8" }}
                   >
-                    <Navigation className="h-3.5 w-3.5" style={{ color: "#2468E8" }} />
+                    Cómo llegar
+                    <Navigation className="h-3 w-3" />
                   </a>
                 </div>
               </div>

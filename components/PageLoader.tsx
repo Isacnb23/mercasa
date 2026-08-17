@@ -5,20 +5,20 @@ import PageLoader3D from "./PageLoader3D";
 import styles from "./PageLoader.module.css";
 import { cn } from "@/lib/utils";
 
-const MIN_TIME = 1800; // tiempo mínimo visible desde el montaje (ms) — rápido pero perceptible
+const MIN_TIME = 1100; // tiempo mínimo visible desde el montaje (ms) — rápido pero perceptible
 // Tiempo mínimo que el camión 3D permanece EN PANTALLA desde que el modelo
-// terminó de cargar: cubre la entrada (ENTER_DURATION 1100ms en PageLoader3D)
-// + una pausa breve al centro (~1100ms) antes de salir. Es clave porque el
+// terminó de cargar: cubre la entrada (ENTER_DURATION 820ms en PageLoader3D)
+// + una pausa breve al centro (~550ms) antes de salir. Es clave porque el
 // GLB es pesado: si tarda más que MIN_TIME en descargar, sin esto el overlay
 // saldría en el instante en que carga (wait=0) y no se vería ni la entrada
 // ni el camión centrado. Debe mantenerse en sync con ENTER_DURATION.
-const SHOWCASE_3D = 2200;
+const SHOWCASE_3D = 1400;
 // Debe calzar EXACTO con LEAVE_DURATION en PageLoader3D.tsx: ese valor
 // controla cuánto tarda el camión en salir de cuadro (vía rAF), y este
 // temporizador decide cuándo React avanza a "done" — si no coinciden, el
 // camión se corta a medio salir o la transición espera de más sin motivo.
-const LEAVE_DELAY = 620;
-const DONE_DELAY = 650; // debe calzar con la transición de .isDone (ver PageLoader.module.css)
+const LEAVE_DELAY = 460;
+const DONE_DELAY = 500; // debe calzar con la transición de .isDone (ver PageLoader.module.css)
 
 // ---- Barra de progreso "viva" ----
 // El progreso real de descarga del GLB llega a saltos (o ni siquiera llega si
@@ -26,7 +26,7 @@ const DONE_DELAY = 650; // debe calzar con la transición de .isDone (ver PageLo
 // suavizamos hacia un objetivo con una animación de rAF: nunca se ve
 // congelada y, al resolver el modelo, completa del valor actual a 100% con
 // una curva controlada en vez de saltar de golpe.
-const COMPLETE_DURATION = 700; // ms — cierre visual ágil hasta 100%
+const COMPLETE_DURATION = 550; // ms — cierre visual ágil hasta 100%
 
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;

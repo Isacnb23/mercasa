@@ -3,7 +3,7 @@
 import { useId, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, ChevronDown, Boxes, Play, Truck, Warehouse } from "lucide-react";
+import { ChevronDown, Boxes, Truck, Warehouse } from "lucide-react";
 import { heroHighlights, site } from "@/lib/data";
 import { scrollToId } from "@/lib/utils";
 import heroPhoto from "@/public/brand/hero-warehouse.jpg";
@@ -281,48 +281,10 @@ export default function Hero() {
             className="mt-7 text-[15.5px] leading-[1.7] md:text-[16.5px]"
             style={{ color: "rgba(255,255,255,0.78)", maxWidth: "590px" }}
           >
-            Importación, logística y distribución mayorista con más de 60 años
-            de respaldo institucional. Abastecemos supermercados, retail y
-            comercio local en todo el país.
+            Importación, logística y distribución mayorista de productos de
+            consumo masivo, con cobertura en supermercados, retail y comercio
+            local en todo el país.
           </motion.p>
-
-          {/* Acciones */}
-          <motion.div
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.38, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-5 md:mt-10"
-          >
-            <button
-              onClick={() => scrollToId("#contacto")}
-              className="group inline-flex items-center gap-2.5 rounded-full text-[14.5px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-95"
-              style={{
-                padding: "15px 30px",
-                background: "linear-gradient(135deg, #2F80ED 0%, #4A8DFF 100%)",
-                boxShadow:
-                  "0 16px 40px -12px rgba(47,128,237,0.85), 0 0 0 1px rgba(120,170,255,0.25) inset",
-              }}
-            >
-              Hágase Cliente
-              <ArrowRight className="h-[17px] w-[17px] transition group-hover:translate-x-1" />
-            </button>
-
-            <button
-              onClick={() => scrollToId("#nosotros")}
-              className="group inline-flex items-center gap-3.5 text-[14.5px] font-medium text-white/85 transition hover:text-white"
-            >
-              <span
-                className="relative flex h-[52px] w-[52px] items-center justify-center rounded-full backdrop-blur-md transition duration-300 group-hover:bg-white/[0.10]"
-                style={{
-                  border: "1px solid rgba(255,255,255,0.28)",
-                  background: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <Play className="h-[15px] w-[15px] translate-x-[1px] fill-current text-white" />
-              </span>
-              Conozca más sobre nosotros
-            </button>
-          </motion.div>
         </div>
 
         {/* ----- Panel de métricas (glassmorphism) ----- */}

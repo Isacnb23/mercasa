@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Assets servidos tal cual (vendor/binarios) — no son código fuente del
+    // proyecto: el decoder de Draco (three/examples/jsm/libs/draco) usado
+    // para el modelo 3D comprimido del camión.
+    "public/**",
   ]),
 ]);
 
