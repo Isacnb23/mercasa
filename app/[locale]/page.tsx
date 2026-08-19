@@ -10,9 +10,9 @@ import SectionReveal from "@/components/SectionReveal";
 export default function Home() {
   return (
     <>
-      <div className="sticky top-0 z-50">
+      {/* <div className="sticky top-0 z-50"> */}
         <Header />
-      </div>
+      {/* </div> */}
       <main className="relative" style={{ zIndex: 10 }}>
         <Hero />
         <SectionReveal z={20}>

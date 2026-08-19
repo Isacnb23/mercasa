@@ -23,7 +23,8 @@ export default function LocaleSwitcher({ variant = "header" }: { variant?: "head
     });
   };
 
-  const dim = variant === "header" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.45)";
+  const isHeader = variant === "header";
+  const dim = isHeader ? "rgba(8,43,92,0.5)" : "rgba(255,255,255,0.45)";
 
   return (
     <div
@@ -33,10 +34,11 @@ export default function LocaleSwitcher({ variant = "header" }: { variant?: "head
         "flex items-center gap-[2px] rounded-full border px-1 py-1 text-[11px] font-bold uppercase tracking-wide transition",
         isPending && "opacity-60"
       )}
-      style={{
-        borderColor: "rgba(74,141,255,0.35)",
-        background: "rgba(47,128,237,0.08)",
-      }}
+      style={
+        isHeader
+          ? { borderColor: "rgba(8,43,92,0.14)", background: "rgba(8,43,92,0.04)" }
+          : { borderColor: "rgba(74,141,255,0.35)", background: "rgba(47,128,237,0.08)" }
+      }
     >
       {routing.locales.map((loc) => {
         const active = loc === locale;
@@ -50,7 +52,11 @@ export default function LocaleSwitcher({ variant = "header" }: { variant?: "head
             className="rounded-full px-2 py-[3px] transition"
             style={{
               color: active ? "#ffffff" : dim,
-              background: active ? "linear-gradient(135deg, #2F80ED, #4A8DFF)" : "transparent",
+              background: active
+                ? isHeader
+                  ? "#075FD8"
+                  : "linear-gradient(135deg, #2F80ED, #4A8DFF)"
+                : "transparent",
             }}
           >
             {loc}

@@ -39,8 +39,9 @@
   "Hero": {
     "badgeSince": "Since {year}",
     "badgeParent": "A {parent} company",
-    "title": "<accent>Costa Rica's leader</accent> in mass-market distribution and commercialization of consumer goods",
+    "title": "Costa Rica's leader in mass-market <accent>distribution and commercialization</accent> of consumer goods",
     "paragraph": "Import, logistics, and wholesale distribution of consumer goods, reaching supermarkets, retail, and local trade nationwide.",
+    "ctaPrimary": "Discover our operation",
     "scrollLabel": "Connections that move business",
     "scrollAria": "Scroll down",
     "photoAlt": "Mercasa warehouse: forklift moving pallets between storage racks",

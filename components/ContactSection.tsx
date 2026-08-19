@@ -1,87 +1,18 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Clock, Compass, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import Reveal from "./Reveal";
-import SeamArc from "./SeamArc";
+import SoftCurve from "./SoftCurve";
 import { site } from "@/lib/data";
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-navy-950" />,
+  loading: () => <div className="absolute inset-0 bg-corp-ink" />,
 });
-
-/* Curva azul de cierre, propia de esta sección: trazo fino + halo suave y un
-   punto de brillo cerca del centro/derecha, sobre la curva orgánica. */
-function ContactBottomCurve() {
-  const uid = useId().replace(/[:]/g, "");
-  return (
-    <svg
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full sm:h-16"
-      viewBox="0 0 1920 100"
-      preserveAspectRatio="none"
-      fill="none"
-    >
-      <defs>
-        <linearGradient id={`contact-curve-${uid}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#367FF7" stopOpacity="0" />
-          <stop offset="50%" stopColor="#367FF7" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#367FF7" stopOpacity="0" />
-        </linearGradient>
-        <filter id={`contact-curve-glow-${uid}`} x="-20%" y="-200%" width="140%" height="500%">
-          <feGaussianBlur stdDeviation="4" />
-        </filter>
-      </defs>
-      <path
-        d="M0,58 C 440,20 1180,86 1920,42"
-        stroke={`url(#contact-curve-${uid})`}
-        strokeWidth={6}
-        strokeLinecap="round"
-        filter={`url(#contact-curve-glow-${uid})`}
-        opacity={0.35}
-      />
-      <path
-        d="M0,58 C 440,20 1180,86 1920,42"
-        stroke={`url(#contact-curve-${uid})`}
-        strokeWidth={1.1}
-      />
-      {/* punto de brillo sutil cerca del centro/derecha */}
-      <circle cx="1180" cy="58" r="3.2" fill="#8fc1ff" opacity="0.9" filter={`url(#contact-curve-glow-${uid})`} />
-      <circle cx="1180" cy="58" r="2" fill="#ffffff" opacity="0.85" />
-    </svg>
-  );
-}
-
-/* Puntos decorativos azules en ambos extremos, alrededor de la altura de las
-   tarjetas — se apagan progresivamente hacia el centro. */
-function ContactDots({ side }: { side: "left" | "right" }) {
-  return (
-    <div
-      aria-hidden
-      className={`pointer-events-none absolute top-1/2 hidden h-[420px] w-[200px] -translate-y-1/2 sm:block ${
-        side === "left" ? "left-0" : "right-0"
-      }`}
-      style={{
-        backgroundImage:
-          "radial-gradient(circle, rgba(59,123,255,0.65) 1.1px, transparent 1.6px)",
-        backgroundSize: "24px 24px",
-        maskImage:
-          side === "left"
-            ? "radial-gradient(60% 80% at 0% 50%, black 0%, transparent 75%)"
-            : "radial-gradient(60% 80% at 100% 50%, black 0%, transparent 75%)",
-        WebkitMaskImage:
-          side === "left"
-            ? "radial-gradient(60% 80% at 0% 50%, black 0%, transparent 75%)"
-            : "radial-gradient(60% 80% at 100% 50%, black 0%, transparent 75%)",
-        opacity: 0.5,
-      }}
-    />
-  );
-}
 
 /* Menú "Cómo llegar": un solo botón que despliega dos opciones (Google Maps /
    Waze) en vez de un link directo — coordenadas puras en ambos links, nunca
@@ -115,7 +46,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
         aria-expanded={open}
         aria-haspopup="menu"
         className="inline-flex h-8 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
-        style={{ borderRadius: "8px", background: "#2468E8" }}
+        style={{ borderRadius: "8px", background: "#075FD8" }}
       >
         {t("directionsCta")}
         <Navigation className="h-3 w-3" />
@@ -132,9 +63,9 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
             className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden"
             style={{
               borderRadius: "10px",
-              border: "1px solid rgba(56,140,255,0.25)",
+              border: "1px solid rgba(7,95,216,0.25)",
               background: "#0c1a2e",
-              boxShadow: "0 14px 34px rgba(0,0,0,0.45), 0 0 0 1px rgba(56,140,255,0.06)",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.45), 0 0 0 1px rgba(7,95,216,0.06)",
             }}
           >
             <a
@@ -143,7 +74,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
               target="_blank"
               rel="noreferrer"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(56,140,255,0.14)]"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(7,95,216,0.16)]"
             >
               <Navigation className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
               {t("openInGoogleMaps")}
@@ -155,7 +86,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
               target="_blank"
               rel="noreferrer"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(56,140,255,0.14)]"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(7,95,216,0.16)]"
             >
               <Compass className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
               {t("openInWaze")}
@@ -207,37 +138,32 @@ export default function ContactSection() {
     <section
       id="contacto"
       className="relative scroll-mt-20 overflow-hidden py-24 md:py-28"
-      style={{
-        background:
-          "radial-gradient(circle at 50% 35%, rgba(30,100,220,0.07), transparent 48%)",
-      }}
+      style={{ background: "#F7F3EB" }}
     >
-      <SeamArc
-        flip
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 w-full sm:h-28"
-      />
-      <ContactDots side="left" />
-      <ContactDots side="right" />
+      {/* El seam Marcas → Contacto ya lo marca la curva inferior de Marcas;
+          acá solo se agrega la de salida hacia el Footer (que cierra en un
+          tono distinto, #F3F5F7) para no duplicar el mismo trazo. */}
+      <SoftCurve position="bottom" flip />
 
       <div className="relative z-10 mx-auto max-w-[1180px] px-4 md:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <span
             className="inline-flex items-center gap-3 text-[13px] font-semibold uppercase"
-            style={{ letterSpacing: "0.22em", color: "#388CFF" }}
+            style={{ letterSpacing: "0.22em", color: "#075FD8" }}
           >
-            <span className="h-px w-6" style={{ background: "rgba(56,140,255,0.5)" }} />
+            <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
             {t("eyebrow")}
-            <span className="h-px w-6" style={{ background: "rgba(56,140,255,0.5)" }} />
+            <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
           </span>
           <h2
-            className="mt-5 font-display font-medium tracking-tight"
-            style={{ fontSize: "48px", lineHeight: 1.05, color: "rgba(255,255,255,0.96)" }}
+            className="mt-5 font-display text-corp-ink"
+            style={{ fontSize: "clamp(36px, 4vw, 56px)", lineHeight: 1.05, fontWeight: 600, letterSpacing: "-0.02em" }}
           >
             {t("title")}
           </h2>
           <p
             className="mx-auto mt-4 max-w-[700px] text-[15px] leading-[1.55] md:text-[16px]"
-            style={{ color: "rgba(255,255,255,0.70)" }}
+            style={{ color: "#3A4A5F" }}
           >
             {t("paragraph")}
           </p>
@@ -248,8 +174,9 @@ export default function ContactSection() {
           <Reveal
             className="flex min-w-0 flex-col justify-between gap-8 bg-white p-[26px] sm:p-[28px]"
             style={{
-              borderRadius: "16px",
-              boxShadow: "0 20px 45px rgba(0,0,0,0.16), 0 0 0 1px rgba(35,95,180,0.08)",
+              borderRadius: "20px",
+              border: "1px solid #D8E1EC",
+              boxShadow: "0 16px 50px rgba(16,37,63,0.10)",
             }}
           >
             <div>
@@ -259,7 +186,7 @@ export default function ContactSection() {
                 {site.address.line2} · CP {site.address.postalCode}
               </InfoRow>
               <InfoRow icon={Phone} title={t("telefonoTitle")}>
-                <a href={site.phoneHref} className="transition hover:text-[#2468E8]">
+                <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
                   {site.phone}
                 </a>{" "}
                 · {site.phonesExtra.join(" · ")}
@@ -267,12 +194,12 @@ export default function ContactSection() {
               <InfoRow icon={Mail} title={t("correosTitle")}>
                 <a
                   href={`mailto:${site.emails.comunicaciones}`}
-                  className="transition hover:text-[#2468E8]"
+                  className="transition hover:text-[#075FD8]"
                 >
                   {site.emails.comunicaciones}
                 </a>
                 <br />
-                <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#2468E8]">
+                <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
                   {site.emails.rh}
                 </a>{" "}
                 {t("correosRh")}
@@ -293,8 +220,8 @@ export default function ContactSection() {
                 className="inline-flex h-[50px] items-center gap-2.5 px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
                 style={{
                   borderRadius: "10px",
-                  background: "linear-gradient(135deg, #1754D8, #216CF2)",
-                  boxShadow: "0 6px 18px rgba(30,100,240,0.25)",
+                  background: "#075FD8",
+                  boxShadow: "0 6px 18px rgba(7,95,216,0.30)",
                 }}
               >
                 <WhatsAppIcon className="h-[18px] w-[18px]" />
@@ -306,30 +233,31 @@ export default function ContactSection() {
                 className="inline-flex h-[50px] items-center gap-2.5 px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5"
                 style={{
                   borderRadius: "10px",
-                  border: "1px solid rgba(40,105,230,0.65)",
-                  color: "#12233f",
+                  border: "1px solid rgba(7,95,216,0.5)",
+                  color: "#082B5C",
                   background: "#ffffff",
                 }}
               >
-                <Phone className="h-4 w-4" style={{ color: "#2468E8" }} />
+                <Phone className="h-4 w-4" style={{ color: "#075FD8" }} />
                 {t("callCta")}
               </motion.a>
             </div>
           </Reveal>
 
-          {/* Mapa: el propio mapa funciona como tarjeta */}
+          {/* Mapa: se queda dark a propósito (único contraste oscuro dentro
+              de la sección clara) — marco/sombra igual al de la vitrina de
+              Marcas para que se distinga bien del fondo alrededor. */}
           <Reveal
             delay={0.1}
             className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
             style={{
               borderRadius: "20px",
-              border: "1px solid rgba(90,150,255,0.45)",
-              boxShadow:
-                "0 22px 55px rgba(0,0,0,0.30), 0 0 0 1px rgba(60,130,255,0.10), 0 0 26px rgba(50,120,255,0.10), inset 0 1px 0 rgba(255,255,255,0.06)",
+              border: "1px solid #D8E1EC",
+              boxShadow: "0 20px 50px rgba(16,37,63,0.10)",
             }}
           >
-            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-navy-950 lg:min-h-0">
-              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-navy-950" />}
+            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-corp-ink lg:min-h-0">
+              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-corp-ink" />}
               {/* Viñeta sutil para que el marco se sienta intencional aun si
                   el mapa todavía está cargando teselas. */}
               <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_20px_rgba(6,15,24,0.4)]" />
@@ -359,8 +287,6 @@ export default function ContactSection() {
           </Reveal>
         </div>
       </div>
-
-      <ContactBottomCurve />
     </section>
   );
 }
@@ -382,11 +308,11 @@ function InfoRow({
         className="flex h-[58px] w-[58px] shrink-0 items-center justify-center"
         style={{
           borderRadius: "12px",
-          background: "rgba(37,99,235,0.035)",
-          border: "1px solid rgba(37,99,235,0.14)",
+          background: "rgba(7,95,216,0.05)",
+          border: "1px solid rgba(7,95,216,0.16)",
         }}
       >
-        <Icon className="h-6 w-6" style={{ color: "#2468E8" }} />
+        <Icon className="h-6 w-6" style={{ color: "#075FD8" }} />
       </span>
       <div
         className={`min-w-0 flex-1 pb-4 ${!last ? "border-b" : ""}`}
@@ -394,7 +320,7 @@ function InfoRow({
       >
         <p
           className="text-[13px] font-bold"
-          style={{ letterSpacing: "0.04em", color: "#2468E8" }}
+          style={{ letterSpacing: "0.04em", color: "#075FD8" }}
         >
           {title.toUpperCase()}
         </p>

@@ -1,17 +1,8 @@
-/* Escenario 3D reconstruido en React a partir de index_mercasa_3d_integrado.html.
-   El canvas de Three.js pinta el camión, su sombra, el halo y el humo; estas
-   capas CSS aportan el resto de la ambientación (glow radial, piso de
-   estudio liso, carretera y speed lines) de forma barata. Paleta azul
-   elegante con teal como acento — nada de patrones tipo grid/holograma. */
-
 .stage {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  /* Fase 1-2 del brief: el ambiente (glow/piso/curvas) se ensambla con un
-     fundido suave en vez de aparecer de golpe, antes de que entre el camión.
-     Solo opacity+scale (GPU) — no reflow. */
   animation: stageAssemble 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes stageAssemble {
@@ -30,41 +21,36 @@
   }
 }
 
-/* Glow radial detrás del camión: azul profundo y elegante, con un acento
-   teal contenido (no neón) y un toque cálido (gold) casi imperceptible.
-   Respiración lenta que da vida sin distraer. */
+/* Glow radial: azul corporativo muy suave sobre fondo claro, en vez del
+   glow profundo pensado para navy. */
 .radial {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(
       26% 20% at 47% 36%,
-      rgba(134, 174, 226, .10),
+      rgba(7, 95, 216, .05),
       transparent 68%
     ),
     radial-gradient(
       56% 44% at 50% 40%,
-      color-mix(
-        in srgb,
-        rgba(53, 109, 176, .38),
-        transparent
-      ),
-      rgba(21, 58, 95, .18) 48%,
+      rgba(7, 95, 216, .07),
+      rgba(7, 95, 216, .02) 48%,
       transparent 70%
     );
   animation: breathe 7s ease-in-out infinite;
 }
 
-/* Viñeta: oscurece las esquinas para dar foco central y profundidad de
-   estudio fotográfico — sin esto el fondo se lee plano/parejo. */
+/* Viñeta: leve profundidad hacia los bordes, tono azul-marino tenue en vez
+   de negro — nunca debe verse como si la escena se oscureciera. */
 .vignette {
   position: absolute;
   z-index: 7;
   inset: 0;
   background: radial-gradient(
     120% 100% at 50% 46%,
-    transparent 42%,
-    color-mix(in srgb, var(--color-ink) 55%, transparent) 100%
+    transparent 55%,
+    rgba(8, 43, 92, 0.05) 100%
   );
 }
 @keyframes breathe {
@@ -79,19 +65,17 @@
   }
 }
 
-/* Aurora: un lavado de color lento y difuso que cruza el fondo — profundidad
-   y movimiento casi imperceptibles, muy premium. Azul dominante, teal como
-   acento contenido (nada de neón). */
+/* Aurora: lavado de color casi imperceptible, mismo azul de marca */
 .aurora {
   position: absolute;
   inset: -20%;
   background: radial-gradient(
     42% 62% at 30% 45%,
-    rgba(25, 76, 130, .20),
+    rgba(7, 95, 216, .08),
     transparent 60%
   );
   filter: blur(40px);
-  opacity: 0.30;
+  opacity: 0.5;
   animation: drift 16s ease-in-out infinite alternate;
 }
 @keyframes drift {
@@ -103,9 +87,72 @@
   }
 }
 
-/* Piso de estudio: un degradado liso que oscurece hacia el frente, con un
-   brillo suave cerca del horizonte — como un piso pulido bajo luz de
-   estudio. Sin patrones ni líneas: eso es lo que se leía "de plástico". */
+.skySpecks {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: .5;
+  pointer-events: none;
+}
+
+.skySpecks i {
+  --x: calc(((var(--i) * 37) % 100) * 1%);
+  --y: calc((8 + ((var(--i) * 53) % 60)) * 1%);
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(7, 95, 216, .45);
+  box-shadow: none;
+  opacity: calc(.16 + ((var(--i) % 5) * .10));
+  animation: twinkle calc(3.5s + (var(--i) % 7) * .6s) ease-in-out infinite;
+  animation-delay: calc(var(--i) * -.33s);
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(.65); opacity: .12; }
+  50% { transform: scale(1.45); opacity: .48; }
+}
+
+.skyline {
+  position: absolute;
+  left: 4%;
+  bottom: 36.2%;
+  width: 25%;
+  height: 12%;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(3px, .55vw, 10px);
+  opacity: .10;
+  filter: blur(.3px);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
+}
+
+.skyline span {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 6px;
+  background: linear-gradient(180deg, rgba(8, 43, 92, .5), rgba(8, 43, 92, .1));
+  border-top: 1px solid rgba(7, 95, 216, .35);
+  box-shadow: none;
+}
+
+.skyline span:nth-child(1) { height: 27%; }
+.skyline span:nth-child(2) { height: 52%; }
+.skyline span:nth-child(3) { height: 34%; }
+.skyline span:nth-child(4) { height: 73%; }
+.skyline span:nth-child(5) { height: 45%; }
+.skyline span:nth-child(6) { height: 90%; }
+.skyline span:nth-child(7) { height: 58%; }
+.skyline span:nth-child(8) { height: 38%; }
+.skyline span:nth-child(9) { height: 66%; }
+
+/* Piso de estudio: superficie clara y limpia, con una sombra de contacto
+   suave en vez de un degradado hacia negro. */
 .floor {
   position: absolute;
   left: 0;
@@ -115,24 +162,23 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(9, 27, 45, .66) 42%,
-    rgba(5, 15, 24, .96) 100%
+    rgba(226, 232, 240, .55) 42%,
+    rgba(216, 225, 236, .85) 100%
   );
 }
- .floor::before {
+.floor::before {
   content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(
     50% 70% at 50% 0%,
-    rgba(120, 180, 255, .10),
+    rgba(7, 95, 216, .06),
     transparent 72%
   );
-  opacity: 0.28;
+  opacity: 0.5;
   animation: breathe 7s ease-in-out infinite;
 }
 
-/* Línea de horizonte con leve resplandor teal, justo bajo el camión */
 .horizon {
   position: absolute;
   left: 0;
@@ -142,17 +188,16 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(123, 181, 255, .14) 30%,
-    rgba(180, 214, 255, .20) 50%,
-    rgba(123, 181, 255, .14) 70%,
+    rgba(8, 43, 92, .10) 30%,
+    rgba(8, 43, 92, .16) 50%,
+    rgba(8, 43, 92, .10) 70%,
     transparent
   );
-  filter: blur(0.5px);
-  box-shadow: 0 0 24px rgba(123, 181, 255, .10);
-  opacity: 0.55;
+  filter: none;
+  box-shadow: none;
+  opacity: 0.6;
 }
 
-/* Motas de luz flotando hacia arriba: vida y profundidad, muy sutiles */
 .motes {
   position: absolute;
   inset: 0;
@@ -163,8 +208,8 @@
   position: absolute;
   bottom: -4%;
   border-radius: 50%;
-  background: rgba(208, 228, 255, .86);
-  box-shadow: 0 0 6px rgba(127,180,255,.20);
+  background: rgba(7, 95, 216, .45);
+  box-shadow: none;
   opacity: 0;
   animation-name: floatUp;
   animation-timing-function: ease-in-out;
@@ -198,7 +243,6 @@
   height: 100%;
 }
 
-/* Carretera minimalista con línea discontinua animándose */
 .road {
   position: absolute;
   z-index: 3;
@@ -215,7 +259,7 @@
   right: 8%;
   top: 10px;
   height: 1px;
-  background: rgba(154, 197, 255, 0.10);
+  background: rgba(8, 43, 92, 0.10);
 }
 .roadDash {
   position: absolute;
@@ -225,10 +269,10 @@
   height: 2.5px;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.78) 0 44px,
+    rgba(8, 43, 92, 0.55) 0 44px,
     transparent 44px 104px
   );
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-teal-400) 14%, transparent));
+  filter: none;
   animation: roadMove 1.35s linear infinite;
 }
 @keyframes roadMove {
@@ -237,7 +281,6 @@
   }
 }
 
-/* Speed lines discretas — casi invisibles en idle, activas al acelerar */
 .speedlines {
   position: absolute;
   z-index: 4;
@@ -250,7 +293,7 @@
   left: -14vw;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(147, 240, 228, 0.5));
+  background: linear-gradient(90deg, transparent, rgba(7, 95, 216, 0.4));
   animation: speed 1.6s linear infinite;
 }
 .speedlines span:nth-child(1) {
@@ -287,7 +330,6 @@
   }
 }
 
-/* Al pasar a "leaving": la carretera se acelera y aparecen las speed lines */
 .isLeaving .roadDash {
   animation-duration: 0.22s;
 }
@@ -298,7 +340,6 @@
   animation-duration: 0.55s;
 }
 
-/* Móvil: carretera un poco más abajo, decoración más discreta */
 @media (max-width: 640px) {
   .surfacePlate {
     width: 88vw;
@@ -329,16 +370,15 @@
 
 
 /* ============================================================
-   REDISEÑO PREMIUM — fondo implementable, sin texturas externas
+   REDISEÑO PREMIUM — versión clara, mismo lenguaje corporativo
    ============================================================ */
 
 .backdrop {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(85% 72% at 50% 39%, rgba(26, 88, 142, 0.26), transparent 61%),
-    radial-gradient(52% 42% at 50% 43%, rgba(118, 176, 255, 0.10), transparent 70%),
-    linear-gradient(180deg, #0a2238 0%, #0f3352 52%, #081826 100%);
+    radial-gradient(85% 72% at 50% 39%, rgba(7, 95, 216, 0.08), transparent 61%),
+    linear-gradient(180deg, #FFFFFF 0%, #F8F9FB 52%, #F3F5F7 100%);
 }
 
 .waveField {
@@ -346,9 +386,9 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.58;
+  opacity: 0.4;
   transform: translateZ(0);
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
   pointer-events: none;
 }
 
@@ -360,73 +400,9 @@
 }
 
 @keyframes waveDrift {
-  from { transform: translate3d(-1.5%, 0, 0) scaleY(0.97); opacity: 0.56; }
-  to   { transform: translate3d(1.8%, -1.2%, 0) scaleY(1.035); opacity: 0.92; }
+  from { transform: translate3d(-1.5%, 0, 0) scaleY(0.97); opacity: 0.4; }
+  to   { transform: translate3d(1.8%, -1.2%, 0) scaleY(1.035); opacity: 0.75; }
 }
-
-.skySpecks {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  opacity: .42;
-  pointer-events: none;
-}
-
-.skySpecks i {
-  --x: calc(((var(--i) * 37) % 100) * 1%);
-  --y: calc((8 + ((var(--i) * 53) % 60)) * 1%);
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: rgba(212, 229, 255, .68);
-  box-shadow: 0 0 8px rgba(127,180,255,.18);
-  opacity: calc(.16 + ((var(--i) % 5) * .10));
-  animation: twinkle calc(3.5s + (var(--i) % 7) * .6s) ease-in-out infinite;
-  animation-delay: calc(var(--i) * -.33s);
-}
-
-@keyframes twinkle {
-  0%, 100% { transform: scale(.65); opacity: .12; }
-  50% { transform: scale(1.45); opacity: .48; }
-}
-
-.skyline {
-  position: absolute;
-  left: 4%;
-  bottom: 36.2%;
-  width: 25%;
-  height: 12%;
-  display: flex;
-  align-items: flex-end;
-  gap: clamp(3px, .55vw, 10px);
-  opacity: .07;
-  filter: blur(.3px);
-  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
-}
-
-.skyline span {
-  position: relative;
-  display: block;
-  flex: 1 1 auto;
-  min-width: 6px;
-  background: linear-gradient(180deg, rgba(145, 186, 226, .56), rgba(40, 86, 124, .14));
-  border-top: 1px solid rgba(161,232,238,.5);
-  box-shadow: 0 0 18px rgba(127,180,255,.05);
-}
-
-.skyline span:nth-child(1) { height: 27%; }
-.skyline span:nth-child(2) { height: 52%; }
-.skyline span:nth-child(3) { height: 34%; }
-.skyline span:nth-child(4) { height: 73%; }
-.skyline span:nth-child(5) { height: 45%; }
-.skyline span:nth-child(6) { height: 90%; }
-.skyline span:nth-child(7) { height: 58%; }
-.skyline span:nth-child(8) { height: 38%; }
-.skyline span:nth-child(9) { height: 66%; }
 
 .floorReflection {
   position: absolute;
@@ -435,10 +411,10 @@
   bottom: 0;
   height: 40%;
   background:
-    radial-gradient(42% 55% at 52% 0%, rgba(118,176,255,.06), transparent 68%),
-    linear-gradient(180deg, rgba(255,255,255,.025), transparent 28%);
-  filter: blur(.2px);
-  opacity: .12;
+    radial-gradient(42% 55% at 52% 0%, rgba(7, 95, 216, .04), transparent 68%),
+    linear-gradient(180deg, rgba(8, 43, 92, .02), transparent 28%);
+  filter: none;
+  opacity: .16;
   pointer-events: none;
 }
 
@@ -449,8 +425,8 @@
   right: 10%;
   top: 2%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(127,180,255,.20), transparent);
-  box-shadow: 0 0 20px rgba(127,180,255,.08);
+  background: linear-gradient(90deg, transparent, rgba(8, 43, 92, .14), transparent);
+  box-shadow: none;
 }
 
 .stageLight {
@@ -461,11 +437,13 @@
   width: min(48vw, 680px);
   height: 150px;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(118,176,255,0.08), rgba(118,176,255,0.02) 42%, rgba(118,176,255,0) 72%);
+  background: radial-gradient(ellipse at center, rgba(7, 95, 216, 0.06), rgba(7, 95, 216, 0.015) 42%, rgba(7, 95, 216, 0) 72%);
   filter: blur(16px);
   opacity: .9;
 }
 
+/* Plataforma bajo el camión: clara, con borde y sombra de contacto suave
+   en vez del panel casi negro del original. */
 .surfacePlate {
   position: absolute;
   z-index: 2;
@@ -475,13 +453,13 @@
   height: clamp(76px, 8vh, 108px);
   transform: translateX(-50%);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 30%),
-    linear-gradient(180deg, rgba(8, 22, 35, 0.78), rgba(4, 12, 20, 0.96));
+    linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.65) 30%),
+    linear-gradient(180deg, #EEF2F6, #E2E8F0);
   clip-path: polygon(4% 46%, 96% 46%, 88% 100%, 12% 100%);
   box-shadow:
-    inset 0 1px 0 rgba(201, 223, 255, 0.08),
-    0 18px 40px rgba(0, 0, 0, 0.28);
-  opacity: 0.88;
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 18px 40px rgba(16, 37, 63, 0.10);
+  opacity: 0.92;
 }
 
 .surfacePlate::before {
@@ -491,7 +469,7 @@
   right: 6%;
   top: 30%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(142, 191, 255, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, rgba(8, 43, 92, 0.10), transparent);
 }
 
 .surfacePlate::after {
@@ -501,7 +479,7 @@
   right: 12%;
   bottom: 18%;
   height: 44%;
-  background: radial-gradient(ellipse at center, rgba(118,176,255,0.06), rgba(118,176,255,0) 72%);
+  background: radial-gradient(ellipse at center, rgba(7, 95, 216, 0.05), rgba(7, 95, 216, 0) 72%);
   filter: blur(10px);
 }
 
@@ -511,11 +489,9 @@
   right: 18%;
   top: 6px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(118,176,255,.18), rgba(191,220,255,.24), rgba(118,176,255,.18), transparent);
-  box-shadow:
-    0 0 8px rgba(127,180,255,.10),
-    0 0 18px rgba(127,180,255,.04);
-  opacity: .14;
+  background: linear-gradient(90deg, transparent, rgba(7, 95, 216, .12), rgba(8, 43, 92, .18), rgba(7, 95, 216, .12), transparent);
+  box-shadow: none;
+  opacity: .2;
 }
 
 .isLeaving .waveBack {
@@ -530,15 +506,15 @@
 
 @media (max-width: 820px) {
   .waveField {
-    opacity: .54;
+    opacity: .38;
   }
   .skyline {
     width: 38%;
     bottom: 34.4%;
-    opacity: .11;
+    opacity: .12;
   }
   .skySpecks {
-    opacity: .42;
+    opacity: .5;
   }
 }
 
@@ -548,7 +524,7 @@
   }
   .waveField {
     transform: scale(1.15);
-    opacity: .42;
+    opacity: .3;
   }
 }
 

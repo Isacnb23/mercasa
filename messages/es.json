@@ -39,8 +39,9 @@
   "Hero": {
     "badgeSince": "Desde {year}",
     "badgeParent": "Una empresa de {parent}",
-    "title": "Líderes en <accent>distribución y comercialización</accent> masiva de productos de consumo en <accent>Costa Rica</accent>",
+    "title": "Líderes en <accent>distribución y comercialización</accent> masiva de productos de consumo en Costa Rica",
     "paragraph": "Importación, logística y distribución mayorista de productos de consumo masivo, con cobertura en supermercados, retail y comercio local en todo el país.",
+    "ctaPrimary": "Conocer nuestra operación",
     "scrollLabel": "Conexiones que mueven negocios",
     "scrollAria": "Desplazarse hacia abajo",
     "photoAlt": "Bodega de Mercasa: montacargas moviendo tarimas entre racks de almacenamiento",

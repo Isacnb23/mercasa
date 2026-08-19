@@ -44,6 +44,27 @@
 
   --font-inter: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-spectral: "Spectral", Georgia, serif;
+
+  /* ------------------------------------------------------------------ */
+  /* Rediseño corporativo claro — tokens nuevos (Navbar + Hero, fase 1). */
+  /* Conviven con la paleta oscura de arriba: las secciones que aún no   */
+  /* se migran (About, Logística, Marcas, Contacto, Footer) siguen       */
+  /* usando navy, teal y gold sin cambios.                                */
+  /* ------------------------------------------------------------------ */
+  --color-corp-white: #ffffff;
+  --color-corp-offwhite: #f8f9fb;
+  --color-corp-warmgray: #f3f5f7;
+
+  --color-corp-ink: #082b5c;
+  --color-corp-deep: #061e41;
+  --color-corp-blue: #075fd8;
+  --color-corp-blue-2: #1670e8;
+
+  --color-corp-yellow: #ffd21a;
+  --color-corp-yellow-hover: #f4c400;
+
+  --shadow-corp: 0 16px 50px rgba(16, 37, 63, 0.08);
+  --ease-corp: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 @theme inline {
@@ -75,6 +96,19 @@
   --color-slate-500: var(--color-slate-500);
   --color-slate-700: var(--color-slate-700);
 
+  --color-corp-white: var(--color-corp-white);
+  --color-corp-offwhite: var(--color-corp-offwhite);
+  --color-corp-warmgray: var(--color-corp-warmgray);
+  --color-corp-ink: var(--color-corp-ink);
+  --color-corp-deep: var(--color-corp-deep);
+  --color-corp-blue: var(--color-corp-blue);
+  --color-corp-blue-2: var(--color-corp-blue-2);
+  --color-corp-yellow: var(--color-corp-yellow);
+  --color-corp-yellow-hover: var(--color-corp-yellow-hover);
+
+  --shadow-corp: var(--shadow-corp);
+  --ease-corp: var(--ease-corp);
+
   --font-sans: var(--font-inter);
   --font-display: var(--font-spectral);
 
@@ -95,11 +129,11 @@
 }
 
 html {
-  background: var(--color-ink);
+  background: var(--color-corp-offwhite);
 }
 
 body {
-  background: var(--color-ink);
+  background: var(--color-corp-offwhite);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -205,20 +239,22 @@ body {
   position: absolute;
   inset: 13px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a8d4ff, var(--color-teal-400));
+  /* Azul institucional (--color-corp-blue), consistente con el resto del
+     sitio en vez del teal/azul genérico que tenía el diseño viejo. */
+  background: linear-gradient(135deg, #4a97f0, var(--color-corp-blue));
   border: 3px solid #06121c;
   /* Doble anillo ESTÁTICO (además del pulso animado de abajo) — así el pin
      siempre tiene un halo visible, no solo durante el pico de la animación. */
   box-shadow:
-    0 0 0 4px rgba(107, 165, 255, 0.5),
-    0 0 0 9px rgba(59, 123, 255, 0.2),
+    0 0 0 4px rgba(7, 95, 216, 0.5),
+    0 0 0 9px rgba(7, 95, 216, 0.2),
     0 4px 18px rgba(0, 0, 0, 0.55);
 }
 .mercasa-map-pin__pulse {
   position: absolute;
   inset: 6px;
   border-radius: 50%;
-  background: rgba(107, 165, 255, 0.5);
+  background: rgba(7, 95, 216, 0.5);
   animation: mercasa-pin-pulse 2.2s ease-out infinite;
 }
 @keyframes mercasa-pin-pulse {
