@@ -142,8 +142,7 @@ export default function LogisticsTimeline() {
           {logisticsSteps.map((step) => (
             <RevealItem
               key={step.step}
-              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-white p-7 transition-shadow duration-300 hover:shadow-[0_18px_40px_rgba(16,37,63,0.14)]"
-              style={{ borderColor: "#E2E8F0", boxShadow: "0 10px 28px rgba(16,37,63,0.07)" }}
+              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-7 shadow-[0_10px_28px_rgba(16,37,63,0.07)] transition-shadow duration-300 hover:shadow-[0_18px_40px_rgba(16,37,63,0.14)]"
             >
               {/* Filete superior en hover: mismo lenguaje que la banda de Nosotros */}
               <span
