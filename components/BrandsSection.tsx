@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
@@ -155,6 +155,7 @@ function CategoryExplorer({
 
 export default function BrandsSection() {
   const t = useTranslations("Brands");
+  const reduceMotion = useReducedMotion();
   // Por defecto, sin categoría seleccionada: se ve el mural completo (todas
   // las marcas) y ningún chip queda activo.
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -174,7 +175,7 @@ export default function BrandsSection() {
       <div className="relative mx-auto px-4 sm:px-6" style={{ width: "min(95vw, 1660px)" }}>
         <div className="grid grid-cols-1 gap-[34px] lg:grid-cols-[370px_minmax(0,1fr)] lg:items-center lg:gap-[42px]">
           {/* ---------- Columna izquierda: contenido ---------- */}
-          <Reveal className="relative">
+          <Reveal className="relative" once>
             <h2
               className="font-display text-corp-ink"
               style={{
@@ -229,9 +230,9 @@ export default function BrandsSection() {
           {/* ---------- Columna derecha: showroom de marcas (foto real, completa, sin recorte) + categorías debajo ---------- */}
           <div className="flex flex-col gap-[24px]">
             <motion.div
-              initial={{ opacity: 0, x: 40, scale: 1.02 }}
+              initial={reduceMotion ? false : { opacity: 0, x: 40, scale: 1.02 }}
               whileInView={{ opacity: 1, x: 0, scale: 1 }}
-              viewport={{ once: false, margin: "-80px" }}
+              viewport={{ once: true, margin: "-80px" }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
               // aspect-ratio fijo (proporción de la pared de logos original):
               // ancho estable sin depender de las dimensiones intrínsecas de

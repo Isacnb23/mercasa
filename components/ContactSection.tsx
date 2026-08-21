@@ -173,6 +173,7 @@ export default function ContactSection() {
         <div className="mt-12 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
           {/* Info + CTAs */}
           <Reveal
+            once
             className="flex min-w-0 flex-col justify-between gap-8 bg-white p-[26px] sm:p-[28px]"
             style={{
               borderRadius: "20px",
@@ -250,6 +251,7 @@ export default function ContactSection() {
               Marcas para que se distinga bien del fondo alrededor. */}
           <Reveal
             delay={0.1}
+            once
             className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
             style={{
               borderRadius: "20px",

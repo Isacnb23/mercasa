@@ -1,8 +1,9 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { ChevronRight, MapPin, Mail, Phone } from "lucide-react";
-import { navLinks, site } from "@/lib/data";
+import { MapPin, Mail, Phone } from "lucide-react";
+import { site } from "@/lib/data";
 import logo from "@/public/models/mercasa-logo-transparent.png";
+import FooterNav from "./FooterNav";
 
 /* lucide-react ya no incluye íconos de marcas (Facebook/LinkedIn/Instagram),
    así que los tres se dibujan a mano como SVG simples, mismo trazo. */
@@ -107,22 +108,15 @@ export default async function Footer() {
             >
               {t("navTitle")}
             </p>
-            <ul className="mt-5 flex flex-col gap-[17px] text-[15px] leading-none md:text-[16px]">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="group inline-flex items-center gap-2 transition hover:text-[#075FD8]"
-                    style={{ color: "#3A4A5F" }}
-                  >
-                    <ChevronRight
-                      className="h-[14px] w-[14px] shrink-0 text-[#075FD8] transition group-hover:translate-x-0.5"
-                    />
-                    {tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <FooterNav
+              labels={{
+                inicio: tNav("inicio"),
+                nosotros: tNav("nosotros"),
+                logistica: tNav("logistica"),
+                marcas: tNav("marcas"),
+                contacto: tNav("contacto"),
+              }}
+            />
           </div>
 
           {/* Columna 3 — Contacto */}

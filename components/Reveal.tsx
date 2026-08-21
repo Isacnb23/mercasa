@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, Variants } from "framer-motion";
+import { motion, useReducedMotion, Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type RevealProps = {
@@ -34,6 +34,15 @@ export default function Reveal({
   once = false,
   style,
 }: RevealProps) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return (
+      <div className={cn(className)} style={style}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       className={cn(className)}
@@ -53,17 +62,24 @@ export function RevealGroup({
   children,
   className,
   stagger = 0.12,
+  once = false,
 }: {
   children: React.ReactNode;
   className?: string;
   stagger?: number;
+  once?: boolean;
 }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return <div className={cn(className)}>{children}</div>;
+  }
+
   return (
     <motion.div
       className={cn(className)}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: false, margin: "-80px" }}
+      viewport={{ once, margin: "-80px" }}
       variants={{
         visible: { transition: { staggerChildren: stagger } },
       }}
@@ -80,6 +96,11 @@ export function RevealItem({
   children: React.ReactNode;
   className?: string;
 }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return <div className={cn(className)}>{children}</div>;
+  }
+
   return (
     <motion.div className={cn(className)} variants={baseVariants}>
       {children}

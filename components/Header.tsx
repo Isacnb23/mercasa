@@ -6,7 +6,8 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "@/lib/data";
-import { cn, scrollToId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import logo from "@/public/models/mercasa-logo-transparent.png";
 import LocaleSwitcher from "./LocaleSwitcher";
 import RecruitmentPopover from "./RecruitmentPopover";
@@ -17,6 +18,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("#inicio");
+  const scrollTo = useScrollTo();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -25,11 +27,35 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Scroll-spy: mantiene el subrayado activo sincronizado con la sección
+  // realmente visible, sea que el usuario haya llegado ahí con un click en
+  // el navbar/footer o simplemente scrolleando. La franja de detección
+  // (rootMargin) es angosta y arranca justo debajo del navbar fijo, así la
+  // sección "activa" es la que ocupa esa banda, no la que apenas asoma abajo.
+  useEffect(() => {
+    const sections = navLinks
+      .map((link) => document.querySelector(link.href))
+      .filter((el): el is Element => el !== null);
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveHref(`#${entry.target.id}`);
+        });
+      },
+      { rootMargin: "-96px 0px -70% 0px", threshold: 0 }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
   const handleNav = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
     setOpen(false);
     setActiveHref(href);
-    scrollToId(href);
+    scrollTo(href);
   };
 
   const linkClass = (href: string) => cn("group relative rounded-full px-4 py-2 font-display text-[14.5px] font-medium tracking-wide transition-colors duration-300 hover:bg-corp-blue/[0.06]", activeHref === href ? "text-corp-blue" : "text-corp-ink/75 hover:text-corp-blue");

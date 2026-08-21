@@ -130,6 +130,12 @@
 
 html {
   background: var(--color-corp-offwhite);
+  /* Base de fallback para navegación por ancla (#seccion): la especificidad
+     de este selector de elemento gana sobre el `* { scroll-behavior: auto }`
+     de arriba, así el salto a una sección siempre es animado incluso antes
+     de que el JS (useScrollTo, ver Header/Hero/LogisticsTimeline/FooterNav)
+     tome el control con Lenis para un timing/easing más preciso. */
+  scroll-behavior: smooth;
 }
 
 body {

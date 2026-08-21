@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Globe2, Truck, Warehouse } from "lucide-react";
 import { heroHighlights, site } from "@/lib/data";
-import { scrollToId } from "@/lib/utils";
+import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import heroPhoto from "@/public/brand/hero-warehouse.jpg";
 
 const highlightIcons = {
@@ -19,6 +19,7 @@ const EASE_CORP = [0.22, 0.61, 0.36, 1] as const;
 
 export default function Hero() {
   const t = useTranslations("Hero");
+  const scrollTo = useScrollTo();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -175,7 +176,7 @@ export default function Hero() {
           >
             <button
               type="button"
-              onClick={() => scrollToId("#logistica")}
+              onClick={() => scrollTo("#logistica")}
               className="group inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-corp-ink bg-white px-7 py-[13px] text-[14px] font-semibold text-corp-ink transition duration-300 hover:-translate-y-0.5 hover:bg-corp-ink hover:text-white sm:w-auto"
             >
               {t("ctaPrimary")}
@@ -226,7 +227,7 @@ export default function Hero() {
 
       {/* ---------- Indicador de scroll ---------- */}
       <motion.button
-        onClick={() => scrollToId("#nosotros")}
+        onClick={() => scrollTo("#nosotros")}
         aria-label={t("scrollAria")}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -7,7 +7,7 @@ import { ChevronDown, Ship, Warehouse, Truck, Store } from "lucide-react";
 import Reveal, { RevealGroup, RevealItem } from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import { logisticsSteps } from "@/lib/data";
-import { scrollToId } from "@/lib/utils";
+import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import heroLogisticaPhoto from "@/public/brand/herologistica.jpg";
 
 const stepIcons = {
@@ -40,6 +40,7 @@ function HeroBand({ alt }: { alt: string }) {
 /* ---------- Sección principal ---------- */
 export default function LogisticsTimeline() {
   const t = useTranslations("Logistics");
+  const scrollTo = useScrollTo();
   return (
     <section
       id="logistica"
@@ -54,7 +55,7 @@ export default function LogisticsTimeline() {
       <div className="relative z-10 mx-auto px-5 md:px-8" style={{ width: "min(92vw, 1500px)" }}>
         {/* ---------- Bloque superior: editorial + collage ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[425px_minmax(0,1fr)] lg:gap-[70px]">
-          <Reveal>
+          <Reveal once>
             <div className="flex items-center gap-4">
               <span
                 className="whitespace-nowrap text-[13px] font-bold uppercase text-corp-blue"
@@ -92,7 +93,7 @@ export default function LogisticsTimeline() {
             </p>
           </Reveal>
 
-          <Reveal delay={0.12}>
+          <Reveal delay={0.12} once>
             <HeroBand alt={t("heroBandAlt")} />
           </Reveal>
         </div>
@@ -110,7 +111,7 @@ export default function LogisticsTimeline() {
             style={{ top: "42px", borderTop: "2px dashed #C7D4E3" }}
           />
 
-          <RevealGroup className="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <RevealGroup once stagger={0.09} className="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {logisticsSteps.map((step) => {
               const StepIcon = stepIcons[step.icon as keyof typeof stepIcons];
               return (
@@ -166,7 +167,7 @@ export default function LogisticsTimeline() {
         {/* ---------- Transición hacia Marcas ---------- */}
         <button
           type="button"
-          onClick={() => scrollToId("#marcas")}
+          onClick={() => scrollTo("#marcas")}
           className="mx-auto mt-12 flex flex-col items-center gap-2 text-slate-400 transition hover:text-corp-blue"
         >
           <span className="whitespace-nowrap text-[11px] font-semibold uppercase" style={{ letterSpacing: "0.28em" }}>
