@@ -199,77 +199,104 @@ body {
   }
 }
 
-/* ---------- Mapa 3D de Contacto (MapLibre / OpenFreeMap) ---------- */
-/* El estilo base "dark" ya es oscuro por diseño (fondo casi negro, agua gris
-   oscuro); solo se sube un poco el contraste/brillo para que se note el
-   relieve de los edificios 3D bajo el panel de vidrio. */
-.mercasa-map .maplibregl-canvas {
-  filter: brightness(1.12) contrast(1.05) saturate(1.1);
-}
+/* ---------- Mapa de Contacto (MapLibre / OpenFreeMap) ---------- */
+/* Estilo base "positron" (claro) — a diferencia del "dark" que este mapa
+   usaba antes, no necesita ningún filtro de brillo/contraste sobre el
+   canvas: aplicarle el mismo boost pensado para tiles oscuros lo dejaría
+   lavado. Controles, atribución y pin pasan todos a paleta clara a juego. */
 .mercasa-map .maplibregl-ctrl-attrib,
 .mercasa-map .maplibregl-ctrl-attrib a {
   background: transparent;
-  color: rgba(238, 242, 245, 0.45);
+  color: rgba(12, 35, 63, 0.55);
 }
 .mercasa-map .maplibregl-ctrl-attrib.maplibregl-compact {
-  background-color: rgba(6, 15, 24, 0.55);
+  background-color: rgba(255, 255, 255, 0.75);
 }
 .mercasa-map .maplibregl-ctrl-group {
-  background: rgba(8, 23, 38, 0.72);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
+  background: #ffffff;
+  border: 1px solid rgba(15, 40, 75, 0.12);
+  box-shadow: 0 8px 20px rgba(16, 37, 63, 0.14);
 }
 .mercasa-map .maplibregl-ctrl-group button {
   background: transparent;
 }
 .mercasa-map .maplibregl-ctrl-group button:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(12, 68, 124, 0.06);
 }
 .mercasa-map .maplibregl-ctrl-icon {
-  filter: invert(1) brightness(1.6);
+  /* Los iconos +/- del control vienen en gris oscuro por defecto — ya leen
+     bien sobre el fondo blanco del control, sin invertir. */
+  filter: none;
 }
 
+/* Pin del CEDI: gota de marca (azul #0C447C) con un isotipo "M" en círculo
+   blanco. La gota se logra con el truco clásico de CSS (cuadrado con 3
+   esquinas redondeadas + rotate(-45deg)); el halo pulsante y el propio
+   contenedor están calculados para que la PUNTA de la gota —no su centro—
+   caiga exactamente sobre la coordenada (ver anchor:"bottom" en el JS). */
 .mercasa-map-pin {
   position: relative;
-  width: 44px;
+  width: 36px;
   height: 44px;
-}
-.mercasa-map-pin__dot {
-  position: absolute;
-  inset: 13px;
-  border-radius: 50%;
-  /* Azul institucional (--color-corp-blue), consistente con el resto del
-     sitio en vez del teal/azul genérico que tenía el diseño viejo. */
-  background: linear-gradient(135deg, #4a97f0, var(--color-corp-blue));
-  border: 3px solid #06121c;
-  /* Doble anillo ESTÁTICO (además del pulso animado de abajo) — así el pin
-     siempre tiene un halo visible, no solo durante el pico de la animación. */
-  box-shadow:
-    0 0 0 4px rgba(7, 95, 216, 0.5),
-    0 0 0 9px rgba(7, 95, 216, 0.2),
-    0 4px 18px rgba(0, 0, 0, 0.55);
 }
 .mercasa-map-pin__pulse {
   position: absolute;
-  inset: 6px;
+  left: 50%;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  margin-bottom: -7px;
   border-radius: 50%;
-  background: rgba(7, 95, 216, 0.5);
+  background: rgba(12, 68, 124, 0.35);
   animation: mercasa-pin-pulse 2.2s ease-out infinite;
+}
+.mercasa-map-pin__drop {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #0c447c;
+  box-shadow:
+    0 6px 16px rgba(12, 68, 124, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.mercasa-map-pin__label {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0c447c;
+  font-family: var(--font-display, inherit);
+  font-size: 13px;
+  font-weight: 800;
 }
 @keyframes mercasa-pin-pulse {
   0% {
-    transform: scale(0.55);
+    transform: scale(0.6);
     opacity: 0.85;
   }
   100% {
-    transform: scale(2.6);
+    transform: scale(3.4);
     opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .mercasa-map-pin__pulse {
     animation: none;
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }
+

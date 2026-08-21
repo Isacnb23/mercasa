@@ -30,8 +30,13 @@ const MODEL_URL = "/models/mercasa-truck.glb";
 const DRACO_DECODER_PATH = "/draco/";
 const MODEL_TIMEOUT = 7000; // ms — si no carga en este tiempo, se cae al loader 2D
 
-const ENTER_DURATION = 820; // ms — entrada ágil, sin crawl al llegar al centro
-const LEAVE_DURATION = 460; // ms — salida rápida con easeInCubic (acelera al "jalar")
+// Debe calzar con ENTER_DURATION/COMPLETE_DURATION en PageLoader.tsx: el
+// padre arranca su propio timer de "estadía" (DWELL_DURATION) usando este
+// mismo valor como referencia de cuándo la entrada ya terminó — si no
+// coinciden, la coreografía se desincroniza otra vez.
+const ENTER_DURATION = 600; // ms — entrada ágil, sin crawl al llegar al centro
+// Debe calzar EXACTO con LEAVE_DURATION_3D en PageLoader.tsx (ver esa constante).
+const LEAVE_DURATION = 500; // ms — salida con easeInCubic (acelera al "jalar")
 const RIG_BASE_Y = -0.74; // altura del camión sobre el piso: apoyado pero con aire de estudio
 // Posición central en X. Ligeramente a la derecha para compensar el sesgo
 // visual del remolque (largo hacia -X) y centrar la masa del camión en cuadro.

@@ -3,31 +3,24 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Boxes, ChevronDown, Globe2, Ship, Truck, Users } from "lucide-react";
+import { ChevronDown, Ship, Warehouse, Truck, Store } from "lucide-react";
 import Reveal, { RevealGroup, RevealItem } from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import { logisticsSteps } from "@/lib/data";
 import { scrollToId } from "@/lib/utils";
 import heroLogisticaPhoto from "@/public/brand/herologistica.jpg";
-import step1Photo from "@/public/brand/1.jpg";
-import step2Photo from "@/public/brand/2.almacenamiento.jpg";
-import step3Photo from "@/public/brand/3.jpg";
-import step4Photo from "@/public/brand/4.jpg";
 
-const statIcons = {
-  globe: Globe2,
+const stepIcons = {
   ship: Ship,
-  boxes: Boxes,
+  warehouse: Warehouse,
   truck: Truck,
-  users: Users,
+  store: Store,
 } as const;
 
-const stepPhotos = {
-  "map-world": step1Photo,
-  "photo-warehouse": step2Photo,
-  "map-cr": step3Photo,
-  store: step4Photo,
-} as const;
+// Un solo azul de marca para las 4 cards (antes cada paso tenía su propio
+// color — desentonaba con la paleta monocromática de Mercasa).
+const STEP_ACCENT = "#0C447C";
+const STEP_ACCENT_BG = "#E6F1FB";
 
 /* ---------- Banda hero: collage ya compuesto (barco → bodega → camión → tienda) ---------- */
 function HeroBand({ alt }: { alt: string }) {
@@ -39,39 +32,6 @@ function HeroBand({ alt }: { alt: string }) {
         fill
         className="object-cover"
         sizes="(min-width: 1280px) 900px, (min-width: 768px) calc(100vw - 4rem), calc(100vw - 2rem)"
-      />
-    </div>
-  );
-}
-
-/* ---------- Foto de apoyo de cada etapa ---------- */
-function StepVisual({ visual }: { visual: string }) {
-  const src = stepPhotos[visual as keyof typeof stepPhotos];
-  return (
-    <div
-      className="relative h-[140px] w-full overflow-hidden rounded-[14px]"
-      style={{
-        border: "1px solid #E8DFC8",
-        boxShadow: "0 10px 26px -14px rgba(16,37,63,0.22)",
-      }}
-    >
-      <Image src={src} alt="" fill className="object-cover" sizes="(min-width: 1024px) 22vw, 45vw" />
-      {/* Overlay tibio consistente: unifica la temperatura de color entre
-          fotos de distinto origen (real vs. render) para que las 4 se
-          sientan de la misma sesión, aunque no lo sean. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(8,43,92,0.06) 0%, rgba(8,43,92,0) 35%, rgba(8,43,92,0.14) 100%)",
-          mixBlendMode: "multiply",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
       />
     </div>
   );
@@ -138,63 +98,63 @@ export default function LogisticsTimeline() {
         </div>
 
         {/* ---------- Cuatro etapas: tarjetas con más carácter ---------- */}
-        <RevealGroup className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:mt-[70px] lg:grid-cols-4">
-          {logisticsSteps.map((step) => (
-            <RevealItem
-              key={step.step}
-              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-7 shadow-[0_10px_28px_rgba(16,37,63,0.07)] transition-shadow duration-300 hover:shadow-[0_18px_40px_rgba(16,37,63,0.14)]"
-            >
-              {/* Filete superior en hover: mismo lenguaje que la banda de Nosotros */}
-              <span
-                aria-hidden
-                className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-corp-yellow transition-transform duration-400 group-hover:scale-x-100"
-              />
+        <div className="relative mt-16 lg:mt-[70px]">
+          {/* Línea de flujo punteada: conecta los 4 pasos a la altura de sus
+              badges, detrás de las cards (z-0, las cards opacas la tapan
+              excepto en el gap entre ellas). Solo desde lg, que es donde el
+              grid es una sola fila de 4 — en mobile/tablet (2 columnas) no
+              hay una fila única a la que conectar. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 z-0 hidden lg:block"
+            style={{ top: "42px", borderTop: "2px dashed #C7D4E3" }}
+          />
 
-              {/* Número dentro de un círculo, en vez de suelto: más ancla visual */}
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full font-display text-[17px] font-bold text-corp-blue transition-transform duration-300 group-hover:scale-105"
-                style={{ background: "#E6F1FB" }}
-              >
-                {step.step}
-              </span>
+          <RevealGroup className="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {logisticsSteps.map((step) => {
+              const StepIcon = stepIcons[step.icon as keyof typeof stepIcons];
+              return (
+                <RevealItem
+                  key={step.step}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-7 shadow-[0_10px_28px_rgba(16,37,63,0.07)] transition-shadow duration-300 hover:shadow-[0_18px_40px_rgba(16,37,63,0.14)]"
+                >
+                  {/* Barra de acento superior: mismo azul de marca en las 4
+                      cards, para reforzar que son 4 etapas de UN proceso. */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-[3px]"
+                    style={{ background: STEP_ACCENT }}
+                  />
 
-              {/* Bloque flexible: absorbe la diferencia de altura entre
-                  títulos de 1 y 2 líneas para que las cuatro fotos y sus
-                  métricas queden alineadas horizontalmente. */}
-              <div className="flex-1">
-                <h3 className="mt-5 text-[19px] font-semibold leading-tight text-corp-ink">
-                  {t(`steps.${step.key}.title`)}
-                </h3>
-                <p className="mt-3 text-[14px] leading-[1.65]" style={{ color: "#3A4A5F" }}>
-                  {t(`steps.${step.key}.description`)}
-                </p>
-              </div>
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Badge rectangular (antes círculo): texto en el azul de
+                        marca sobre un fondo tenue del mismo tono. */}
+                    <span
+                      className="inline-flex w-fit items-center rounded-lg px-3 py-1 font-display text-[13px] font-bold transition-transform duration-300 group-hover:scale-105"
+                      style={{ background: STEP_ACCENT_BG, color: STEP_ACCENT }}
+                    >
+                      {step.step}
+                    </span>
 
-              <div className="mt-5">
-                <StepVisual visual={step.visual} />
-              </div>
+                    <StepIcon
+                      aria-hidden
+                      className="h-6 w-6 shrink-0"
+                      strokeWidth={1.75}
+                      style={{ color: STEP_ACCENT }}
+                    />
+                  </div>
 
-              {step.stats.length > 0 && (
-                <div className="mt-5 flex flex-wrap items-center gap-x-7 gap-y-3 border-t pt-4" style={{ borderColor: "#E2E8F0" }}>
-                  {step.stats.map((stat) => {
-                    const StatIcon = statIcons[stat.icon as keyof typeof statIcons];
-                    return (
-                      <div key={stat.icon} className="flex items-center gap-2.5">
-                        <StatIcon className="h-[18px] w-[18px] shrink-0 text-corp-blue/70" strokeWidth={1.5} aria-hidden />
-                        <div className="leading-tight">
-                          <span className="block text-[16px] font-semibold text-corp-ink">{stat.value}</span>
-                          <span className="mt-0.5 block text-[11.5px] text-slate-500">
-                            {t(`steps.${step.key}.statLabel`)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </RevealItem>
-          ))}
-        </RevealGroup>
+                  <h3 className="mt-5 text-[19px] font-semibold leading-tight text-corp-ink">
+                    {t(`steps.${step.key}.title`)}
+                  </h3>
+                  <p className="mt-3 text-[14px] leading-[1.65]" style={{ color: "#3A4A5F" }}>
+                    {t(`steps.${step.key}.description`)}
+                  </p>
+                </RevealItem>
+              );
+            })}
+          </RevealGroup>
+        </div>
 
         {/* La barra inferior de diferenciales ("Más de 60 años / Respaldo
             institucional / Estándares internacionales / Cobertura nacional")

@@ -25,8 +25,8 @@ maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 /**
  * Mapa de fondo para la sección de Contacto: vista plana (top-down, sin tilt
  * ni rotación) para que se lea al instante como "aquí está la bodega", no
- * como un render abstracto. Usa OpenFreeMap (estilo "dark", ya oscuro por
- * diseño) vía MapLibre GL — sin API key ni facturación.
+ * como un render abstracto. Usa OpenFreeMap (estilo "positron", claro) vía
+ * MapLibre GL — sin API key ni facturación.
  *
  * El único marcador y su info viven en la card flotante de ContactSection
  * (no hay popup nativo de MapLibre acá): dos tarjetas mostrando lo mismo se
@@ -55,12 +55,14 @@ export default function ContactMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/dark",
+      style: "https://tiles.openfreemap.org/styles/positron",
       center: [site.address.lng, site.address.lat],
-      // Vista plana: zoom 15 deja ver las calles principales y el contexto
-      // de la zona; pitch/bearing en 0 para que se lea como un mapa de
-      // ubicación normal, orientado al norte, no como un render 3D.
-      zoom: 15,
+      // Vista plana: zoom 17 deja el CEDI como protagonista, con la vía de
+      // acceso y las cuadras inmediatas a su alrededor, sin el ruido de
+      // calles lejanas que aparecía a zoom 15; pitch/bearing en 0 para que
+      // se lea como un mapa de ubicación normal, orientado al norte, no
+      // como un render 3D.
+      zoom: 17,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -78,56 +80,43 @@ export default function ContactMap() {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    // El estilo "dark" de OpenFreeMap deja las vías casi en el mismo negro
-    // que el fondo (fondo rgb(12,12,12); calles en #181818, hsl(0,0%,7%), o
-    // incluso #000 en la Interamericana a este zoom) — se lee "apagado", no
-    // elegante. Confirmé los layer IDs reales del estilo remoto (GET
-    // https://tiles.openfreemap.org/styles/dark → 47 layers) antes de
-    // tocarlos — son los mismos que ya se usaban acá, no nombres genéricos
-    // inventados ("road"/"transportation" NO son IDs reales de este estilo).
-    // Se sube el contraste de vías/rótulos vía setPaintProperty en cuanto el
-    // estilo remoto termina de cargar, y se lleva el fondo al navy de marca
-    // (--color-navy-950) en vez del negro neutro por defecto: mismo mood
-    // oscuro, pero ahora es UNA paleta (fondo/agua/edificios en navy, vías en
-    // azul-gris cada vez más claro por jerarquía) en vez de negro plano +
-    // vías casi invisibles.
+    // El estilo "positron" de OpenFreeMap ya trae buen contraste de vías de
+    // fábrica (casing gris sobre calle blanca, jerarquía por ancho) — a
+    // diferencia del "dark" que este mapa usaba antes, acá no hace falta
+    // repintar la red vial completa para que se lea. Confirmé los layer IDs
+    // reales vía GET https://tiles.openfreemap.org/styles/positron (55
+    // layers, mismos IDs que el estilo "dark": background/water/building/
+    // highway_* no cambian entre estilos de OpenFreeMap, solo su paleta).
+    // Los únicos ajustes son de marca: fondo cálido a juego con el beige de
+    // la sección (#F7F3EB) en vez del gris frío por defecto, agua en un azul
+    // reconocible (el "positron" de fábrica la deja gris), y un tinte sutil
+    // de azul institucional en la carretera principal/motorway para que se
+    // sienta parte de la identidad, deliberadamente discreto.
     map.on("style.load", () => {
       // setPaintProperty exige el nombre de capa en pantalla (getLayer) antes
       // de tocarla, por si el estilo remoto la renombró o quitó.
       const setLineColor = (layerId: string, color: string) => {
         if (map.getLayer(layerId)) map.setPaintProperty(layerId, "line-color", color);
       };
-      const setTextColor = (layerId: string, color: string) => {
-        if (map.getLayer(layerId)) map.setPaintProperty(layerId, "text-color", color);
-      };
 
       if (map.getLayer("background")) {
-        map.setPaintProperty("background", "background-color", "#081726");
+        map.setPaintProperty("background", "background-color", "#F6F1E6");
+      }
+      if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#BFD9EC");
+      if (map.getLayer("building")) {
+        map.setPaintProperty("building", "fill-color", "#ECE4D3");
+        map.setPaintProperty("building", "fill-outline-color", "#DCD0B8");
       }
 
-      // Jerarquía por brillo: cuanto más importante la vía, más clara — igual
-      // que cualquier mapa dark-mode legible (Interamericana = motorway =
-      // la más brillante). Valores subidos otra vuelta más: la primera pasada
-      // (grises/azules muy apagados) seguía leyéndose plana contra el fondo.
-      setLineColor("highway_path", "#3a5068");
-      setLineColor("highway_minor", "#5b7fa8");
-      setLineColor("highway_major_casing", "rgba(110,145,185,0.9)");
-      setLineColor("highway_major_inner", "#8fb8e8");
-      setLineColor("highway_major_subtle", "#6688aa");
-      setLineColor("highway_motorway_casing", "rgba(130,165,205,0.95)");
-      setLineColor("highway_motorway_inner", "#aed0f5");
-      setLineColor("highway_motorway_subtle", "#7098bc");
-      setTextColor("highway_name_other", "rgba(190,205,220,0.95)");
-      setTextColor("highway_name_motorway", "#d4e4f7");
+      setLineColor("highway_major_casing", "rgba(12,68,124,0.22)");
+      setLineColor("highway_motorway_casing", "rgba(12,68,124,0.28)");
 
-      // Un toque en agua/edificios para que el "contexto" (qué es calle, qué
-      // es agua, qué es construido) también se distinga, sin acercarse al
-      // brillo de las vías. Áreas verdes (landuse_park) NO se tocan a
-      // propósito — el pedido es legibilidad de vías, no repintar el resto.
-      if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#0f2233");
-      if (map.getLayer("building")) {
-        map.setPaintProperty("building", "fill-color", "#0e1a2a");
-        map.setPaintProperty("building", "fill-outline-color", "#1c3550");
+      // Etiquetas de calles residenciales/de servicio (Avenida 48, Calle 58,
+      // etc.) solo generan ruido a esta escala y hacen que el CEDI se pierda
+      // entre nombres de vías secundarias — se ocultan, dejando visibles
+      // solo las etiquetas de vías principales ("highway-name-major").
+      if (map.getLayer("highway-name-minor")) {
+        map.setLayoutProperty("highway-name-minor", "visibility", "none");
       }
     });
 
@@ -135,17 +124,20 @@ export default function ContactMap() {
       loaded = true;
       window.clearTimeout(failSafeTimer);
 
-      // Marcador del CEDI: pin con halo pulsante en teal, a juego con el
-      // sitio. Sin popup propio: la card flotante de ContactSection ya
-      // muestra el nombre y el botón "Cómo llegar" — un popup nativo acá
-      // encima duplicaba esa info y tapaba el pin.
+      // Marcador del CEDI: gota azul de marca con isotipo "M" en círculo
+      // blanco y halo pulsante detrás. Sin popup propio: la card flotante de
+      // ContactSection ya muestra el nombre y el botón "Cómo llegar" — un
+      // popup nativo acá encima duplicaba esa info y tapaba el pin.
       const el = document.createElement("div");
       el.className = "mercasa-map-pin";
       el.innerHTML = `
         <span class="mercasa-map-pin__pulse"></span>
-        <span class="mercasa-map-pin__dot"></span>
+        <span class="mercasa-map-pin__drop"></span>
+        <span class="mercasa-map-pin__label">M</span>
       `;
-      new maplibregl.Marker({ element: el, anchor: "center" })
+      // anchor "bottom": la punta de la gota (no su centro visual) es la que
+      // debe caer exactamente sobre la coordenada del CEDI.
+      new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([site.address.lng, site.address.lat])
         .addTo(map);
     });

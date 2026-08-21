@@ -11,7 +11,7 @@ import { site } from "@/lib/data";
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-corp-ink" />,
+  loading: () => <div className="absolute inset-0 bg-[#F6F1E6]" />,
 });
 
 /* Menú "Cómo llegar": un solo botón que despliega dos opciones (Google Maps /
@@ -56,11 +56,11 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
         {open && (
           <motion.div
             role="menu"
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden"
+            className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-20 overflow-hidden"
             style={{
               borderRadius: "10px",
               border: "1px solid rgba(7,95,216,0.25)",
@@ -101,9 +101,10 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
 /**
  * Marcas, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
  * fijo de AmbientBackdrop) — el "cambio de capítulo" se logra con tarjetas
- * claras flotando encima, no con un cambio de color de página. El mapa 3D
- * se mantiene como una "ventana" oscura enmarcada dentro de una tarjeta
- * clara tipo mapa impreso, no como fondo de toda la sección.
+ * claras flotando encima, no con un cambio de color de página. El mapa
+ * (estilo "positron" claro) vive enmarcado dentro de una tarjeta tipo mapa
+ * impreso, a juego con el resto de la sección en vez de ser el único
+ * contraste oscuro.
  */
 export default function ContactSection() {
   const t = useTranslations("Contact");
@@ -256,15 +257,20 @@ export default function ContactSection() {
               boxShadow: "0 20px 50px rgba(16,37,63,0.10)",
             }}
           >
-            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-corp-ink lg:min-h-0">
-              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-corp-ink" />}
+            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-[#F6F1E6] lg:min-h-0">
+              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-[#F6F1E6]" />}
               {/* Viñeta sutil para que el marco se sienta intencional aun si
-                  el mapa todavía está cargando teselas. */}
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_20px_rgba(6,15,24,0.4)]" />
+                  el mapa todavía está cargando teselas — aclarada a juego
+                  con el mapa claro (antes oscurecía bordes sobre un mapa
+                  dark). */}
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_50px_16px_rgba(16,37,63,0.12)]" />
 
-              {/* Tarjeta flotante superpuesta */}
+              {/* Tarjeta flotante superpuesta: en la esquina inferior
+                  izquierda, lejos del pin (centrado en el mapa) y de los
+                  controles de zoom (arriba a la derecha), para que el pin
+                  respire sin competir con otro elemento azul fuerte. */}
               <div
-                className="absolute left-4 top-4 max-w-[280px] bg-white p-4"
+                className="absolute bottom-4 left-4 max-w-[280px] bg-white p-4"
                 style={{
                   borderRadius: "12px",
                   boxShadow: "0 14px 30px -10px rgba(0,0,0,0.35)",

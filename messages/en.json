@@ -33,7 +33,7 @@
     "ariaLabel": "Loading Mercasa",
     "kicker": "Loading experience",
     "sub": "Logistics & Distribution",
-    "captionLoading": "Preparing your order...",
+    "captionLoading": "Loading...",
     "captionReady": "Ready to continue"
   },
   "Hero": {
@@ -80,8 +80,7 @@
     "steps": {
       "importacion": {
         "title": "Global Import",
-        "description": "We work with more than 45 suppliers across 30 countries, managing international freight and customs to the highest standards.",
-        "statLabel": "countries"
+        "description": "We work with more than 45 suppliers across 30 countries, managing international freight and customs to the highest standards."
       },
       "almacenamiento": {
         "title": "Smart Warehousing",
@@ -93,8 +92,7 @@
       },
       "puntoDeVenta": {
         "title": "Point of Sale",
-        "description": "We close the loop by getting every product into the hands of the end consumer, in every corner of the country.",
-        "statLabel": "customers served every week"
+        "description": "We close the loop by getting every product into the hands of the end consumer, in every corner of the country."
       }
     },
     "cta": "Discover our brands",

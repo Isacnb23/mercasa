@@ -6,39 +6,47 @@ import PageLoader3D from "./PageLoader3D";
 import styles from "./PageLoader.module.css";
 import { cn } from "@/lib/utils";
 
-const MIN_TIME = 1100; // tiempo mínimo visible desde el montaje (ms) — rápido pero perceptible
-// Tiempo mínimo que el camión 3D permanece EN PANTALLA desde que el modelo
-// terminó de cargar: cubre la entrada (ENTER_DURATION 820ms en PageLoader3D)
-// + una pausa breve al centro (~550ms) antes de salir. Es clave porque el
-// GLB es pesado: si tarda más que MIN_TIME en descargar, sin esto el overlay
-// saldría en el instante en que carga (wait=0) y no se vería ni la entrada
-// ni el camión centrado. Debe mantenerse en sync con ENTER_DURATION.
-const SHOWCASE_3D = 1400;
-// Debe calzar EXACTO con LEAVE_DURATION en PageLoader3D.tsx: ese valor
-// controla cuánto tarda el camión en salir de cuadro (vía rAF), y este
-// temporizador decide cuándo React avanza a "done" — si no coinciden, el
-// camión se corta a medio salir o la transición espera de más sin motivo.
-const LEAVE_DELAY = 460;
-const DONE_DELAY = 500; // debe calzar con la transición de .isDone (ver PageLoader.module.css)
+// El camión 3D (GLB vía Three.js) es el protagonista del loader — un intento
+// anterior lo reemplazó por un camión 2D creyendo que resolvía el problema
+// de timing, pero eso no era lo pedido: se revirtió. El problema real era
+// que la coreografía del camión 3D corría atada a timers independientes de
+// la barra de progreso, y el exit podía disparar antes de que la entrada
+// terminara de jugarse (se sentía como un flash). La solución: el camión 3D
+// tiene su PROPIA secuencia garantizada de 3 fases — entrada → estadía →
+// salida — con temporizadores dedicados armados en el instante exacto en
+// que corresponde (nunca con una resta retroactiva de "cuánto falta"), que
+// corre completa sin importar cuándo dispare window.load. El telón del
+// panel arranca RECIÉN cuando esa secuencia termina — nunca antes, nunca
+// simultáneo.
+const MIN_TIME = 350; // ms — piso mínimo antes de poder cerrar el panel (evita flash en fallback 2D con carga cacheada)
+// Debe calzar con ENTER_DURATION en PageLoader3D.tsx: ambos arrancan juntos
+// al resolver el modelo, así que si coinciden, la entrada del camión y el
+// cierre de la barra a 100% terminan en el mismo instante.
+const ENTER_DURATION = 600; // ms — entrada del camión 3D, ease-out
+const DWELL_DURATION = 800; // ms — el camión 3D queda visible al centro (idle: ruedas, suspensión, glow — ya animado dentro de PageLoader3D)
+// Debe calzar EXACTO con LEAVE_DURATION en PageLoader3D.tsx.
+const LEAVE_DURATION_3D = 500; // ms — salida del camión 3D, ease-in-out
+// El camión 2D/fallback no tiene coreografía dedicada (su salida sigue atada
+// al telón del panel vía CSS, `.isLeaving .truckStage` — como siempre fue,
+// ver PageLoader.module.css) porque no depende de ningún asset pesado: no
+// hay ningún "flash" que evitar ahí.
+// El telón del panel arranca solo después de que el camión (3D o 2D) ya
+// salió por completo, así que puede ser corto: no tiene que disimular
+// ningún corte, solo cerrar con prolijidad.
+const PANEL_LEAVE_DELAY = 130; // debe calzar con la transición de .ui (ver PageLoader.module.css)
+const DONE_DELAY = 140; // debe calzar con la transición de .isDone (ver PageLoader.module.css)
 
-// ---- Barra de progreso "viva" ----
-// El progreso real de descarga del GLB llega a saltos (o ni siquiera llega si
-// el servidor no manda Content-Length). En vez de pintar ese valor crudo,
-// suavizamos hacia un objetivo con una animación de rAF: nunca se ve
-// congelada y, al resolver el modelo, completa del valor actual a 100% con
-// una curva controlada en vez de saltar de golpe.
-const COMPLETE_DURATION = 550; // ms — cierre visual ágil hasta 100%
+const COMPLETE_DURATION = 600; // ms — cierre visual de la barra a 100%, sincronizado con ENTER_DURATION
 
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Fase del PANEL/telón — ya NO controla al camión 3D directamente (ver
+// `truckSignal` más abajo, que es la señal dedicada para eso).
 type Phase = "loading" | "leaving" | "done" | "hidden";
 // "pending": aún no se decidió 3D vs 2D — no debe montarse NADA que dispare
 // la descarga del GLB hasta que el efecto de montaje resuelva reduced-motion.
-// Si "three" arrancara como valor por defecto, PageLoader3D montaría (y
-// pediría el .glb) en el mismo commit, antes de que este componente alcance
-// a corregir a "fallback" para reduced-motion.
 type Mode = "pending" | "three" | "fallback";
 
 export default function PageLoader() {
@@ -47,22 +55,24 @@ export default function PageLoader() {
   const [mode, setMode] = useState<Mode>("pending");
   const [indeterminate, setIndeterminate] = useState(true);
   const [visualProgress, setVisualProgress] = useState(6);
-  const [modelReady, setModelReady] = useState(false);
+  const [sequenceStarted, setSequenceStarted] = useState(false);
+  // Señal DEDICADA para PageLoader3D — independiente de `phase` (el panel).
+  // Antes ambos recibían el mismo valor, así que el camión salía de cuadro
+  // exactamente cuando el panel empezaba su telón; ahora el panel espera a
+  // que esto llegue a "leaving" Y a que el camión termine de salir (ver
+  // truckGoneRef) antes de arrancar el suyo.
+  const [truckSignal, setTruckSignal] = useState<"loading" | "leaving">("loading");
 
-  const startRef = useRef(0);
   const reducedRef = useRef(false);
   const resolvedRef = useRef(false);
-  const resolvedAtRef = useRef(0); // instante en que el modelo quedó listo
-  const showcaseRef = useRef(false); // true solo si cargó el camión 3D (no fallback)
+  const showcaseRef = useRef(false); // true solo si cargó el camión 3D (no fallback 2D)
+  const truckGoneRef = useRef(false); // true cuando el camión (3D o 2D) ya completó su salida
   const pageLoadedRef = useRef(false);
-  const timersRef = useRef<{
-    leave?: ReturnType<typeof setTimeout>;
-    done?: ReturnType<typeof setTimeout>;
-    hide?: ReturnType<typeof setTimeout>;
-  }>({});
+  const minTimeDoneRef = useRef(false);
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
 
-  // Progreso "objetivo" (crudo, puede saltar) vs. "visual" (suavizado, el que
-  // se pinta). completionStartRef marca cuándo empezó el cierre a 100%.
+  // Progreso "objetivo" (crudo, puede saltar) vs. "visual" (suavizado, el
+  // que se pinta). completionStartRef marca cuándo empezó el cierre a 100%.
   const progressRef = useRef(6);
   const targetRef = useRef(12);
   const completionStartRef = useRef(0);
@@ -78,18 +88,18 @@ export default function PageLoader() {
 
       let next = progressRef.current;
 
-      if (modelReady && completionStartRef.current > 0) {
-        const t = Math.min(1, (now - completionStartRef.current) / COMPLETE_DURATION);
-        next = completionFromRef.current + (100 - completionFromRef.current) * easeInOutCubic(t);
-        if (t >= 1) next = 100;
+      if (sequenceStarted && completionStartRef.current > 0) {
+        const tt = Math.min(1, (now - completionStartRef.current) / COMPLETE_DURATION);
+        next = completionFromRef.current + (100 - completionFromRef.current) * easeInOutCubic(tt);
+        if (tt >= 1) next = 100;
       } else {
-        // Sin Content-Length (indeterminado): sigue avanzando despacio hasta
-        // 84% para no verse congelada mientras se espera la descarga real.
+        // Sin Content-Length (indeterminado): sigue avanzando hasta 84% para
+        // no verse congelada mientras se espera la descarga real del GLB.
         if (indeterminate) {
-          targetRef.current = Math.min(84, targetRef.current + dt * 5.4);
+          targetRef.current = Math.min(84, targetRef.current + dt * 8);
         }
         const target = Math.min(90, targetRef.current);
-        const smoothing = 1 - Math.exp(-dt * 4.2);
+        const smoothing = 1 - Math.exp(-dt * 5.5);
         next += (target - next) * smoothing;
       }
 
@@ -100,42 +110,59 @@ export default function PageLoader() {
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [modelReady, indeterminate]);
+  }, [sequenceStarted, indeterminate]);
 
-  // Se cumple cuando el modelo 3D ya resolvió (cargó o cayó al fallback 2D) Y
-  // la página terminó de cargar. Gobierna cuándo pasa a "leaving" — ni el
-  // three.js ni el 2D deciden por su cuenta cuándo se oculta el overlay.
+  // Se cumple cuando el camión ya salió de cuadro por completo, la página
+  // terminó de cargar Y pasó el piso mínimo. Gobierna cuándo arranca el
+  // telón del panel — nunca antes de que el camión termine su salida.
   const tryFinish = useCallback(() => {
     if (!resolvedRef.current || !pageLoadedRef.current) return;
-    if (timersRef.current.leave) return; // ya se programó la salida
+    if (!minTimeDoneRef.current) return;
+    if (!truckGoneRef.current) return;
+    if (timersRef.current.leave) return; // ya se programó la salida del panel
 
-    const now = Date.now();
-    let wait = reducedRef.current ? 0 : Math.max(0, MIN_TIME - (now - startRef.current));
-    // Con camión 3D, garantizar que se vea EN PANTALLA el tiempo de showcase
-    // desde que cargó (entrada + pausa), aunque la descarga haya tardado mucho.
-    if (showcaseRef.current) {
-      wait = Math.max(wait, SHOWCASE_3D - (now - resolvedAtRef.current));
-    }
     timersRef.current.leave = setTimeout(() => {
       setPhase("leaving");
       timersRef.current.done = setTimeout(() => {
         setPhase("done");
         timersRef.current.hide = setTimeout(() => setPhase("hidden"), DONE_DELAY);
-      }, LEAVE_DELAY);
-    }, wait);
+      }, PANEL_LEAVE_DELAY);
+    }, 0);
   }, []);
 
   const handleResolved = useCallback(
     (isThreeTruck: boolean) => {
       if (!resolvedRef.current) {
         resolvedRef.current = true;
-        resolvedAtRef.current = Date.now();
         showcaseRef.current = isThreeTruck;
         // Dispara el cierre suave de la barra hasta 100% desde el valor
-        // actual, en vez de dejarla clavada o saltar de golpe.
+        // actual. Arranca en el mismo instante que la entrada del camión,
+        // así ambos llegan a su remate juntos (ver COMPLETE_DURATION /
+        // ENTER_DURATION arriba).
         completionFromRef.current = progressRef.current;
         completionStartRef.current = performance.now();
-        setModelReady(true);
+        setSequenceStarted(true);
+
+        if (isThreeTruck) {
+          // Secuencia garantizada: entrada → estadía → salida, con
+          // temporizadores dedicados armados AHORA (al resolver el GLB) —
+          // corre completa sin importar cuándo termine de cargar el resto
+          // de la página.
+          timersRef.current.dwellStart = setTimeout(() => {
+            timersRef.current.leaveStart = setTimeout(() => {
+              setTruckSignal("leaving");
+              timersRef.current.truckGone = setTimeout(() => {
+                truckGoneRef.current = true;
+                tryFinish();
+              }, LEAVE_DURATION_3D);
+            }, DWELL_DURATION);
+          }, ENTER_DURATION);
+        } else {
+          // 2D/fallback: sin coreografía dedicada que proteger — su salida
+          // queda atada al telón del panel (.isLeaving .truckStage), como
+          // siempre fue.
+          truckGoneRef.current = true;
+        }
       }
       tryFinish();
     },
@@ -145,20 +172,25 @@ export default function PageLoader() {
   const handleFallback = useCallback(() => {
     setMode("fallback");
     setIndeterminate(true);
-    handleResolved(false); // 2D: sin showcase largo (se muestra al instante)
+    handleResolved(false); // 2D: sin coreografía dedicada (se muestra al instante)
   }, [handleResolved]);
 
   useEffect(() => {
-    startRef.current = Date.now();
     reducedRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (reducedRef.current) {
       // Menos movimiento: nunca se inicializa Three.js ni se descargan los
-      // ~55MB del GLB — directo al loader 2D existente.
+      // ~55MB del GLB — directo al loader 2D existente, sin piso mínimo
+      // artificial.
+      minTimeDoneRef.current = true;
       setMode("fallback");
       handleResolved(false);
     } else {
       setMode("three");
+      timersRef.current.minTime = setTimeout(() => {
+        minTimeDoneRef.current = true;
+        tryFinish();
+      }, MIN_TIME);
     }
 
     function onWindowLoad() {
@@ -174,9 +206,7 @@ export default function PageLoader() {
 
     return () => {
       window.removeEventListener("load", onWindowLoad);
-      clearTimeout(timersRef.current.leave);
-      clearTimeout(timersRef.current.done);
-      clearTimeout(timersRef.current.hide);
+      Object.values(timersRef.current).forEach((timer) => clearTimeout(timer));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tryFinish/handleResolved son estables (refs)
   }, []);
@@ -184,6 +214,7 @@ export default function PageLoader() {
   if (phase === "hidden") return null;
 
   const leavingOrDone = phase === "leaving" || phase === "done";
+  const complete = visualProgress >= 99.95;
 
   return (
     <div
@@ -200,7 +231,7 @@ export default function PageLoader() {
 
       {mode === "three" && (
         <PageLoader3D
-          phase={phase}
+          phase={truckSignal}
           onProgress={(p) => {
             setIndeterminate(false);
             // El progreso de red llega 0..100. Se reserva el último tramo
@@ -227,34 +258,27 @@ export default function PageLoader() {
       )}
       {/* mode === "pending": aún resolviendo reduced-motion, no se monta ninguna escena */}
 
-      {(() => {
-        const complete = visualProgress >= 99.95;
-        return (
-          <div className={cn(styles.ui, mode === "three" && styles.uiBottom, complete && styles.isComplete)}>
-            <div className={styles.uiPanel}>
-              <div className={styles.uiKicker}>
-                <span className={styles.uiDot} /> {t("kicker")}
-              </div>
-              <div className={styles.brand}>MERCASA</div>
-              {mode === "three" && <div className={styles.sub}>{t("sub")}</div>}
-              <div className={styles.panelLine} />
-              <div className={styles.progressTrack}>
-                {indeterminate ? (
-                  <span className={cn(styles.progressFill, styles.sweep)} />
-                ) : (
-                  <span className={styles.progressFill} style={{ width: `${visualProgress.toFixed(1)}%` }} />
-                )}
-              </div>
-              <div className={styles.loaderMeta}>
-                <div className={styles.caption}>
-                  {complete ? t("captionReady") : t("captionLoading")}
-                </div>
-                {mode === "three" && <div className={styles.percent}>{Math.round(visualProgress)}%</div>}
-              </div>
-            </div>
+      <div className={cn(styles.ui, mode === "three" && styles.uiBottom, complete && styles.isComplete)}>
+        <div className={styles.uiPanel}>
+          <div className={styles.uiKicker}>
+            <span className={styles.uiDot} /> {t("kicker")}
           </div>
-        );
-      })()}
+          <div className={styles.brand}>MERCASA</div>
+          {mode === "three" && <div className={styles.sub}>{t("sub")}</div>}
+          <div className={styles.panelLine} />
+          <div className={styles.progressTrack}>
+            {indeterminate ? (
+              <span className={cn(styles.progressFill, styles.sweep)} />
+            ) : (
+              <span className={styles.progressFill} style={{ width: `${visualProgress.toFixed(1)}%` }} />
+            )}
+          </div>
+          <div className={styles.loaderMeta}>
+            <div className={styles.caption}>{complete ? t("captionReady") : t("captionLoading")}</div>
+            {mode === "three" && <div className={styles.percent}>{Math.round(visualProgress)}%</div>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

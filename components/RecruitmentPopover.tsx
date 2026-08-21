@@ -87,6 +87,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
             </div>
             <p className="mt-2 text-[13px] leading-[1.55] text-slate-500">
               {t("intro")}
+              {t("intro2")}
             </p>
 
             {/* Espacio reservado para más info a futuro (vacantes, mensaje) —

@@ -31,9 +31,9 @@
   },
   "PageLoader": {
     "ariaLabel": "Cargando Mercasa",
-    "kicker": "Experiencia de carga",
+    "kicker": "",
     "sub": "Logística & Distribución",
-    "captionLoading": "Preparando su pedido...",
+    "captionLoading": "Cargando...",
     "captionReady": "Listo para continuar"
   },
   "Hero": {
@@ -80,8 +80,7 @@
     "steps": {
       "importacion": {
         "title": "Importación Global",
-        "description": "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares.",
-        "statLabel": "países"
+        "description": "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares."
       },
       "almacenamiento": {
         "title": "Almacenamiento Inteligente",
@@ -93,8 +92,7 @@
       },
       "puntoDeVenta": {
         "title": "Punto de Venta",
-        "description": "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
-        "statLabel": "de clientes atendidos cada semana"
+        "description": "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país."
       }
     },
     "cta": "Descubra nuestras marcas",
@@ -152,7 +150,8 @@
   "Recruitment": {
     "navLabel": "Reclutamiento",
     "title": "Reclutamiento",
-    "intro": "¿Querés sumarte a nuestro equipo? Escribinos a este correo.",
+    "intro": "¿Querés sumarte a nuestro equipo?",
+    "intro2": "Envia tu CV a este correo.",
     "emailLabel": "Correo",
     "close": "Cerrar"
   },

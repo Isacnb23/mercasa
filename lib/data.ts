@@ -34,7 +34,7 @@ export const site = {
   // AJUSTAR: Mercasa todavía no tiene estas cuentas activas — se deja el
   // botón listo en el footer, pero el link queda vacío ("#") a propósito
   // hasta que nos pasen la URL real. No inventar una cuenta.
-  linkedin: "#",
+  linkedin: "https://www.linkedin.com/company/grupo-inteca/posts/?feedView=all",
   instagram: "#",
 };
 
@@ -60,7 +60,7 @@ export const heroHighlights = [
    Logística — no se repiten aquí para no duplicar el mismo dato en dos
    secciones distintas. */
 export const aboutStats = [
-  { key: "colaboradores", display: "+200" },
+  { key: "colaboradores", display: "+400" },
   { key: "trayectoria", value: 60, suffix: "+" },
   { key: "cedis", value: 2, suffix: "" },
   // Ojo: 1963 es el año de fundación de MERCASA (site.foundedYear), no de
@@ -116,34 +116,49 @@ export const brandNames = [
   "Monday", "Thüringer", "St. Omer", "Tika",
 ];
 
-// AJUSTAR: agrupación por categoría para el filtro opcional del muro de marcas.
-// Es una primera clasificación de referencia (no viene del brief del cliente) —
-// pídanle a Grupo Inteca que la confirme o corrija antes de darla por definitiva.
+// Agrupación por categoría para el filtro opcional del muro de marcas.
+// Lista de marcas confirmada contra el mural de marcas (2026-08-21).
 // El label de cada categoría vive en Brands.categories.<key>; los nombres de
 // marca dentro de `brands` son nombres propios y no se traducen.
+// `image`: pared de logos propia por categoría (sin título quemado en la
+// imagen — el label ya lo pone el chip). Viven junto al mural en
+// /public/brand/marcas.
+export const brandsMuralImage = "/brand/marcas/marcas-mural.jpg";
+
 export const brandCategories = [
   {
     key: "alimentos",
+    image: "/brand/marcas/alimentos.png",
     brands: [
-      "Nature Valley", "Renata", "Matilde Vicenzi", "Fiber One", "Smucker's",
-      "Pietrobon", "Pomí", "Heinz", "La Costeña", "San Marcos", "MiSabor",
-      "Girol", "Boom Bastic", "Pillsbury", "Betty Crocker", "McCain",
+      "MiSabor", "Girol", "Marquise", "Snickers", "Oreo", "Milka", "Trident",
+      "Pietrobon", "Vitarella", "Halls", "Able Farm", "Pringles", "Renata",
+      "Smucker's", "Pomi", "Mentos", "Pelican",
     ],
   },
   {
     key: "bebe-cuidado",
+    image: "/brand/marcas/cuidado-personal.png",
     brands: [
-      "Choice Care", "Smarty Baby", "Bebín", "Pelican", "Senior", "Ideal",
-      "Selpak", "Koa", "Shave & Go", "BelSpá", "B-Healthy",
+      "Choice Care", "Ideal", "Selpak", "Nivea", "Palmolive", "Gillette",
+      "Saba", "Belspá", "Tena", "Koa",
     ],
   },
   {
     key: "hogar-institucional",
-    brands: ["Clinx", "Bio EZserv", "EZlight", "EZbags", "EZserv", "EZclean", "EZtape"],
+    image: "/brand/marcas/cuidado-hogar.png",
+    brands: [
+      "EZlight", "EZwrap", "Bio EZserv", "Clinx", "EZserv", "EZtape",
+      "Suavitel", "Ensueño", "EZbags", "EZClean", "Poderoso", "Pinol",
+    ],
   },
   {
     key: "bebidas",
-    brands: ["Monday", "Thüringer", "St. Omer", "Tika"],
+    image: "/brand/marcas/bebidas.png",
+    brands: [
+      "Carlsberg", "Monster Energy", "B-Healthy", "5,0", "Heineken",
+      "Stella Artois", "Thüringer", "Red Bull", "Suerox", "Johnnie Walker",
+      "Nescafé", "Jägermeister", "The Macallan", "Electrolit",
+    ],
   },
 ];
 
@@ -151,41 +166,35 @@ export const brandCategories = [
 export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "compromiso" }];
 
 // Las 4 etapas de la cadena (importación → almacenamiento → distribución →
-// punto de venta). title/description/statLabel viven en Logistics.steps.<key>.
-// Cada paso lleva como máximo UNA cifra propia (icon+value numéricos, sin
-// label — el label sale de los mensajes), distinta a las 3 stats de impacto
-// del Hero (1,900+ TEUs, 10,500+ posiciones de tarima, 2,500 entregas/semana),
-// para no repetir el mismo dato en dos secciones. Los pasos sin cifra propia
-// real (almacenamiento y distribución ya están cubiertos por el hero) quedan
-// sin stats — mejor sin chip que con el mismo número dos veces.
+// punto de venta). title/description viven en Logistics.steps.<key>.
+// El footer de cifra (icon+value, antes solo en los pasos 01 y 04) se quitó:
+// generaba asimetría entre las 4 cards y el dato ya está en el párrafo de
+// cada una.
+// El color de acento (barra superior + badge de número) es el MISMO azul de
+// marca en las 4 — antes cada paso tenía un color distinto (azul/teal/coral/
+// púrpura), pero eso desentonaba con la paleta monocromática de Mercasa. Vive
+// como constante en LogisticsTimeline.tsx, no acá, porque ya no varía por
+// paso.
 export const logisticsSteps = [
   {
     step: "01",
     key: "importacion",
     icon: "ship",
-    visual: "map-world",
-    stats: [{ icon: "globe", value: "30+" }],
   },
   {
     step: "02",
     key: "almacenamiento",
     icon: "warehouse",
-    visual: "photo-warehouse",
-    stats: [],
   },
   {
     step: "03",
     key: "distribucion",
     icon: "truck",
-    visual: "map-cr",
-    stats: [],
   },
   {
     step: "04",
     key: "puntoDeVenta",
     icon: "store",
-    visual: "store",
-    stats: [{ icon: "users", value: "Miles" }],
   },
 ];
 

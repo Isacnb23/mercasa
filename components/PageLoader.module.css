@@ -89,7 +89,12 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  transition: transform 0.46s cubic-bezier(0.5, 0, 0.75, 0);
+  /* Este es el camión 2D/fallback (reduced-motion, timeout o error del
+     GLB) — sin coreografía dedicada, su salida sigue atada al telón del
+     panel (.isLeaving más abajo), como siempre fue. El camión 3D
+     (PageLoader3D) tiene su propia secuencia garantizada, orquestada desde
+     PageLoader.tsx. */
+  transition: transform 0.2s cubic-bezier(0.5, 0, 0.75, 0);
 }
 
 .truckWrap {
@@ -240,7 +245,10 @@
   flex-direction: column;
   align-items: center;
   width: min(460px, calc(100% - 36px));
-  transition: opacity 0.34s ease, transform 0.52s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Recortado para caber dentro de PANEL_LEAVE_DELAY (PageLoader.tsx): la
+     salida del panel debe terminar antes de que arranque el "telón" de
+     .isDone. Arranca solo después de que el camión ya salió de cuadro. */
+  transition: opacity 0.1s ease, transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .uiBottom {
   position: absolute;
@@ -421,7 +429,7 @@
   }
 }
 
-/* --------- salida --------- */
+/* --------- salida del camión 2D/fallback y del panel --------- */
 .isLeaving .truckStage {
   transform: translateX(120vw);
 }
@@ -444,5 +452,12 @@
 
 .isDone {
   transform: translateY(-100%);
-  transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+  opacity: 0;
+  /* Debe calzar con DONE_DELAY en PageLoader.tsx. El fade-out es un seguro
+     extra sobre el "telón": si el translateY no llega a componerse
+     perfectamente en algún dispositivo, la opacidad igual lo tapa antes de
+     que el componente se desmonte — nunca un corte brusco de golpe. */
+  transition:
+    transform 0.15s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.12s ease-out;
 }

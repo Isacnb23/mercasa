@@ -28,6 +28,41 @@ export default function Hero() {
   const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "8%"]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
 
+  const renderHighlightCard = (item: (typeof heroHighlights)[number], extraClassName: string) => {
+    const Icon = highlightIcons[item.key as keyof typeof highlightIcons];
+    const isAccent = item.key === "infraestructura";
+    return (
+      <div
+        key={item.key}
+        className={`rounded-2xl bg-white p-4 ${extraClassName}`}
+        style={{ boxShadow: "0 16px 40px rgba(8, 27, 56, 0.16)" }}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full " +
+              (isAccent ? "bg-[#FDECD9]" : "bg-[#E3EEFC]")
+            }
+          >
+            <Icon
+              className={"h-5 w-5 " + (isAccent ? "text-[#E8620A]" : "text-corp-blue")}
+              strokeWidth={1.75}
+              aria-hidden
+            />
+          </span>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              {t(`highlights.${item.key}.label`)}
+            </p>
+            <p className="mt-1 text-[16px] font-bold leading-snug text-corp-ink">
+              {t(`highlights.${item.key}.value`)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section
       id="inicio"
@@ -164,43 +199,28 @@ export default function Hero() {
               sizes="calc(100vw - 40px)"
             />
           </motion.div>
+
+          {/* Métricas — mobile: apiladas y centradas debajo de la foto */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4, ease: EASE_CORP }}
+            className="mt-5 flex flex-col items-center gap-3 md:hidden"
+          >
+            {heroHighlights.map((item) => renderHighlightCard(item, "w-full max-w-[320px]"))}
+          </motion.div>
         </div>
 
-        {/* ----- Columna 2: tarjeta de métricas sólida ----- */}
+        {/* ----- Columna 2: métricas en tarjetas escalonadas, flotando sobre la foto ----- */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.35, ease: EASE_CORP }}
-          className="hidden md:block"
+          className="relative hidden h-[320px] w-[280px] md:block"
         >
-          <div
-            className="rounded-[20px] p-6 backdrop-blur-xl"
-            style={{
-              background: "rgba(8, 27, 56, 0.62)",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
-            }}
-          >
-            {heroHighlights.map((item, i) => {
-              const Icon = highlightIcons[item.key as keyof typeof highlightIcons];
-              return (
-                <div
-                  key={item.key}
-                  className={"flex items-start gap-4 py-4" + (i > 0 ? " border-t border-white/[0.12]" : " pt-0")}
-                >
-                  <Icon className="mt-0.5 h-6 w-6 shrink-0 text-[#8FBCEE]" strokeWidth={1.5} aria-hidden />
-                  <div>
-                    <p className="text-[12px] leading-tight text-white/55">
-                      {t(`highlights.${item.key}.label`)}
-                    </p>
-                    <p className="mt-1.5 text-[16px] font-semibold leading-snug text-white">
-                      {t(`highlights.${item.key}.value`)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {renderHighlightCard(heroHighlights[0], "absolute left-0 top-0 z-10 w-[250px]")}
+          {renderHighlightCard(heroHighlights[1], "absolute left-[62px] top-[104px] z-20 w-[250px]")}
+          {renderHighlightCard(heroHighlights[2], "absolute left-[6px] top-[212px] z-10 w-[250px]")}
         </motion.div>
       </motion.div>
 

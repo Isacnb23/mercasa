@@ -32,9 +32,12 @@ function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-/* Círculo con borde sutil, ~43px, mismo tratamiento para los tres, aunque
-   LinkedIn/Instagram todavía no tengan URL real. Hover a azul brillante
-   sólido con ícono blanco. */
+/* Círculo azul sólido de marca, ~43px, mismo tratamiento para los tres,
+   aunque LinkedIn/Instagram todavía no tengan URL real. Antes era un
+   círculo con solo borde e ícono azul sin relleno — contra el fondo claro
+   del footer eso se leía casi invisible; ahora el ícono siempre es blanco
+   sobre un fondo azul con contraste garantizado. Hover oscurece el azul en
+   vez de invertir a blanco. */
 function SocialIcon({
   href,
   label,
@@ -54,8 +57,7 @@ function SocialIcon({
       rel={isPlaceholder ? undefined : "noopener noreferrer"}
       aria-label={label}
       title={isPlaceholder ? pendingLabel : label}
-      className="flex h-[43px] w-[43px] items-center justify-center rounded-full border text-corp-blue transition duration-300 hover:-translate-y-px hover:border-corp-blue hover:bg-corp-blue hover:text-white"
-      style={{ borderColor: "#D8E1EC" }}
+      className="flex h-[43px] w-[43px] items-center justify-center rounded-full bg-[#185FA5] text-white transition duration-300 hover:-translate-y-px hover:bg-[#0C447C]"
     >
       {children}
     </a>
