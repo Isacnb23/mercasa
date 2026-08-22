@@ -26,7 +26,7 @@ const PATH_SETS: [string, string][] = [
 
 /**
  * Líneas curvas de resplandor teal, muy sutiles, que fluyen detrás de
- * Marcas / Contacto / Footer para que se lean como una sola superficie
+ * Productos / Contacto / Footer para que se lean como una sola superficie
  * en vez de bloques pegados. Se "dibujan" (stroke-dashoffset vía pathLength)
  * la primera vez que entran en pantalla; con reduced-motion aparecen
  * estáticas, sin trazo animado.

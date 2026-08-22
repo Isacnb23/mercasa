@@ -8,7 +8,12 @@ import { Clock, Compass, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import Container from "./Container";
 import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
-import { site } from "@/lib/data";
+import BusinessSegments from "./BusinessSegments";
+import { businessSegments, site } from "@/lib/data";
+
+function buildWhatsappHref(baseHref: string, message: string) {
+  return `${baseHref}?text=${encodeURIComponent(message)}`;
+}
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
@@ -100,7 +105,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
 }
 
 /**
- * Marcas, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
+ * Productos, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
  * fijo de AmbientBackdrop) — el "cambio de capítulo" se logra con tarjetas
  * claras flotando encima, no con un cambio de color de página. El mapa
  * (estilo "positron" claro) vive enmarcado dentro de una tarjeta tipo mapa
@@ -109,6 +114,17 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
  */
 export default function ContactSection() {
   const t = useTranslations("Contact");
+
+  // Único estado de segmento para toda la sección: lo consume el selector
+  // (BusinessSegments, ahora controlado) y también el CTA de WhatsApp del
+  // cierre, para que el mensaje pre-armado quede contextualizado con el
+  // segmento elegido arriba.
+  const [activeSegmentKey, setActiveSegmentKey] = useState("supermercados");
+  const activeSegment = businessSegments.find((seg) => seg.key === activeSegmentKey) ?? businessSegments[0];
+  const whatsappHref = buildWhatsappHref(
+    site.whatsappHref,
+    t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
+  );
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
   // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
@@ -142,12 +158,14 @@ export default function ContactSection() {
       className="relative scroll-mt-20 overflow-hidden py-24 md:py-28"
       style={{ background: "#F7F3EB" }}
     >
-      {/* El seam Marcas → Contacto ya lo marca la curva inferior de Marcas;
-          acá solo se agrega la de salida hacia el Footer (que cierra en un
-          tono distinto, #F3F5F7) para no duplicar el mismo trazo. */}
+      {/* El seam Productos → Contacto ya lo marca la curva inferior de
+          Productos; acá solo se agrega la de salida hacia el Footer (que
+          cierra en un tono distinto, #F3F5F7) para no duplicar el mismo
+          trazo. */}
       <SoftCurve position="bottom" flip />
 
       <Container className="relative z-10">
+        {/* ---------- Encabezado único de la sección ---------- */}
         <Reveal className="mx-auto max-w-2xl text-center">
           <span
             className="inline-flex items-center gap-3 text-[13px] font-semibold uppercase"
@@ -171,93 +189,65 @@ export default function ContactSection() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
-          {/* Info + CTAs */}
+        {/* ---------- Paso 1: ¿qué tipo de negocio sos? ---------- */}
+        <div className="mt-12">
+          <BusinessSegments activeKey={activeSegmentKey} onSelect={setActiveSegmentKey} />
+        </div>
+
+        {/* ---------- Paso 2: info de contacto + mapa ---------- */}
+        <div className="mt-16 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+          {/* Info */}
           <Reveal
             once
-            className="flex min-w-0 flex-col justify-between gap-8 bg-white p-[26px] sm:p-[28px]"
+            className="flex min-w-0 flex-col bg-white p-[26px] sm:p-[28px]"
             style={{
               borderRadius: "20px",
               border: "1px solid #D8E1EC",
               boxShadow: "0 16px 50px rgba(16,37,63,0.10)",
             }}
           >
-            <div>
-              <InfoRow icon={MapPin} title={t("sedeTitle")}>
-                {site.address.line1}
-                <br />
-                {site.address.line2} · CP {site.address.postalCode}
-              </InfoRow>
-              <InfoRow icon={Phone} title={t("telefonoTitle")}>
-                <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
-                  {site.phone}
-                </a>{" "}
-                · {site.phonesExtra.join(" · ")}
-              </InfoRow>
-              <InfoRow icon={Mail} title={t("correosTitle")}>
-                <a
-                  href={`mailto:${site.emails.comunicaciones}`}
-                  className="transition hover:text-[#075FD8]"
-                >
-                  {site.emails.comunicaciones}
-                </a>
-                <br />
-                <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
-                  {site.emails.rh}
-                </a>{" "}
-                {t("correosRh")}
-              </InfoRow>
-              <InfoRow icon={Clock} title={t("horarioTitle")} last>
-                {t("horarioWeekdays")}
-                <br />
-                {t("horarioSaturday")}
-              </InfoRow>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <motion.a
-                href={site.whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex h-[50px] items-center gap-2.5 px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
-                style={{
-                  borderRadius: "10px",
-                  background: "#075FD8",
-                  boxShadow: "0 6px 18px rgba(7,95,216,0.30)",
-                }}
+            <InfoRow icon={MapPin} title={t("sedeTitle")}>
+              {site.address.line1}
+              <br />
+              {site.address.line2} · CP {site.address.postalCode}
+            </InfoRow>
+            <InfoRow icon={Phone} title={t("telefonoTitle")}>
+              <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
+                {site.phone}
+              </a>{" "}
+              · {site.phonesExtra.join(" · ")}
+            </InfoRow>
+            <InfoRow icon={Mail} title={t("correosTitle")}>
+              <a
+                href={`mailto:${site.emails.comunicaciones}`}
+                className="transition hover:text-[#075FD8]"
               >
-                <WhatsAppIcon className="h-[18px] w-[18px]" />
-                {t("whatsappCta")}
-              </motion.a>
-              <motion.a
-                href={site.phoneHref}
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex h-[50px] items-center gap-2.5 px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5"
-                style={{
-                  borderRadius: "10px",
-                  border: "1px solid rgba(7,95,216,0.5)",
-                  color: "#082B5C",
-                  background: "#ffffff",
-                }}
-              >
-                <Phone className="h-4 w-4" style={{ color: "#075FD8" }} />
-                {t("callCta")}
-              </motion.a>
-            </div>
+                {site.emails.comunicaciones}
+              </a>
+              <br />
+              <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
+                {site.emails.rh}
+              </a>{" "}
+              {t("correosRh")}
+            </InfoRow>
+            <InfoRow icon={Clock} title={t("horarioTitle")} last>
+              {t("horarioWeekdays")}
+              <br />
+              {t("horarioSaturday")}
+            </InfoRow>
           </Reveal>
 
-          {/* Mapa: se queda dark a propósito (único contraste oscuro dentro
-              de la sección clara) — marco/sombra igual al de la vitrina de
-              Marcas para que se distinga bien del fondo alrededor. */}
+          {/* Mapa: marco y sombra reforzados (azul de marca #0C447C, 2.5px)
+              para que se despegue del fondo beige, en el que antes se
+              camuflaba con un borde gris casi imperceptible. */}
           <Reveal
             delay={0.1}
             once
             className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
             style={{
               borderRadius: "20px",
-              border: "1px solid #D8E1EC",
-              boxShadow: "0 20px 50px rgba(16,37,63,0.10)",
+              border: "2.5px solid #0C447C",
+              boxShadow: "0 28px 60px rgba(12,68,124,0.22), 0 10px 24px rgba(16,37,63,0.16)",
             }}
           >
             <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-[#F6F1E6] lg:min-h-0">
@@ -295,6 +285,40 @@ export default function ContactSection() {
             </div>
           </Reveal>
         </div>
+
+        {/* ---------- Paso 3: un solo CTA de cierre, contextualizado con el
+            segmento elegido arriba ---------- */}
+        <Reveal once className="mx-auto mt-14 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <motion.a
+            href={whatsappHref}
+            target="_blank"
+            rel="noreferrer"
+            whileTap={{ scale: 0.97 }}
+            className="inline-flex h-[50px] w-full items-center justify-center gap-2.5 px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-auto"
+            style={{
+              borderRadius: "10px",
+              background: "#075FD8",
+              boxShadow: "0 6px 18px rgba(7,95,216,0.30)",
+            }}
+          >
+            <WhatsAppIcon className="h-[18px] w-[18px]" />
+            {t("whatsappCta")}
+          </motion.a>
+          <motion.a
+            href={site.phoneHref}
+            whileTap={{ scale: 0.97 }}
+            className="inline-flex h-[50px] w-full items-center justify-center gap-2.5 px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 sm:w-auto"
+            style={{
+              borderRadius: "10px",
+              border: "1px solid rgba(7,95,216,0.5)",
+              color: "#082B5C",
+              background: "#ffffff",
+            }}
+          >
+            <Phone className="h-4 w-4" style={{ color: "#075FD8" }} />
+            {t("callCta")}
+          </motion.a>
+        </Reveal>
       </Container>
     </section>
   );

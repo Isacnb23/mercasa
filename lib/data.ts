@@ -43,7 +43,7 @@ export const navLinks = [
   { href: "#inicio", key: "inicio" },
   { href: "#nosotros", key: "nosotros" },
   { href: "#logistica", key: "logistica" },
-  { href: "#marcas", key: "marcas" },
+  { href: "#productos", key: "productos" },
   { href: "#contacto", key: "contacto" },
 ];
 
@@ -125,6 +125,8 @@ export const brandNames = [
 // /public/brand/marcas.
 export const brandsMuralImage = "/brand/marcas/marcas-mural.jpg";
 
+// Orden: categoría estrella primero (alimentos), luego el resto según lo
+// pedido para el master-detail de Productos.
 export const brandCategories = [
   {
     key: "alimentos",
@@ -133,6 +135,15 @@ export const brandCategories = [
       "MiSabor", "Girol", "Marquise", "Snickers", "Oreo", "Milka", "Trident",
       "Pietrobon", "Vitarella", "Halls", "Able Farm", "Pringles", "Renata",
       "Smucker's", "Pomi", "Mentos", "Pelican",
+    ],
+  },
+  {
+    key: "bebidas",
+    image: "/brand/marcas/bebidas.png",
+    brands: [
+      "Carlsberg", "Monster Energy", "B-Healthy", "5,0", "Heineken",
+      "Stella Artois", "Thüringer", "Red Bull", "Suerox", "Johnnie Walker",
+      "Nescafé", "Jägermeister", "The Macallan", "Electrolit",
     ],
   },
   {
@@ -151,19 +162,54 @@ export const brandCategories = [
       "Suavitel", "Ensueño", "EZbags", "EZClean", "Poderoso", "Pinol",
     ],
   },
-  {
-    key: "bebidas",
-    image: "/brand/marcas/bebidas.png",
-    brands: [
-      "Carlsberg", "Monster Energy", "B-Healthy", "5,0", "Heineken",
-      "Stella Artois", "Thüringer", "Red Bull", "Suerox", "Johnnie Walker",
-      "Nescafé", "Jägermeister", "The Macallan", "Electrolit",
-    ],
-  },
 ];
 
 // title/description en Brands.pillars.<key>
 export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "compromiso" }];
+
+// Selector "Soluciones por tipo de negocio" en Contacto. Label, frase de
+// valor y el sustantivo para el mensaje de WhatsApp viven en
+// Contact.segments.<key> (son texto visible, traducible). `categories` son
+// las keys de `brandCategories` relevantes para ese segmento — punto de
+// partida a validar con el cliente, por eso vive acá y no hardcodeado en el
+// JSX.
+export const businessSegments = [
+  {
+    key: "supermercados",
+    icon: "store",
+    categories: ["alimentos", "bebe-cuidado", "hogar-institucional", "bebidas"],
+  },
+  {
+    key: "hoteleria",
+    icon: "hotel",
+    categories: ["bebe-cuidado", "hogar-institucional", "bebidas", "alimentos"],
+  },
+  {
+    key: "restaurantes",
+    icon: "chef-hat",
+    categories: ["alimentos", "hogar-institucional", "bebidas"],
+  },
+  {
+    key: "comercio-local",
+    icon: "shopping-bag",
+    categories: ["alimentos", "bebidas", "hogar-institucional"],
+  },
+  {
+    key: "panaderias",
+    icon: "cookie",
+    categories: ["alimentos", "hogar-institucional"],
+  },
+  {
+    key: "instituciones",
+    icon: "building",
+    categories: ["hogar-institucional", "bebe-cuidado", "alimentos"],
+  },
+  {
+    key: "retail",
+    icon: "shopping-cart",
+    categories: ["alimentos", "bebidas", "bebe-cuidado"],
+  },
+];
 
 // Las 4 etapas de la cadena (importación → almacenamiento → distribución →
 // punto de venta). title/description viven en Logistics.steps.<key>.
@@ -173,28 +219,37 @@ export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "co
 // El color de acento (barra superior + badge de número) es el MISMO azul de
 // marca en las 4 — antes cada paso tenía un color distinto (azul/teal/coral/
 // púrpura), pero eso desentonaba con la paleta monocromática de Mercasa. Vive
-// como constante en LogisticsTimeline.tsx, no acá, porque ya no varía por
-// paso.
+// como constante en LogisticsSteps.tsx, no acá, porque ya no varía por paso.
+// `image`: foto real de cada etapa (public/brand/Logistica/) — vive acá como
+// ruta de string, no como import estático en el componente, para poder
+// reemplazarla con un solo cambio de línea. Los archivos originales subidos
+// tenían espacios y tildes en el nombre ("Importación Global.png", etc.); se
+// renombraron a slugs ASCII para evitar problemas de resolución de rutas en
+// producción/Vercel.
 export const logisticsSteps = [
   {
     step: "01",
     key: "importacion",
     icon: "ship",
+    image: "/brand/Logistica/importacion-global.png",
   },
   {
     step: "02",
     key: "almacenamiento",
     icon: "warehouse",
+    image: "/brand/Logistica/almacenamiento-inteligente.png",
   },
   {
     step: "03",
     key: "distribucion",
     icon: "truck",
+    image: "/brand/Logistica/distribucion-nacional.png",
   },
   {
     step: "04",
     key: "puntoDeVenta",
     icon: "store",
+    image: "/brand/Logistica/punto-de-venta.png",
   },
 ];
 

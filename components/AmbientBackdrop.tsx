@@ -5,7 +5,7 @@ import ChapterCurves from "./ChapterCurves";
  * sutiles + líneas curvas de luz) detrás de TODAS las secciones. Las
  * secciones ya no declaran su propio bg-navy-* ni sus propias curvas, así
  * que no hay "bloques" ni texturas distintas entre ellas: todo el scroll
- * (Inicio, Nosotros, Logística, Marcas, Contacto, Footer) ocurre sobre la
+ * (Inicio, Nosotros, Logística, Productos, Contacto, Footer) ocurre sobre la
  * misma superficie con un solo sistema de fondo.
  */
 export default function AmbientBackdrop() {

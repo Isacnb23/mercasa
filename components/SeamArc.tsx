@@ -10,7 +10,7 @@ type SeamArcProps = {
 
 /**
  * Arco/ceja decorativo muy sutil que marca la costura entre dos secciones
- * (Marcas→Contacto, Contacto→Footer) para que el cambio se sienta como una
+ * (Productos→Contacto, Contacto→Footer) para que el cambio se sienta como una
  * curva continua en vez de un corte recto. Puramente decorativo: el fondo
  * navy no cambia, solo se agrega esta línea de luz.
  */

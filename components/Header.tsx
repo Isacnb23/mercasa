@@ -113,7 +113,7 @@ export default function Header() {
 
           <nav className="hidden items-center justify-center gap-1 md:flex">
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={linkClass(link.href)}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}<span className={cn("absolute -bottom-[1px] left-1/2 h-[2px] w-0 -translate-x-1/2 rounded-full bg-corp-blue transition-all duration-300", activeHref === link.href ? "w-6" : "group-hover:w-6")} /></a>
+              <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={linkClass(link.href)}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "contacto")}<span className={cn("absolute -bottom-[1px] left-1/2 h-[2px] w-0 -translate-x-1/2 rounded-full bg-corp-blue transition-all duration-300", activeHref === link.href ? "w-6" : "group-hover:w-6")} /></a>
             ))}
           </nav>
 
@@ -152,7 +152,7 @@ export default function Header() {
             >
               <div className="flex flex-col gap-1 p-3">
                 {navLinks.map((link) => (
-                  <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={cn("rounded-2xl px-4 py-3 text-base font-medium transition", activeHref === link.href ? "bg-corp-blue/[0.06] text-corp-blue" : "text-corp-ink hover:bg-corp-ink/[0.05]")}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "marcas" | "contacto")}</a>
+                  <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={cn("rounded-2xl px-4 py-3 text-base font-medium transition", activeHref === link.href ? "bg-corp-blue/[0.06] text-corp-blue" : "text-corp-ink hover:bg-corp-ink/[0.05]")}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "contacto")}</a>
                 ))}
                 <RecruitmentPopover variant="mobile" />
               </div>

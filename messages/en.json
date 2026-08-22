@@ -18,7 +18,7 @@
     "inicio": "Home",
     "nosotros": "About",
     "logistica": "Logistics",
-    "marcas": "Brands",
+    "productos": "Products",
     "contacto": "Contact"
   },
   "Header": {
@@ -39,7 +39,7 @@
   "Hero": {
     "badgeSince": "Since {year}",
     "badgeParent": "A {parent} company",
-    "title": "Costa Rica's leader in mass-market <accent>distribution and commercialization</accent> of consumer goods",
+    "title": "Costa Rica's leader in <accent>distribution</accent> of consumer goods",
     "paragraph": "Import, logistics, and wholesale distribution of consumer goods, reaching supermarkets, retail, and local trade nationwide.",
     "ctaPrimary": "Discover our operation",
     "scrollLabel": "Connections that move business",
@@ -48,15 +48,15 @@
     "highlights": {
       "transito": {
         "label": "International freight",
-        "value": "1,900+ TEUs per year"
+        "value": "3,500+ TEUs per year"
       },
       "infraestructura": {
         "label": "Owned infrastructure",
-        "value": "10,500+ pallet positions"
+        "value": "16,500+ pallet positions"
       },
       "cobertura": {
         "label": "Nationwide coverage",
-        "value": "2,500 weekly deliveries"
+        "value": "3,500 weekly deliveries"
       }
     }
   },
@@ -77,32 +77,112 @@
     "titleLead": "The engine behind every",
     "titleAccent": "delivery",
     "lead": "We connect the world with Costa Rica through an efficient, modern, and reliable logistics chain that guarantees availability and speed on every delivery.",
+    "sequenceEyebrow": "How our logistics chain works",
     "steps": {
       "importacion": {
         "title": "Global Import",
-        "description": "We work with more than 45 suppliers across 30 countries, managing international freight and customs to the highest standards."
+        "description": "We work with more than 120 suppliers across more than 35 countries, managing international freight and customs to the highest standards.",
+        "statValue": "120+",
+        "statLabel": "international suppliers",
+        "features": {
+          "f1": {
+            "title": "End-to-end customs management",
+            "description": "Procedures and regulatory compliance handled from start to finish, with zero friction for the supplier."
+          },
+          "f2": {
+            "title": "Direct negotiation with manufacturers",
+            "description": "A commercial relationship with no intermediaries, translating into better terms and prices."
+          },
+          "f3": {
+            "title": "Real-time traceability",
+            "description": "Tracking international transit from the origin port until it arrives in Costa Rica."
+          },
+          "f4": {
+            "title": "Quality control at the source",
+            "description": "Standards verified before the product begins its journey."
+          }
+        }
       },
       "almacenamiento": {
         "title": "Smart Warehousing",
-        "description": "Two owned macro distribution centers with more than 10,500 pallet positions and world-class inventory management technology."
+        "description": "Two owned macro distribution centers with more than 16,500 pallet positions and world-class inventory management technology.",
+        "statValue": "16,500+",
+        "statLabel": "pallet positions",
+        "features": {
+          "f1": {
+            "title": "World-class WMS technology",
+            "description": "Inventory management with full visibility of every pallet position."
+          },
+          "f2": {
+            "title": "Conditions controlled by product type",
+            "description": "Temperature, humidity, and handling tailored to each category."
+          },
+          "f3": {
+            "title": "Guaranteed FIFO rotation",
+            "description": "First in, first out, ensuring freshness and shelf-life compliance."
+          },
+          "f4": {
+            "title": "Fast picking and dispatch",
+            "description": "Operations designed to minimize time between warehouse and route."
+          }
+        }
       },
       "distribucion": {
         "title": "Nationwide Distribution",
-        "description": "Our own logistics network covering the entire country, optimizing routes for efficient, on-time deliveries."
+        "description": "Our own logistics network covering the entire country, optimizing routes for efficient, on-time deliveries.",
+        "statValue": "3,500+",
+        "statLabel": "weekly deliveries",
+        "features": {
+          "f1": {
+            "title": "Own fleet with optimized routes",
+            "description": "Efficient coverage across the country's 7 provinces."
+          },
+          "f2": {
+            "title": "Scheduled deliveries",
+            "description": "Coordinated with supermarkets, retail, and local trade according to their restocking cycle."
+          },
+          "f3": {
+            "title": "Real-time fleet monitoring",
+            "description": "Full visibility of every delivery en route."
+          },
+          "f4": {
+            "title": "Punctuality as a standard",
+            "description": "Compliance with agreed delivery windows."
+          }
+        }
       },
       "puntoDeVenta": {
         "title": "Point of Sale",
-        "description": "We close the loop by getting every product into the hands of the end consumer, in every corner of the country."
+        "description": "We close the loop by getting every product into the hands of the end consumer, in every corner of the country.",
+        "statValue": "",
+        "statLabel": "Full coverage",
+        "features": {
+          "f1": {
+            "title": "Constant shelf replenishment",
+            "description": "Product availability where the consumer looks for it."
+          },
+          "f2": {
+            "title": "On-site commercial support",
+            "description": "Direct support for the businesses we distribute to."
+          },
+          "f3": {
+            "title": "No-intermediary relationship",
+            "description": "From the international supplier to local trade, in one integrated operation."
+          },
+          "f4": {
+            "title": "Closing the logistics loop",
+            "description": "The product reaches the end consumer in every corner of the country."
+          }
+        }
       }
     },
     "cta": "Discover our brands",
     "heroBandAlt": "Mercasa's logistics chain: ocean import, warehouse storage, truck transport, and point of sale"
   },
   "Brands": {
-    "titleLead": "Brands that",
-    "titleWord1": "build",
-    "titleWord2": "trust",
-    "paragraph": "We work with leading brands that guarantee quality, innovation, and wellbeing for our customers.",
+    "titleLead": "Everything your business",
+    "titleAccent": "needs",
+    "paragraph": "A complete portfolio to supply your business, backed by leading brands that guarantee quality and innovation in every category.",
     "pillars": {
       "calidad": {
         "title": "Guaranteed quality",
@@ -117,16 +197,109 @@
         "description": "We keep expanding our portfolio to meet what the Costa Rican market needs."
       }
     },
-    "explorerLabel": "Browse by category",
+    "categoriesLabel": "Product categories",
+    "categoryBrandsLabel": "Brands in this category",
     "categories": {
-      "alimentos": { "label": "Food & pantry" },
-      "bebe-cuidado": { "label": "Baby & personal care" },
-      "hogar-institucional": { "label": "Home & institutional cleaning" },
-      "bebidas": { "label": "Beverages" }
+      "alimentos": {
+        "label": "Food & pantry",
+        "shortLabel": "Food",
+        "tagline": "Snacks, sweets, and pantry staples to stock any shelf.",
+        "productTypes": [
+          "Snacks",
+          "Chocolates and candy",
+          "Cookies",
+          "Potato chips",
+          "Sauces and condiments",
+          "Italian pasta",
+          "Jams and preserves",
+          "Chewing gum and mints"
+        ]
+      },
+      "bebidas": {
+        "label": "Beverages",
+        "shortLabel": "Beverages",
+        "tagline": "From beer to energy drinks: the selection your customers look for.",
+        "productTypes": [
+          "Beer",
+          "Energy drinks",
+          "Premium spirits",
+          "Coffee",
+          "Rehydration and isotonic drinks"
+        ]
+      },
+      "bebe-cuidado": {
+        "label": "Baby & personal care",
+        "shortLabel": "Personal care",
+        "tagline": "Personal care and hygiene for every stage of the family.",
+        "productTypes": [
+          "Toilet paper and napkins",
+          "Diapers",
+          "Sanitary pads",
+          "Soap and skin care",
+          "Razors",
+          "Intimate hygiene",
+          "Senior care"
+        ]
+      },
+      "hogar-institucional": {
+        "label": "Home & institutional cleaning",
+        "shortLabel": "Cleaning & institutional",
+        "tagline": "Cleaning solutions for the home and institutional operations.",
+        "productTypes": [
+          "Detergents and fabric softeners",
+          "Disinfectants",
+          "Packaging and plastic film",
+          "Industrial bags",
+          "Adhesive tape",
+          "Multi-purpose cleaners",
+          "Institutional / food-service supplies"
+        ]
+      }
     },
+    "muralTitle": "Backed by leading brands",
+    "muralSubtitle": "These are some of the brands that guarantee the quality of our portfolio.",
     "showroomAlt": "Portfolio of brands distributed by Mercasa"
   },
   "Contact": {
+    "segmentsCategoriesLabel": "Categories relevant to you",
+    "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
+    "segments": {
+      "supermercados": {
+        "label": "Supermarkets & chains",
+        "valuePhrase": "One supplier for your entire assortment: from pantry shelves to cleaning aisles.",
+        "whatsappNoun": "a supermarket"
+      },
+      "hoteleria": {
+        "label": "Hospitality & tourism",
+        "valuePhrase": "Amenities, cleaning supplies, and beverages to elevate your guests' experience.",
+        "whatsappNoun": "a hotel"
+      },
+      "restaurantes": {
+        "label": "Restaurants & food service",
+        "valuePhrase": "Ingredients, beverages, and packaging so your kitchen never stops.",
+        "whatsappNoun": "a restaurant"
+      },
+      "comercio-local": {
+        "label": "Local shops (pulperías)",
+        "valuePhrase": "The assortment your customers look for, with reliable delivery.",
+        "whatsappNoun": "a local shop"
+      },
+      "panaderias": {
+        "label": "Bakeries",
+        "valuePhrase": "Ingredients and packaging for your daily production.",
+        "whatsappNoun": "a bakery"
+      },
+      "instituciones": {
+        "label": "Institutions",
+        "valuePhrase": "Reliable institutional supply, at the volume your operation demands.",
+        "whatsappNoun": "an institution"
+      },
+      "retail": {
+        "label": "Retail & convenience stores",
+        "valuePhrase": "Guaranteed high turnover: snacks, beverages, and convenience essentials.",
+        "whatsappNoun": "a convenience store"
+      }
+    },
     "eyebrow": "Contact",
     "title": "Let's talk business",
     "paragraph": "Visit us at our distribution center in El Tejar, El Guarco, Cartago, or reach out directly — we serve international suppliers and local customers alike.",

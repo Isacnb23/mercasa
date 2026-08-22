@@ -114,7 +114,7 @@ export default async function Footer() {
                 inicio: tNav("inicio"),
                 nosotros: tNav("nosotros"),
                 logistica: tNav("logistica"),
-                marcas: tNav("marcas"),
+                productos: tNav("productos"),
                 contacto: tNav("contacto"),
               }}
             />

@@ -124,16 +124,17 @@ export default function ContactMap() {
       loaded = true;
       window.clearTimeout(failSafeTimer);
 
-      // Marcador del CEDI: gota azul de marca con isotipo "M" en círculo
-      // blanco y halo pulsante detrás. Sin popup propio: la card flotante de
-      // ContactSection ya muestra el nombre y el botón "Cómo llegar" — un
-      // popup nativo acá encima duplicaba esa info y tapaba el pin.
+      // Marcador del CEDI: imagen de marca (gota azul con isotipo, ver
+      // globals.css para el detalle de por qué el contenedor mide 51px con
+      // una imagen de 56px) y halo pulsante detrás. Sin popup propio: la
+      // card flotante de ContactSection ya muestra el nombre y el botón
+      // "Cómo llegar" — un popup nativo acá encima duplicaba esa info y
+      // tapaba el pin.
       const el = document.createElement("div");
       el.className = "mercasa-map-pin";
       el.innerHTML = `
         <span class="mercasa-map-pin__pulse"></span>
-        <span class="mercasa-map-pin__drop"></span>
-        <span class="mercasa-map-pin__label">M</span>
+        <img class="mercasa-map-pin__img" src="/brand/Mapa/pin-mapa-sin-fondo.png" alt="" draggable="false" />
       `;
       // anchor "bottom": la punta de la gota (no su centro visual) es la que
       // debe caer exactamente sobre la coordenada del CEDI.

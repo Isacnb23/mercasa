@@ -18,7 +18,7 @@
     "inicio": "Inicio",
     "nosotros": "Nosotros",
     "logistica": "Logística",
-    "marcas": "Marcas",
+    "productos": "Productos",
     "contacto": "Contacto"
   },
   "Header": {
@@ -39,7 +39,7 @@
   "Hero": {
     "badgeSince": "Desde {year}",
     "badgeParent": "Una empresa de {parent}",
-    "title": "Líderes en <accent>distribución y comercialización</accent> masiva de productos de consumo en Costa Rica",
+    "title": "Líderes en <accent>distribución</accent> de productos de Costa Rica",
     "paragraph": "Importación, logística y distribución mayorista de productos de consumo masivo, con cobertura en supermercados, retail y comercio local en todo el país.",
     "ctaPrimary": "Conocer nuestra operación",
     "scrollLabel": "Conexiones que mueven negocios",
@@ -48,15 +48,15 @@
     "highlights": {
       "transito": {
         "label": "Tránsito internacional",
-        "value": "1,900+ TEUs al año"
+        "value": "3,500+ TEUs al año"
       },
       "infraestructura": {
         "label": "Infraestructura propia",
-        "value": "10,500+ posiciones de tarima"
+        "value": "16,500+ posiciones de tarima"
       },
       "cobertura": {
         "label": "Cobertura nacional",
-        "value": "2,500 entregas comerciales por semana"
+        "value": "3,500 entregas comerciales por semana"
       }
     }
   },
@@ -77,32 +77,112 @@
     "titleLead": "El motor detrás de cada",
     "titleAccent": "entrega",
     "lead": "Unimos el mundo con Costa Rica a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
+    "sequenceEyebrow": "Así funciona nuestra cadena logística",
     "steps": {
       "importacion": {
         "title": "Importación Global",
-        "description": "Conectamos con más de 45 proveedores en 30 países, gestionando el tráfico internacional y aduanas con los más altos estándares."
+        "description": "Conectamos con más de 120 proveedores en más de 35 países, gestionando el tráfico internacional y aduanas con los más altos estándares.",
+        "statValue": "120+",
+        "statLabel": "proveedores internacionales",
+        "features": {
+          "f1": {
+            "title": "Gestión aduanal integral",
+            "description": "Trámites y cumplimiento normativo gestionados de principio a fin, sin fricción para el proveedor."
+          },
+          "f2": {
+            "title": "Negociación directa con fabricantes",
+            "description": "Relación comercial sin intermediarios, lo que se traduce en mejores condiciones y precios."
+          },
+          "f3": {
+            "title": "Trazabilidad en tiempo real",
+            "description": "Seguimiento del tránsito internacional desde que sale del puerto de origen hasta que llega a Costa Rica."
+          },
+          "f4": {
+            "title": "Control de calidad desde el origen",
+            "description": "Verificación de estándares antes de que el producto inicie su viaje."
+          }
+        }
       },
       "almacenamiento": {
         "title": "Almacenamiento Inteligente",
-        "description": "Dos macro-CEDIs propios con más de 10,500 posiciones de tarima y tecnología de gestión de inventarios de clase mundial."
+        "description": "Dos macro-CEDIs propios con más de 16,500 posiciones de tarima y tecnología de gestión de inventarios de clase mundial.",
+        "statValue": "16,500+",
+        "statLabel": "posiciones de tarima",
+        "features": {
+          "f1": {
+            "title": "Tecnología WMS de clase mundial",
+            "description": "Gestión de inventarios con visibilidad total de cada posición de tarima."
+          },
+          "f2": {
+            "title": "Condiciones controladas por tipo de producto",
+            "description": "Temperatura, humedad y manejo adaptados a cada categoría."
+          },
+          "f3": {
+            "title": "Rotación FIFO garantizada",
+            "description": "Primero en entrar, primero en salir, asegurando frescura y vigencia."
+          },
+          "f4": {
+            "title": "Picking y despacho ágil",
+            "description": "Operación diseñada para minimizar tiempos entre bodega y ruta."
+          }
+        }
       },
       "distribucion": {
         "title": "Distribución Nacional",
-        "description": "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales."
+        "description": "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales.",
+        "statValue": "3,500+",
+        "statLabel": "entregas comerciales por semana",
+        "features": {
+          "f1": {
+            "title": "Flota propia con rutas optimizadas",
+            "description": "Cobertura eficiente en las 7 provincias del país."
+          },
+          "f2": {
+            "title": "Entregas programadas",
+            "description": "Coordinación con supermercados, retail y comercio local según su ciclo de reposición."
+          },
+          "f3": {
+            "title": "Monitoreo de flota en tiempo real",
+            "description": "Visibilidad total de cada entrega en ruta."
+          },
+          "f4": {
+            "title": "Puntualidad como estándar",
+            "description": "Cumplimiento de ventanas de entrega acordadas."
+          }
+        }
       },
       "puntoDeVenta": {
         "title": "Punto de Venta",
-        "description": "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país."
+        "description": "Cerramos el ciclo logístico llevando cada producto a manos del consumidor final, en cualquier rincón del país.",
+        "statValue": "",
+        "statLabel": "Cobertura total",
+        "features": {
+          "f1": {
+            "title": "Reposición constante en anaquel",
+            "description": "Disponibilidad del producto donde el consumidor lo busca."
+          },
+          "f2": {
+            "title": "Soporte comercial en punto de venta",
+            "description": "Acompañamiento directo a los negocios que distribuimos."
+          },
+          "f3": {
+            "title": "Relación sin intermediarios",
+            "description": "Del proveedor internacional al comercio local, en una sola operación integrada."
+          },
+          "f4": {
+            "title": "Cierre del ciclo logístico",
+            "description": "El producto llega a manos del consumidor final en cualquier rincón del país."
+          }
+        }
       }
     },
     "cta": "Descubra nuestras marcas",
     "heroBandAlt": "Cadena logística de Mercasa: importación por barco, almacenamiento en bodega, transporte por camión y punto de venta"
   },
   "Brands": {
-    "titleLead": "Marcas que",
-    "titleWord1": "construyen",
-    "titleWord2": "confianza",
-    "paragraph": "Trabajamos con marcas líderes que garantizan calidad, innovación y bienestar para nuestros clientes.",
+    "titleLead": "Todo lo que tu negocio",
+    "titleAccent": "necesita",
+    "paragraph": "Un portafolio completo para abastecer tu negocio, respaldado por marcas líderes que garantizan calidad e innovación en cada categoría.",
     "pillars": {
       "calidad": {
         "title": "Calidad garantizada",
@@ -117,16 +197,109 @@
         "description": "Seguimos ampliando nuestro portafolio para responder a lo que el mercado costarricense necesita."
       }
     },
-    "explorerLabel": "Explorar por categoría",
+    "categoriesLabel": "Categorías de producto",
+    "categoryBrandsLabel": "Marcas en esta categoría",
     "categories": {
-      "alimentos": { "label": "Alimentos y despensa" },
-      "bebe-cuidado": { "label": "Bebés y cuidado personal" },
-      "hogar-institucional": { "label": "Limpieza del hogar e institucional" },
-      "bebidas": { "label": "Bebidas" }
+      "alimentos": {
+        "label": "Alimentos y despensa",
+        "shortLabel": "Alimentos",
+        "tagline": "Snacks, dulces y básicos de despensa para surtir cualquier anaquel.",
+        "productTypes": [
+          "Snacks y botanas",
+          "Chocolates y confites",
+          "Galletas",
+          "Papas fritas",
+          "Salsas y condimentos",
+          "Pasta italiana",
+          "Mermeladas y conservas",
+          "Gomas de mascar y mentas"
+        ]
+      },
+      "bebidas": {
+        "label": "Bebidas",
+        "shortLabel": "Bebidas",
+        "tagline": "De cervezas a energizantes: la selección que tu clientela busca.",
+        "productTypes": [
+          "Cervezas",
+          "Energizantes",
+          "Licores premium",
+          "Café",
+          "Bebidas rehidratantes e isotónicas"
+        ]
+      },
+      "bebe-cuidado": {
+        "label": "Bebés y cuidado personal",
+        "shortLabel": "Cuidado personal",
+        "tagline": "Cuidado personal e higiene para cada etapa de la familia.",
+        "productTypes": [
+          "Papel higiénico y servilletas",
+          "Pañales",
+          "Toallas sanitarias",
+          "Jabón y cuidado de la piel",
+          "Rasuradoras",
+          "Higiene íntima",
+          "Cuidado para adultos mayores"
+        ]
+      },
+      "hogar-institucional": {
+        "label": "Limpieza del hogar e institucional",
+        "shortLabel": "Limpieza e institucional",
+        "tagline": "Soluciones de limpieza para el hogar y la operación institucional.",
+        "productTypes": [
+          "Detergentes y suavizantes",
+          "Desinfectantes",
+          "Empaques y film plástico",
+          "Bolsas industriales",
+          "Cinta adhesiva",
+          "Limpiadores multiusos",
+          "Insumos institucionales / food service"
+        ]
+      }
     },
+    "muralTitle": "Respaldados por marcas líderes",
+    "muralSubtitle": "Estas son algunas de las marcas que garantizan la calidad de nuestro portafolio.",
     "showroomAlt": "Portafolio de marcas distribuidas por Mercasa"
   },
   "Contact": {
+    "segmentsCategoriesLabel": "Categorías que te interesan",
+    "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",
+    "segments": {
+      "supermercados": {
+        "label": "Supermercados y cadenas",
+        "valuePhrase": "Un solo proveedor para todo tu surtido: del anaquel de despensa al de limpieza.",
+        "whatsappNoun": "un supermercado"
+      },
+      "hoteleria": {
+        "label": "Hotelería y turismo",
+        "valuePhrase": "Amenities, limpieza y bebidas para elevar la experiencia de tus huéspedes.",
+        "whatsappNoun": "un hotel"
+      },
+      "restaurantes": {
+        "label": "Restaurantes y food service",
+        "valuePhrase": "Insumos, bebidas y empaques para que tu cocina no pare.",
+        "whatsappNoun": "un restaurante"
+      },
+      "comercio-local": {
+        "label": "Comercio local / pulperías",
+        "valuePhrase": "El surtido que tu clientela busca, con entrega confiable.",
+        "whatsappNoun": "un comercio local"
+      },
+      "panaderias": {
+        "label": "Panaderías",
+        "valuePhrase": "Insumos y empaques para tu producción diaria.",
+        "whatsappNoun": "una panadería"
+      },
+      "instituciones": {
+        "label": "Instituciones",
+        "valuePhrase": "Abastecimiento institucional confiable, en el volumen que tu operación exige.",
+        "whatsappNoun": "una institución"
+      },
+      "retail": {
+        "label": "Retail / tiendas de conveniencia",
+        "valuePhrase": "Rotación alta garantizada: snacks, bebidas y esenciales de conveniencia.",
+        "whatsappNoun": "una tienda de conveniencia"
+      }
+    },
     "eyebrow": "Contacto",
     "title": "Hablemos de negocios",
     "paragraph": "Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o escríbanos directamente — atendemos proveedores internacionales y clientes locales.",

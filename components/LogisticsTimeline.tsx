@@ -3,25 +3,13 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Ship, Warehouse, Truck, Store } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import Container from "./Container";
-import Reveal, { RevealGroup, RevealItem } from "./Reveal";
+import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
-import { logisticsSteps } from "@/lib/data";
+import LogisticsSteps from "./LogisticsSteps";
 import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import heroLogisticaPhoto from "@/public/brand/herologistica.jpg";
-
-const stepIcons = {
-  ship: Ship,
-  warehouse: Warehouse,
-  truck: Truck,
-  store: Store,
-} as const;
-
-// Un solo azul de marca para las 4 cards (antes cada paso tenía su propio
-// color — desentonaba con la paleta monocromática de Mercasa).
-const STEP_ACCENT = "#0C447C";
-const STEP_ACCENT_BG = "#E6F1FB";
 
 /* ---------- Banda hero: collage ya compuesto (barco → bodega → camión → tienda) ---------- */
 function HeroBand({ alt }: { alt: string }) {
@@ -46,10 +34,10 @@ export default function LogisticsTimeline() {
     <section
       id="logistica"
       className="relative overflow-hidden scroll-mt-20 pb-16 pt-24 md:pb-20 md:pt-32"
-      style={{ background: "#F7F3EB" }}
+      style={{ background: "linear-gradient(180deg, #F7F3EB 0%, #FFFFFF 100%)" }}
     >
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de
-          Nosotros; acá solo se agrega la de salida hacia Marcas para no
+          Nosotros; acá solo se agrega la de salida hacia Productos para no
           duplicar el mismo trazo en el mismo borde. */}
       <SoftCurve position="bottom" flip />
 
@@ -99,64 +87,8 @@ export default function LogisticsTimeline() {
           </Reveal>
         </div>
 
-        {/* ---------- Cuatro etapas: tarjetas con más carácter ---------- */}
-        <div className="relative mt-16 lg:mt-[70px]">
-          {/* Línea de flujo punteada: conecta los 4 pasos a la altura de sus
-              badges, detrás de las cards (z-0, las cards opacas la tapan
-              excepto en el gap entre ellas). Solo desde lg, que es donde el
-              grid es una sola fila de 4 — en mobile/tablet (2 columnas) no
-              hay una fila única a la que conectar. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 z-0 hidden lg:block"
-            style={{ top: "42px", borderTop: "2px dashed #C7D4E3" }}
-          />
-
-          <RevealGroup once stagger={0.09} className="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {logisticsSteps.map((step) => {
-              const StepIcon = stepIcons[step.icon as keyof typeof stepIcons];
-              return (
-                <RevealItem
-                  key={step.step}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-7 shadow-[0_10px_28px_rgba(16,37,63,0.07)] transition-shadow duration-300 hover:shadow-[0_18px_40px_rgba(16,37,63,0.14)]"
-                >
-                  {/* Barra de acento superior: mismo azul de marca en las 4
-                      cards, para reforzar que son 4 etapas de UN proceso. */}
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-0 top-0 h-[3px]"
-                    style={{ background: STEP_ACCENT }}
-                  />
-
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Badge rectangular (antes círculo): texto en el azul de
-                        marca sobre un fondo tenue del mismo tono. */}
-                    <span
-                      className="inline-flex w-fit items-center rounded-lg px-3 py-1 font-display text-[13px] font-bold transition-transform duration-300 group-hover:scale-105"
-                      style={{ background: STEP_ACCENT_BG, color: STEP_ACCENT }}
-                    >
-                      {step.step}
-                    </span>
-
-                    <StepIcon
-                      aria-hidden
-                      className="h-6 w-6 shrink-0"
-                      strokeWidth={1.75}
-                      style={{ color: STEP_ACCENT }}
-                    />
-                  </div>
-
-                  <h3 className="mt-5 text-[19px] font-semibold leading-tight text-corp-ink">
-                    {t(`steps.${step.key}.title`)}
-                  </h3>
-                  <p className="mt-3 text-[14px] leading-[1.65]" style={{ color: "#3A4A5F" }}>
-                    {t(`steps.${step.key}.description`)}
-                  </p>
-                </RevealItem>
-              );
-            })}
-          </RevealGroup>
-        </div>
+        {/* ---------- Cuatro etapas: bloques grandes apilados en zigzag ---------- */}
+        <LogisticsSteps />
 
         {/* La barra inferior de diferenciales ("Más de 60 años / Respaldo
             institucional / Estándares internacionales / Cobertura nacional")
@@ -165,10 +97,10 @@ export default function LogisticsTimeline() {
             de logística para reemplazarla, mejor sin la barra que duplicando
             contenido. */}
 
-        {/* ---------- Transición hacia Marcas ---------- */}
+        {/* ---------- Transición hacia Productos ---------- */}
         <button
           type="button"
-          onClick={() => scrollTo("#marcas")}
+          onClick={() => scrollTo("#productos")}
           className="mx-auto mt-12 flex min-h-[44px] flex-col items-center justify-center gap-2 text-slate-400 transition hover:text-corp-blue"
         >
           <span className="whitespace-nowrap text-[11px] font-semibold uppercase" style={{ letterSpacing: "0.28em" }}>
