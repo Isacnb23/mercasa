@@ -14,6 +14,7 @@ import {
   Sparkles,
   UtensilsCrossed,
 } from "lucide-react";
+import Container from "./Container";
 import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import { brandCategories, brandPillars, brandsMuralImage } from "@/lib/data";
@@ -172,7 +173,7 @@ export default function BrandsSection() {
           duplicar el mismo trazo en el mismo borde. */}
       <SoftCurve position="bottom" flip />
 
-      <div className="relative mx-auto px-4 sm:px-6" style={{ width: "min(95vw, 1660px)" }}>
+      <Container className="relative">
         <div className="grid grid-cols-1 gap-[34px] lg:grid-cols-[370px_minmax(0,1fr)] lg:items-center lg:gap-[42px]">
           {/* ---------- Columna izquierda: contenido ---------- */}
           <Reveal className="relative" once>
@@ -273,7 +274,7 @@ export default function BrandsSection() {
             <CategoryExplorer activeKey={activeKey} onSelect={setActiveKey} />
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

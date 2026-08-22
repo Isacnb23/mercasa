@@ -50,7 +50,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
         className={
           variant === "mobile"
             ? "flex w-full items-center justify-center rounded-2xl px-4 py-3 text-base font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.45)] transition duration-300 hover:brightness-95 active:scale-[0.98]"
-            : "inline-flex items-center justify-center whitespace-nowrap rounded-full px-5 py-[9px] text-[13px] font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.5)] transition duration-300 hover:-translate-y-0.5 hover:brightness-95 active:scale-95"
+            : "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full px-5 py-[9px] text-[13px] font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.5)] transition duration-300 hover:-translate-y-0.5 hover:brightness-95 active:scale-95"
         }
       >
         {t("navLabel")}
@@ -65,7 +65,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.18, ease: [0.22, 0.61, 0.36, 1] }}
-            className="absolute left-1/2 top-[calc(100%+14px)] z-30 w-[min(320px,88vw)] -translate-x-1/2"
+            className="fixed inset-x-4 top-[92px] z-30 mx-auto w-auto max-w-[320px] sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-[calc(100%+14px)] sm:mx-0 sm:w-[min(320px,88vw)] sm:-translate-x-1/2"
             style={{
               borderRadius: "16px",
               border: "1px solid rgba(8,43,92,0.08)",

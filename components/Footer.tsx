@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { MapPin, Mail, Phone } from "lucide-react";
 import { site } from "@/lib/data";
 import logo from "@/public/models/mercasa-logo-transparent.png";
+import Container from "./Container";
 import FooterNav from "./FooterNav";
 
 /* lucide-react ya no incluye íconos de marcas (Facebook/LinkedIn/Instagram),
@@ -58,7 +59,7 @@ function SocialIcon({
       rel={isPlaceholder ? undefined : "noopener noreferrer"}
       aria-label={label}
       title={isPlaceholder ? pendingLabel : label}
-      className="flex h-[43px] w-[43px] items-center justify-center rounded-full bg-[#185FA5] text-white transition duration-300 hover:-translate-y-px hover:bg-[#0C447C]"
+      className="flex h-11 w-11 items-center justify-center rounded-full bg-[#185FA5] text-white transition duration-300 hover:-translate-y-px hover:bg-[#0C447C]"
     >
       {children}
     </a>
@@ -80,7 +81,7 @@ export default async function Footer() {
         background: "#F3F5F7",
       }}
     >
-      <div className="relative z-10 mx-auto max-w-[1120px] px-6 md:px-0">
+      <Container className="relative z-10">
         <div className="grid grid-cols-1 gap-x-[55px] gap-y-10 sm:grid-cols-2 md:grid-cols-[1.25fr_0.7fr_1.25fr]">
           {/* Columna 1 — Mercasa */}
           <div className="sm:col-span-2 md:col-span-1">
@@ -134,15 +135,19 @@ export default async function Footer() {
               </li>
               <li className="flex items-center gap-[14px]">
                 <Phone className="h-[19px] w-[19px] shrink-0 text-[#075FD8]" />
-                <a href={site.phoneHref} className="transition hover:text-[#075FD8]" style={{ color: "#3A4A5F" }}>
+                <a
+                  href={site.phoneHref}
+                  className="-my-[11px] inline-flex items-center py-[11px] transition hover:text-[#075FD8]"
+                  style={{ color: "#3A4A5F" }}
+                >
                   {site.phone}
                 </a>
               </li>
-              <li className="flex items-center gap-[14px]">
-                <Mail className="h-[19px] w-[19px] shrink-0 text-[#075FD8]" />
+              <li className="flex items-start gap-[14px]">
+                <Mail className="mt-0.5 h-[19px] w-[19px] shrink-0 text-[#075FD8]" />
                 <a
                   href={`mailto:${site.emails.comunicaciones}`}
-                  className="transition hover:text-[#075FD8]"
+                  className="-my-[11px] block min-w-0 flex-1 break-words py-[11px] transition hover:text-[#075FD8]"
                   style={{ color: "#3A4A5F" }}
                 >
                   {site.emails.comunicaciones}
@@ -182,7 +187,7 @@ export default async function Footer() {
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

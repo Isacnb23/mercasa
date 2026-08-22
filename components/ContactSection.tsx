@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Clock, Compass, Mail, MapPin, Navigation, Phone } from "lucide-react";
+import Container from "./Container";
 import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import { site } from "@/lib/data";
@@ -45,7 +46,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="inline-flex h-8 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
+        className="inline-flex h-11 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
         style={{ borderRadius: "8px", background: "#075FD8" }}
       >
         {t("directionsCta")}
@@ -146,7 +147,7 @@ export default function ContactSection() {
           tono distinto, #F3F5F7) para no duplicar el mismo trazo. */}
       <SoftCurve position="bottom" flip />
 
-      <div className="relative z-10 mx-auto max-w-[1180px] px-4 md:px-8">
+      <Container className="relative z-10">
         <Reveal className="mx-auto max-w-2xl text-center">
           <span
             className="inline-flex items-center gap-3 text-[13px] font-semibold uppercase"
@@ -294,7 +295,7 @@ export default function ContactSection() {
             </div>
           </Reveal>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Award, Handshake, Users, Warehouse } from "lucide-react";
 import { aboutStats, site } from "@/lib/data";
 import cediPhoto from "@/public/brand/cedi-sunset.jpg";
+import Container from "./Container";
 import SoftCurve from "./SoftCurve";
 
 const statIcons = {
@@ -18,18 +19,19 @@ const statIcons = {
 
 const EASE_CORP = [0.22, 0.61, 0.36, 1] as const;
 
-/* Divisores de la banda de métricas: 1 columna en mobile (borde arriba),
-   2 columnas en sm (borde arriba + izquierda según posición), 4 en lg (solo
-   borde izquierda). Se resuelve por índice en vez de con `divide-*` porque
-   el patrón de bordes cambia de forma distinta en cada breakpoint. */
+/* Divisores de la banda de métricas: 2 columnas (2x2) por defecto — borde
+   arriba en la segunda fila, izquierda entre columnas — y 4 en lg (solo
+   borde izquierda, una sola fila). Se resuelve por índice en vez de con
+   `divide-*` porque el patrón de bordes cambia de forma distinta en cada
+   breakpoint. */
 function statDividerClass(i: number) {
   switch (i) {
     case 1:
-      return "border-t sm:border-t-0 sm:border-l";
+      return "border-l";
     case 2:
       return "border-t lg:border-t-0 lg:border-l";
     case 3:
-      return "border-t sm:border-l lg:border-t-0";
+      return "border-t border-l lg:border-t-0";
     default:
       return "";
   }
@@ -98,7 +100,7 @@ export default function AboutSection() {
 
   return (
     <section id="nosotros" className="relative scroll-mt-20 overflow-hidden bg-white pb-16 pt-24 md:pb-20 md:pt-32">
-      <div className="relative z-10 mx-auto px-5 md:px-8" style={{ width: "min(92vw, 1500px)" }}>
+      <Container className="relative z-10">
         {/* ---------- Bloque superior: relato + foto ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.35fr] lg:gap-[34px]">
           {/* Izquierda */}
@@ -165,7 +167,7 @@ export default function AboutSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, margin: "-60px" }}
           transition={{ duration: 0.6, delay: 0.1, ease: EASE_CORP }}
-          className="mt-12 grid grid-cols-1 overflow-hidden rounded-[16px] sm:grid-cols-2 lg:mt-14 lg:grid-cols-4"
+          className="mt-12 grid grid-cols-2 overflow-hidden rounded-[16px] lg:mt-14 lg:grid-cols-4"
           style={{
             border: "1px solid #D8E1EC",
             boxShadow: "0 12px 32px rgba(16,37,63,0.08)",
@@ -176,7 +178,7 @@ export default function AboutSection() {
             return (
               <div
                 key={stat.key}
-                className={`group relative overflow-hidden border-[#E2E8F0] px-7 py-8 transition-colors duration-300 hover:bg-corp-offwhite ${statDividerClass(i)}`}
+                className={`group relative overflow-hidden border-[#E2E8F0] px-4 py-6 transition-colors duration-300 hover:bg-corp-offwhite sm:px-7 sm:py-8 ${statDividerClass(i)}`}
                 style={{ background: i % 2 === 0 ? "#FFFFFF" : "#FBFCFD" }}
               >
                 {/* Filete superior: aparece en hover, detalle de marca */}
@@ -194,7 +196,7 @@ export default function AboutSection() {
                 </div>
 
                 <div className="mt-5 min-w-0">
-                  <span className="block font-display text-[34px] font-bold leading-none text-corp-ink lg:text-[38px]">
+                  <span className="block break-words font-display text-[24px] font-bold leading-none text-corp-ink sm:text-[34px] lg:text-[38px]">
                     <StatValue
                       display={"display" in stat ? stat.display : undefined}
                       value={"value" in stat ? stat.value : undefined}
@@ -217,7 +219,7 @@ export default function AboutSection() {
             venta) se detalla por completo en la sección Logística; aquí ya no se
             repite ese recorrido para no duplicar contenido. "Nosotros" queda
             enfocado en identidad: trayectoria, respaldo y cifras institucionales. */}
-      </div>
+      </Container>
 
       <SoftCurve position="bottom" flip />
     </section>

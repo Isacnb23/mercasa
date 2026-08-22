@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Ship, Warehouse, Truck, Store } from "lucide-react";
+import Container from "./Container";
 import Reveal, { RevealGroup, RevealItem } from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import { logisticsSteps } from "@/lib/data";
@@ -52,7 +53,7 @@ export default function LogisticsTimeline() {
           duplicar el mismo trazo en el mismo borde. */}
       <SoftCurve position="bottom" flip />
 
-      <div className="relative z-10 mx-auto px-5 md:px-8" style={{ width: "min(92vw, 1500px)" }}>
+      <Container className="relative z-10">
         {/* ---------- Bloque superior: editorial + collage ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[425px_minmax(0,1fr)] lg:gap-[70px]">
           <Reveal once>
@@ -168,7 +169,7 @@ export default function LogisticsTimeline() {
         <button
           type="button"
           onClick={() => scrollTo("#marcas")}
-          className="mx-auto mt-12 flex flex-col items-center gap-2 text-slate-400 transition hover:text-corp-blue"
+          className="mx-auto mt-12 flex min-h-[44px] flex-col items-center justify-center gap-2 text-slate-400 transition hover:text-corp-blue"
         >
           <span className="whitespace-nowrap text-[11px] font-semibold uppercase" style={{ letterSpacing: "0.28em" }}>
             {t("cta")}
@@ -180,7 +181,7 @@ export default function LogisticsTimeline() {
             <ChevronDown className="h-[18px] w-[18px]" />
           </motion.span>
         </button>
-      </div>
+      </Container>
     </section>
   );
 }

@@ -24,7 +24,7 @@ export default function FooterNav({
               e.preventDefault();
               scrollTo(link.href);
             }}
-            className="group inline-flex items-center gap-2 transition hover:text-[#075FD8]"
+            className="group -my-[15px] inline-flex items-center gap-2 py-[15px] transition hover:text-[#075FD8]"
             style={{ color: "#3A4A5F" }}
           >
             <ChevronRight className="h-[14px] w-[14px] shrink-0 text-[#075FD8] transition group-hover:translate-x-0.5" />
