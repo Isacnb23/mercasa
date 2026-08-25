@@ -59,7 +59,15 @@ export default function BusinessSegments({
   return (
     <div>
       {/* ---------- Selector de segmento ---------- */}
-      <Reveal once className="flex flex-wrap justify-center gap-3">
+      <Reveal className="mb-4 text-center">
+        <p
+          className="text-[11.5px] font-semibold uppercase"
+          style={{ letterSpacing: "0.14em", color: ACCENT }}
+        >
+          {t("segmentsSelectorLabel")}
+        </p>
+      </Reveal>
+      <Reveal className="flex flex-wrap justify-center gap-3">
         {businessSegments.map((segment) => {
           const isActive = segment.key === activeKey;
           const Icon = segmentIcons[segment.icon as keyof typeof segmentIcons];

@@ -269,3 +269,23 @@ export const contactChannels = [
     description: "Supermercados, retail, mini-súper y comercio local que desean abastecerse con Mercasa.",
   },
 ];
+
+// Fotos del mosaico de "Nuestros Colaboradores". Placeholders: los archivos
+// todavía no están subidos (ver public/brand/Colaboradores/README.md) —
+// CollaboratorPhotoTile degrada a un ícono genérico si el archivo no existe,
+// así que esto no rompe nada mientras tanto. Para poner las fotos reales,
+// solo subir los archivos con estos mismos nombres a esa carpeta (o editar
+// `src` acá si cambian los nombres/la cantidad de fotos).
+// `size` controla cuántas celdas ocupa cada foto en el grid mosaico (ver
+// SIZE_CLASSES en CollaboratorsSection.tsx) — variar los tamaños es lo que le
+// da el efecto Pinterest/masonry liviano en vez de un grid parejo.
+export const collaboratorPhotos: { src: string; size: "large" | "wide" | "tall" | "normal" }[] = [
+  { src: "/brand/Colaboradores/foto-01.jpg", size: "large" },
+  { src: "/brand/Colaboradores/foto-02.jpg", size: "normal" },
+  { src: "/brand/Colaboradores/foto-03.jpg", size: "tall" },
+  { src: "/brand/Colaboradores/foto-04.jpg", size: "wide" },
+  { src: "/brand/Colaboradores/foto-05.jpg", size: "normal" },
+  { src: "/brand/Colaboradores/foto-06.jpg", size: "normal" },
+  { src: "/brand/Colaboradores/foto-07.jpg", size: "wide" },
+  { src: "/brand/Colaboradores/foto-08.jpg", size: "normal" },
+];

@@ -34,17 +34,17 @@ export default function LogisticsTimeline() {
     <section
       id="logistica"
       className="relative overflow-hidden scroll-mt-20 pb-16 pt-24 md:pb-20 md:pt-32"
-      style={{ background: "linear-gradient(180deg, #F7F3EB 0%, #FFFFFF 100%)" }}
+      style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F7F3EB 100%)" }}
     >
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de
-          Nosotros; acá solo se agrega la de salida hacia Productos para no
-          duplicar el mismo trazo en el mismo borde. */}
+          Nosotros; acá solo se agrega la de salida hacia Colaboradores para
+          no duplicar el mismo trazo en el mismo borde. */}
       <SoftCurve position="bottom" flip />
 
       <Container className="relative z-10">
         {/* ---------- Bloque superior: editorial + collage ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[425px_minmax(0,1fr)] lg:gap-[70px]">
-          <Reveal once>
+          <Reveal>
             <div className="flex items-center gap-4">
               <span
                 className="whitespace-nowrap text-[13px] font-bold uppercase text-corp-blue"
@@ -82,7 +82,7 @@ export default function LogisticsTimeline() {
             </p>
           </Reveal>
 
-          <Reveal delay={0.12} once>
+          <Reveal delay={0.12}>
             <HeroBand alt={t("heroBandAlt")} />
           </Reveal>
         </div>

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Award, Handshake, Users, Warehouse } from "lucide-react";
 import { aboutStats, site } from "@/lib/data";
-import cediPhoto from "@/public/brand/cedi-sunset.jpg";
+import cediPhoto from "@/public/brand/Nosotros/ChatGPT Image 25 ago 2026, 10_34_48.png";
 import Container from "./Container";
 import SoftCurve from "./SoftCurve";
 
@@ -99,7 +99,11 @@ export default function AboutSection() {
   const t = useTranslations("About");
 
   return (
-    <section id="nosotros" className="relative scroll-mt-20 overflow-hidden bg-white pb-16 pt-24 md:pb-20 md:pt-32">
+    <section
+      id="nosotros"
+      className="relative scroll-mt-20 overflow-hidden pb-16 pt-16 md:pb-20 md:pt-20"
+      style={{ background: "#F7F3EB" }}
+    >
       <Container className="relative z-10">
         {/* ---------- Bloque superior: relato + foto ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.35fr] lg:gap-[34px]">

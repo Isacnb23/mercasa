@@ -30,7 +30,7 @@ export default function LogisticsSteps() {
   return (
     <div>
       {/* Eyebrow de apertura: introduce la secuencia completa antes del paso 01 */}
-      <Reveal once className="mt-16 lg:mt-20">
+      <Reveal className="mt-16 lg:mt-20">
         <div className="flex items-center gap-4">
           <span
             className="whitespace-nowrap text-[12px] font-bold uppercase text-corp-blue"
@@ -58,7 +58,7 @@ export default function LogisticsSteps() {
           const statValue = t(`steps.${step.key}.statValue`);
 
           return (
-            <Reveal key={step.key} once delay={(i % 2) * 0.08}>
+            <Reveal key={step.key} delay={(i % 2) * 0.08}>
               <div className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-[#E2E8F0] shadow-[0_14px_40px_rgba(16,37,63,0.08)]">
                 <span aria-hidden className="absolute inset-x-0 top-0 z-10 h-[4px]" style={{ background: STEP_ACCENT }} />
 

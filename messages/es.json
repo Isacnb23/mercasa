@@ -17,7 +17,7 @@
   "Nav": {
     "inicio": "Inicio",
     "nosotros": "Nosotros",
-    "logistica": "Logística",
+    "logistica": "Nuestra Logística",
     "productos": "Productos",
     "contacto": "Contacto"
   },
@@ -40,7 +40,7 @@
     "badgeSince": "Desde {year}",
     "badgeParent": "Una empresa de {parent}",
     "title": "Líderes en <accent>distribución</accent> de productos de Costa Rica",
-    "paragraph": "Importación, logística y distribución mayorista de productos de consumo masivo, con cobertura en supermercados, retail y comercio local en todo el país.",
+    "paragraph": "Importación, logística y distribución mayorista de productos de <accent>consumo masivo</accent>, con cobertura en supermercados, retail y comercio local en todo el país.",
     "ctaPrimary": "Conocer nuestra operación",
     "scrollLabel": "Conexiones que mueven negocios",
     "scrollAria": "Desplazarse hacia abajo",
@@ -56,7 +56,7 @@
       },
       "cobertura": {
         "label": "Cobertura nacional",
-        "value": "3,500 entregas comerciales por semana"
+        "value": "3,000 entregas comerciales por semana"
       }
     }
   },
@@ -130,7 +130,7 @@
       "distribucion": {
         "title": "Distribución Nacional",
         "description": "Red logística propia con cobertura en todo el país, optimizando rutas para entregas eficientes y puntuales.",
-        "statValue": "3,500+",
+        "statValue": "3,000+",
         "statLabel": "entregas comerciales por semana",
         "features": {
           "f1": {
@@ -179,88 +179,54 @@
     "cta": "Descubra nuestras marcas",
     "heroBandAlt": "Cadena logística de Mercasa: importación por barco, almacenamiento en bodega, transporte por camión y punto de venta"
   },
-  "Brands": {
+  "Collaborators": {
+    "eyebrow": "Nuestro equipo",
+    "title": "Nuestros Colaboradores",
+    "subtitle": "Las personas detrás de cada entrega, cada día.",
+    "photoAlt": "Colaboradores de Mercasa"
+  },
+  "Products": {
     "titleLead": "Todo lo que tu negocio",
     "titleAccent": "necesita",
-    "paragraph": "Un portafolio completo para abastecer tu negocio, respaldado por marcas líderes que garantizan calidad e innovación en cada categoría.",
+    "paragraph": "Un catálogo completo organizado por familia, con cientos de productos disponibles para tu negocio.",
     "pillars": {
-      "calidad": {
-        "title": "Calidad garantizada",
-        "description": "Marcas de las mejores casas productoras internacionales, seleccionadas para garantizar excelencia en cada hogar."
+      "catalogo": {
+        "title": "Catálogo completo",
+        "description": "Variedad real de productos por familia, actualizada desde nuestro inventario."
       },
-      "alianzas": {
-        "title": "Alianzas estratégicas",
-        "description": "Relaciones comerciales duraderas con marcas reconocidas que confían en nuestra red de distribución nacional."
+      "disponibilidad": {
+        "title": "Disponibilidad garantizada",
+        "description": "Stock verificado y listo para tu pedido."
       },
       "compromiso": {
         "title": "Compromiso con el cliente",
         "description": "Seguimos ampliando nuestro portafolio para responder a lo que el mercado costarricense necesita."
       }
     },
-    "categoriesLabel": "Categorías de producto",
-    "categoryBrandsLabel": "Marcas en esta categoría",
-    "categories": {
-      "alimentos": {
-        "label": "Alimentos y despensa",
-        "shortLabel": "Alimentos",
-        "tagline": "Snacks, dulces y básicos de despensa para surtir cualquier anaquel.",
-        "productTypes": [
-          "Snacks y botanas",
-          "Chocolates y confites",
-          "Galletas",
-          "Papas fritas",
-          "Salsas y condimentos",
-          "Pasta italiana",
-          "Mermeladas y conservas",
-          "Gomas de mascar y mentas"
-        ]
-      },
-      "bebidas": {
-        "label": "Bebidas",
-        "shortLabel": "Bebidas",
-        "tagline": "De cervezas a energizantes: la selección que tu clientela busca.",
-        "productTypes": [
-          "Cervezas",
-          "Energizantes",
-          "Licores premium",
-          "Café",
-          "Bebidas rehidratantes e isotónicas"
-        ]
-      },
-      "bebe-cuidado": {
-        "label": "Bebés y cuidado personal",
-        "shortLabel": "Cuidado personal",
-        "tagline": "Cuidado personal e higiene para cada etapa de la familia.",
-        "productTypes": [
-          "Papel higiénico y servilletas",
-          "Pañales",
-          "Toallas sanitarias",
-          "Jabón y cuidado de la piel",
-          "Rasuradoras",
-          "Higiene íntima",
-          "Cuidado para adultos mayores"
-        ]
-      },
-      "hogar-institucional": {
-        "label": "Limpieza del hogar e institucional",
-        "shortLabel": "Limpieza e institucional",
-        "tagline": "Soluciones de limpieza para el hogar y la operación institucional.",
-        "productTypes": [
-          "Detergentes y suavizantes",
-          "Desinfectantes",
-          "Empaques y film plástico",
-          "Bolsas industriales",
-          "Cinta adhesiva",
-          "Limpiadores multiusos",
-          "Insumos institucionales / food service"
-        ]
-      }
-    },
+    "familiesLabel": "Familias de producto",
+    "productsCount": "{count, plural, one {# producto} other {# productos}}",
+    "productsCountApprox": "{count} productos",
+    "subfamiliesLabel": "Sub-familias",
+    "categoriesInLabel": "Categorías en {subFamilyName}",
+    "packSizesLabel": "Empaques disponibles",
+    "loadingAria": "Cargando catálogo de productos",
+    "errorTitle": "No pudimos cargar el catálogo",
+    "errorDescription": "Ocurrió un problema al conectar con nuestro sistema de inventario. Escribinos y con gusto te compartimos el catálogo completo.",
+    "errorCta": "Contactar por WhatsApp"
+  },
+  "Brands": {
     "muralTitle": "Respaldados por marcas líderes",
     "muralSubtitle": "Estas son algunas de las marcas que garantizan la calidad de nuestro portafolio.",
-    "showroomAlt": "Portafolio de marcas distribuidas por Mercasa"
+    "showroomAlt": "Portafolio de marcas distribuidas por Mercasa",
+    "categories": {
+      "alimentos": { "label": "Alimentos y despensa" },
+      "bebidas": { "label": "Bebidas" },
+      "bebe-cuidado": { "label": "Bebés y cuidado personal" },
+      "hogar-institucional": { "label": "Limpieza del hogar e institucional" }
+    }
   },
   "Contact": {
+    "segmentsSelectorLabel": "Customer class",
     "segmentsCategoriesLabel": "Categorías que te interesan",
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",
     "segments": {

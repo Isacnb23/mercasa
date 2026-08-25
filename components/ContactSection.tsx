@@ -198,7 +198,6 @@ export default function ContactSection() {
         <div className="mt-16 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
           {/* Info */}
           <Reveal
-            once
             className="flex min-w-0 flex-col bg-white p-[26px] sm:p-[28px]"
             style={{
               borderRadius: "20px",
@@ -242,7 +241,6 @@ export default function ContactSection() {
               camuflaba con un borde gris casi imperceptible. */}
           <Reveal
             delay={0.1}
-            once
             className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
             style={{
               borderRadius: "20px",
@@ -288,7 +286,7 @@ export default function ContactSection() {
 
         {/* ---------- Paso 3: un solo CTA de cierre, contextualizado con el
             segmento elegido arriba ---------- */}
-        <Reveal once className="mx-auto mt-14 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Reveal className="mx-auto mt-14 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <motion.a
             href={whatsappHref}
             target="_blank"

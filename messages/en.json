@@ -17,7 +17,7 @@
   "Nav": {
     "inicio": "Home",
     "nosotros": "About",
-    "logistica": "Logistics",
+    "logistica": "Our Logistics",
     "productos": "Products",
     "contacto": "Contact"
   },
@@ -40,7 +40,7 @@
     "badgeSince": "Since {year}",
     "badgeParent": "A {parent} company",
     "title": "Costa Rica's leader in <accent>distribution</accent> of consumer goods",
-    "paragraph": "Import, logistics, and wholesale distribution of consumer goods, reaching supermarkets, retail, and local trade nationwide.",
+    "paragraph": "Import, logistics, and wholesale distribution of <accent>consumer goods</accent>, reaching supermarkets, retail, and local trade nationwide.",
     "ctaPrimary": "Discover our operation",
     "scrollLabel": "Connections that move business",
     "scrollAria": "Scroll down",
@@ -56,7 +56,7 @@
       },
       "cobertura": {
         "label": "Nationwide coverage",
-        "value": "3,500 weekly deliveries"
+        "value": "3,000 weekly deliveries"
       }
     }
   },
@@ -130,7 +130,7 @@
       "distribucion": {
         "title": "Nationwide Distribution",
         "description": "Our own logistics network covering the entire country, optimizing routes for efficient, on-time deliveries.",
-        "statValue": "3,500+",
+        "statValue": "3,000+",
         "statLabel": "weekly deliveries",
         "features": {
           "f1": {
@@ -179,88 +179,54 @@
     "cta": "Discover our brands",
     "heroBandAlt": "Mercasa's logistics chain: ocean import, warehouse storage, truck transport, and point of sale"
   },
-  "Brands": {
+  "Collaborators": {
+    "eyebrow": "Our team",
+    "title": "Our Collaborators",
+    "subtitle": "The people behind every delivery, every day.",
+    "photoAlt": "Mercasa collaborators"
+  },
+  "Products": {
     "titleLead": "Everything your business",
     "titleAccent": "needs",
-    "paragraph": "A complete portfolio to supply your business, backed by leading brands that guarantee quality and innovation in every category.",
+    "paragraph": "A complete catalog organized by family, with hundreds of products available for your business.",
     "pillars": {
-      "calidad": {
-        "title": "Guaranteed quality",
-        "description": "Brands from the world's best manufacturers, selected to bring excellence into every home."
+      "catalogo": {
+        "title": "Complete catalog",
+        "description": "Real product variety by family, updated straight from our inventory."
       },
-      "alianzas": {
-        "title": "Strategic partnerships",
-        "description": "Long-standing commercial relationships with recognized brands that trust our nationwide distribution network."
+      "disponibilidad": {
+        "title": "Guaranteed availability",
+        "description": "Verified stock, ready for your order."
       },
       "compromiso": {
         "title": "Commitment to our customers",
         "description": "We keep expanding our portfolio to meet what the Costa Rican market needs."
       }
     },
-    "categoriesLabel": "Product categories",
-    "categoryBrandsLabel": "Brands in this category",
-    "categories": {
-      "alimentos": {
-        "label": "Food & pantry",
-        "shortLabel": "Food",
-        "tagline": "Snacks, sweets, and pantry staples to stock any shelf.",
-        "productTypes": [
-          "Snacks",
-          "Chocolates and candy",
-          "Cookies",
-          "Potato chips",
-          "Sauces and condiments",
-          "Italian pasta",
-          "Jams and preserves",
-          "Chewing gum and mints"
-        ]
-      },
-      "bebidas": {
-        "label": "Beverages",
-        "shortLabel": "Beverages",
-        "tagline": "From beer to energy drinks: the selection your customers look for.",
-        "productTypes": [
-          "Beer",
-          "Energy drinks",
-          "Premium spirits",
-          "Coffee",
-          "Rehydration and isotonic drinks"
-        ]
-      },
-      "bebe-cuidado": {
-        "label": "Baby & personal care",
-        "shortLabel": "Personal care",
-        "tagline": "Personal care and hygiene for every stage of the family.",
-        "productTypes": [
-          "Toilet paper and napkins",
-          "Diapers",
-          "Sanitary pads",
-          "Soap and skin care",
-          "Razors",
-          "Intimate hygiene",
-          "Senior care"
-        ]
-      },
-      "hogar-institucional": {
-        "label": "Home & institutional cleaning",
-        "shortLabel": "Cleaning & institutional",
-        "tagline": "Cleaning solutions for the home and institutional operations.",
-        "productTypes": [
-          "Detergents and fabric softeners",
-          "Disinfectants",
-          "Packaging and plastic film",
-          "Industrial bags",
-          "Adhesive tape",
-          "Multi-purpose cleaners",
-          "Institutional / food-service supplies"
-        ]
-      }
-    },
+    "familiesLabel": "Product families",
+    "productsCount": "{count, plural, one {# product} other {# products}}",
+    "productsCountApprox": "{count} products",
+    "subfamiliesLabel": "Sub-families",
+    "categoriesInLabel": "Categories in {subFamilyName}",
+    "packSizesLabel": "Available pack sizes",
+    "loadingAria": "Loading product catalog",
+    "errorTitle": "We couldn't load the catalog",
+    "errorDescription": "We had a problem connecting to our inventory system. Reach out to us and we'll gladly share the full catalog.",
+    "errorCta": "Contact us on WhatsApp"
+  },
+  "Brands": {
     "muralTitle": "Backed by leading brands",
     "muralSubtitle": "These are some of the brands that guarantee the quality of our portfolio.",
-    "showroomAlt": "Portfolio of brands distributed by Mercasa"
+    "showroomAlt": "Portfolio of brands distributed by Mercasa",
+    "categories": {
+      "alimentos": { "label": "Food & pantry" },
+      "bebidas": { "label": "Beverages" },
+      "bebe-cuidado": { "label": "Baby & personal care" },
+      "hogar-institucional": { "label": "Home & institutional cleaning" }
+    }
   },
   "Contact": {
+    "segmentsSelectorLabel": "Customer class",
     "segmentsCategoriesLabel": "Categories relevant to you",
     "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
     "segments": {
