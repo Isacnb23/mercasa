@@ -138,6 +138,13 @@ interface HierarchyAccumulator {
   itemIds: Set<string>;
   children: Map<string, HierarchyAccumulator>;
   packSizes?: Set<string>;
+  /**
+   * ItemId -> ItemName de TODOS los productos bajo este nodo (directos o
+   * anidados en una sub-categoría). Solo se llena para nodos de categoría
+   * (ver buildProductHierarchy) — es el único nivel que la UI expande para
+   * listar productos.
+   */
+  productNames?: Map<string, string>;
 }
 
 function makeAccumulator(label: string): HierarchyAccumulator {
@@ -156,6 +163,13 @@ function toNodes(
       itemCount: acc.itemIds.size,
       ...(acc.packSizes
         ? { packSizes: Array.from(acc.packSizes).sort(comparePackSize) }
+        : {}),
+      ...(acc.productNames
+        ? {
+            products: Array.from(acc.productNames, ([id, name]) => ({ id, name })).sort(
+              (a, b) => a.name.localeCompare(b.name, "es")
+            ),
+          }
         : {}),
       children: toNodes(acc.children, path),
     } satisfies HierarchyNode;
@@ -192,6 +206,12 @@ export function buildProductHierarchy(
     if (!h3) continue;
     const category = getOrCreate(subFamily.children, h3);
     category.itemIds.add(item.ItemId);
+    // Se registra ACÁ (antes de la rama de Hierarchy4) para que el producto
+    // quede en la categoría sin importar si termina anidado en una
+    // sub-categoría, agrupado como tamaño de empaque, o directo sin
+    // Hierarchy4 — la categoría es el único nivel que expone `products`.
+    category.productNames ??= new Map();
+    category.productNames.set(item.ItemId, normalizeLabel(item.ItemName));
 
     const h4 = normalizeLabel(item.Hierarchy4);
     if (!h4) continue;

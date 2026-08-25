@@ -1,0 +1,210 @@
+/* Hoja de impresión del catálogo por familia (ver ProductCatalogModal.tsx).
+   Diseño Mercasa real: hoja BLANCA, mismos tokens de marca que el resto del
+   sitio (corp-blue #075FD8, corp-yellow #FFD21A, corp-ink #082B5C) — sin
+   estética "papel" inventada. Sin ícono repetido por producto (la API no
+   trae fotos, ver prompt-verificar-imagenes-api.md): los renglones van con
+   línea punteada tipo índice/lista de precios impresa.
+
+   Técnica de impresión "solo esto": oculto en pantalla (display:none) y en
+   @media print se oculta TODO el resto de la página vía visibility (no
+   display, para no romper el flujo) y se revela únicamente este árbol. Así
+   window.print() imprime solo el catálogo, no el resto del sitio. */
+
+#catalog-print-sheet {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #catalog-print-sheet,
+  #catalog-print-sheet * {
+    visibility: visible;
+  }
+
+  #catalog-print-sheet {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
+
+#catalog-print-sheet {
+  color: #082b5c;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  background: #ffffff;
+}
+
+#catalog-print-sheet .cp-page {
+  width: 210mm;
+  min-height: 297mm;
+  position: relative;
+  background: #ffffff;
+  page-break-after: always;
+}
+
+#catalog-print-sheet .cp-page:last-child {
+  page-break-after: auto;
+}
+
+#catalog-print-sheet .cp-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 297mm;
+  padding: 30mm 22mm;
+}
+
+#catalog-print-sheet .cp-cover-logo {
+  height: 28px;
+  width: auto;
+}
+
+#catalog-print-sheet .cp-cover-icon {
+  margin-top: 18mm;
+  color: #075fd8;
+}
+
+#catalog-print-sheet .cp-eyebrow {
+  color: #075fd8;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#catalog-print-sheet .cp-cover h1 {
+  margin: 0;
+  max-width: 620px;
+  color: #082b5c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+}
+
+#catalog-print-sheet .cp-cover-rule {
+  display: block;
+  width: 46px;
+  height: 3px;
+  border-radius: 999px;
+  background: #ffd21a;
+  margin-top: 16px;
+}
+
+#catalog-print-sheet .cp-cover-description {
+  margin-top: 20px;
+  max-width: 480px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #5c6b7d;
+}
+
+#catalog-print-sheet .cp-cover-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #082b5c;
+}
+
+#catalog-print-sheet .cp-content-page {
+  padding: 20mm 20mm 24mm;
+}
+
+#catalog-print-sheet .cp-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  margin-bottom: 26px;
+  border-bottom: 2px solid #075fd8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #082b5c;
+}
+
+#catalog-print-sheet .cp-page-number {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8493a5;
+}
+
+#catalog-print-sheet .cp-category-header {
+  margin-bottom: 20px;
+}
+
+#catalog-print-sheet .cp-category-label {
+  display: block;
+  color: #075fd8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+#catalog-print-sheet .cp-category-header h2 {
+  margin: 8px 0 0;
+  color: #082b5c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+}
+
+#catalog-print-sheet .cp-category-header .cp-rule {
+  display: block;
+  width: 46px;
+  height: 3px;
+  border-radius: 999px;
+  background: #ffd21a;
+  margin-top: 10px;
+}
+
+#catalog-print-sheet .cp-products {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 20mm;
+}
+
+#catalog-print-sheet .cp-product-row {
+  padding: 7px 0;
+  border-bottom: 1px dotted #cbd5e1;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+#catalog-print-sheet .cp-product-name {
+  margin: 0;
+  color: #082b5c;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+#catalog-print-sheet .cp-footer {
+  position: absolute;
+  left: 20mm;
+  right: 20mm;
+  bottom: 10mm;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #8493a5;
+}
+
+#catalog-print-sheet .cp-footer strong {
+  color: #075fd8;
+}

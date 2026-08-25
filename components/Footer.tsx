@@ -78,9 +78,23 @@ export default async function Footer() {
         /* Remate claro para cerrar el sitio: un tono distinto al de Contacto
            (#F7F3EB) para marcar el cierre, pero siempre dentro del mismo
            lenguaje claro — la curva de Contacto ya marca este cambio de tono. */
-        background: "#F3F5F7",
+        background: `
+            radial-gradient(
+              ellipse 75% 70% at 50% 20%,
+              #FFFDF1 0%,
+              #FBF3E8 48%,
+              #EDE4DD 100%
+            )
+          `,
       }}
     >
+
+      {/* Línea iluminada superior */}
+      <div className="absolute inset-x-[4%] top-0 h-px bg-gradient-to-r from-transparent via-[#E8B69F]/70 to-transparent" />
+
+      {/* Resplandor central */}
+      <div className="pointer-events-none absolute left-1/2 top-0 h-40 w-[70%] -translate-x-1/2 bg-[#FFFDF1]/80 blur-3xl" />
+
       <Container className="relative z-10">
         <div className="grid grid-cols-1 gap-x-[55px] gap-y-10 sm:grid-cols-2 md:grid-cols-[1.25fr_0.7fr_1.25fr]">
           {/* Columna 1 — Mercasa */}
