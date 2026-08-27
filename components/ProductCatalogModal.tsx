@@ -27,6 +27,11 @@ import logisticaImportacion from "@/public/brand/Logistica/importacion-global.pn
 import logisticaAlmacenamiento from "@/public/brand/Logistica/almacenamiento-inteligente.png";
 import logisticaDistribucion from "@/public/brand/Logistica/distribucion-nacional.png";
 import logisticaPuntoDeVenta from "@/public/brand/Logistica/punto-de-venta.png";
+// Fotos reales de Mercasa (ver reemplazar-imagenes-portada-indice.md) — fijas
+// para portada/portafolio, a diferencia de DECORATIVE_PHOTOS de abajo que
+// rota por familia solo en los divisores de sub-familia.
+import portadaPhoto from "@/public/Catalogo/portada.png";
+import indicePhoto from "@/public/Catalogo/indice.png";
 import "./product-catalog-print.css";
 import "./product-catalog-flipbook.css";
 import "./product-catalog-flipbook-realism.css";
@@ -59,11 +64,14 @@ const PRODUCTS_PER_GRID_PAGE = 9;
 // Renglones por página impresa: son compactos, entran muchos más por hoja A4.
 const PRINT_PAGE_SIZE = 15;
 
-// Fotos DECORATIVAS/corporativas (portada, portafolio, divisores de
-// sub-familia) — nunca fotos de producto (esas vienen de ProductImage vía el
-// proxy). Rotan en vez de repetir siempre la misma bodega, y el punto de
-// partida de la rotación varía por familia (hash simple del id) para que
-// dos revistas de familias distintas tampoco arranquen con la misma foto.
+// Fotos DECORATIVAS/corporativas de los divisores de sub-familia — nunca
+// fotos de producto (esas vienen de ProductImage vía el proxy). Portada y
+// portafolio ya NO salen de acá (son fijas, ver portadaPhoto/indicePhoto
+// arriba); esto solo rota entre sub-familias dentro de una misma revista, y
+// el punto de partida de la rotación varía por familia (hash simple del id)
+// para que dos revistas de familias distintas tampoco arranquen con la
+// misma foto. Se van a reemplazar por fotos propias de cada sub-familia más
+// adelante (ver reemplazar-imagenes-portada-indice.md).
 const DECORATIVE_PHOTOS: StaticImageData[] = [
   heroWarehouse,
   logisticaDistribucion,
@@ -741,8 +749,11 @@ function BookPageContent({
   icon: LucideIcon;
 }) {
   const t = useTranslations("Products");
-  const coverPhoto = useMemo(() => pickPhoto(photoOffsetFor(family.id), 0), [family.id]);
-  const portfolioPhoto = useMemo(() => pickPhoto(photoOffsetFor(family.id), 1), [family.id]);
+  // Fijas para todas las familias (ver reemplazar-imagenes-portada-indice.md)
+  // — a diferencia de los divisores de sub-familia, portada/portafolio no
+  // rotan.
+  const coverPhoto = portadaPhoto;
+  const portfolioPhoto = indicePhoto;
 
   if (page.kind === "cover") {
     return (

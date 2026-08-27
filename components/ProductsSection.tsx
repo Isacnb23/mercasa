@@ -13,9 +13,15 @@ import ProductsSkeleton from "./ProductsSkeleton";
 // (ProductExplorer) que maneja la interacción.
 export default function ProductsSection() {
   return (
+    // pb achicado (ver ajuste-encaje-laptop.md): en laptops de poco alto el
+    // conjunto título+pilares+cuadro no entraba sin scrollear la página
+    // entera. pt se deja igual que antes a propósito — el header flotante
+    // (components/Header.tsx, fixed, ~96px de alto real medido) se solapa
+    // con el título si se achica: probado con pt-[28px] y el título queda
+    // tapado detrás de la barra de navegación.
     <section
       id="productos"
-      className="relative overflow-hidden scroll-mt-20 pb-[48px] pt-[40px] sm:pb-[64px] sm:pt-[56px]"
+      className="relative overflow-hidden scroll-mt-20 pb-[36px] pt-[40px] sm:pb-[48px] sm:pt-[56px]"
       style={{ background: "#F7F3EB" }}
     >
       {/* Entrada (Colaboradores → Productos) ya la marca la curva inferior

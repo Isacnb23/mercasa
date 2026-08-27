@@ -37,14 +37,18 @@ export default function ProductsHeader() {
           <span className="text-corp-blue">{t("titleAccent")}</span>
         </h2>
 
-        <span aria-hidden className="mx-auto mt-5 block h-[3px] w-[46px] rounded-full bg-corp-yellow" />
+        <span aria-hidden className="mx-auto mt-4 block h-[3px] w-[46px] rounded-full bg-corp-yellow" />
 
-        <p className="mx-auto mt-6 max-w-[520px] text-[15.5px] leading-[1.7]" style={{ color: "#3A4A5F" }}>
+        <p className="mx-auto mt-4 max-w-[520px] text-[15.5px] leading-[1.7]" style={{ color: "#3A4A5F" }}>
           {t("paragraph")}
         </p>
       </Reveal>
 
-      <ul className="mx-auto mt-10 grid max-w-[880px] grid-cols-1 gap-8 sm:grid-cols-3">
+      {/* mt-10 -> mt-7, íconos/gaps achicados: en laptops de poco alto
+          (1366x768, 1440x900) este bloque + el cuadro de familias no
+          entraban sin scrollear la página entera (ver
+          ajuste-encaje-laptop.md). */}
+      <ul className="mx-auto mt-7 grid max-w-[880px] grid-cols-1 gap-6 sm:grid-cols-3">
         {pillarKeys.map((key, i) => {
           const Icon = pillarIcons[key];
           return (
@@ -57,15 +61,15 @@ export default function ProductsHeader() {
               className="flex flex-col items-center text-center"
             >
               <span
-                className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[14px] text-corp-blue"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-corp-blue"
                 style={{ background: "#E6F1FB", border: "1px solid rgba(255,210,26,0.5)" }}
               >
-                <Icon className="h-5 w-5" strokeWidth={1.7} aria-hidden />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden />
               </span>
-              <h3 className="mt-3 text-[13px] font-bold uppercase text-corp-ink" style={{ letterSpacing: "0.06em" }}>
+              <h3 className="mt-2 text-[13px] font-bold uppercase text-corp-ink" style={{ letterSpacing: "0.06em" }}>
                 {t(`pillars.${key}.title`)}
               </h3>
-              <p className="mt-1.5 max-w-[240px] text-[13.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
+              <p className="mt-1 max-w-[240px] text-[13.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
                 {t(`pillars.${key}.description`)}
               </p>
             </motion.li>

@@ -80,7 +80,12 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
   };
 
   return (
-    <div className="mt-16 lg:mt-20">
+    // mt-16/mt-20 -> mt-8/mt-10: en laptops (1366x768, 1440x900, menos alto
+    // disponible que un monitor grande) el conjunto título+pilares+esto+
+    // cuadro no entraba sin scrollear la página entera (ver
+    // ajuste-encaje-laptop.md). Mismo criterio en el resto de los espacios
+    // de esta sección: se achican, no se eliminan.
+    <div className="mt-8 lg:mt-10">
       <Reveal className="flex items-center justify-center gap-4">
         <span
           className="whitespace-nowrap text-[12px] font-bold uppercase text-corp-blue"
@@ -94,17 +99,17 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
           por familia/categoría — abre la revista de la primera familia
           directo en la portada (no existe un "catálogo unificado" propio:
           cada familia es su propia revista, ver ProductCatalogModal). */}
-      <Reveal delay={0.03} className="mx-auto mt-6 flex max-w-[480px] flex-col items-center text-center">
+      <Reveal delay={0.03} className="mx-auto mt-4 flex max-w-[480px] flex-col items-center text-center">
         <button
           type="button"
           onClick={() => openCatalog(families[0].id)}
-          className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[13.5px] font-semibold text-white shadow-[0_10px_26px_rgba(24,95,165,0.28)] transition hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13.5px] font-semibold text-white shadow-[0_10px_26px_rgba(24,95,165,0.28)] transition hover:opacity-90"
           style={{ background: ACCENT }}
         >
           <BookOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
           {t("exploreCta")}
         </button>
-        <p className="mt-2.5 text-[12.5px]" style={{ color: MUTED }}>
+        <p className="mt-2 text-[12.5px]" style={{ color: MUTED }}>
           {t("exploreCtaSubtitle")}
         </p>
       </Reveal>
@@ -131,10 +136,20 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
           scrolleando la PÁGINA en su lugar) era Lenis
           (components/SmoothScroll.tsx, smoothWheel:true global) capturando
           todos los eventos de wheel del sitio — `data-lenis-prevent` en cada
-          contenedor con overflow-y-auto le devuelve el scroll nativo. */}
+          contenedor con overflow-y-auto le devuelve el scroll nativo.
+
+          Alto responsive con clamp() en vez de fijo (ver
+          ajuste-encaje-laptop.md): en laptops de poco alto (1366x768,
+          1440x900) un h-[520px] fijo cortaba el cuadro y obligaba a
+          scrollear la página entera para verlo completo. clamp(mínimo,
+          preferido en vh, máximo) lo achica en viewports bajos y lo tapa en
+          65vh en el resto, sin pasar nunca de 640px en monitores grandes.
+          En mobile (max-sm:) se deja un alto fijo — mezclar vh con las
+          barras dinámicas del navegador mobile puede saltar al hacer
+          scroll. */}
       <Reveal delay={0.06}>
         <div
-          className="mt-8 flex h-[440px] shrink-0 flex-row overflow-hidden rounded-[28px] border bg-white sm:h-[520px] max-sm:flex-col"
+          className="mt-5 flex h-[420px] shrink-0 flex-row overflow-hidden rounded-[28px] border bg-white sm:h-[clamp(420px,65vh,640px)] max-sm:flex-col"
           style={{ borderColor: RULE, boxShadow: "0 16px 44px rgba(16,37,63,0.08)" }}
         >
           <div
