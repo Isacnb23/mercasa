@@ -27,20 +27,6 @@ const INK = "#0c1a26";
 const MUTED = "#5C6B7D";
 const RULE = "#E2E8F0";
 
-// Primera categoría CON productos reales de la familia (recorre sub-familia
-// -> categoría en orden) — es donde react-pageflip realmente tiene una
-// página (ver buildBookPages en ProductCatalogModal), así que el botón
-// "Revista" de la familia entra directo al contenido en vez de forzar al
-// usuario a pasar primero por portada/portafolio.
-function firstCategoryWithProducts(family: HierarchyNode): string | undefined {
-  for (const subFamily of family.children) {
-    for (const category of subFamily.children) {
-      if ((category.products?.length ?? 0) > 0) return category.id;
-    }
-  }
-  return undefined;
-}
-
 const expandTransition = { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const };
 
 export default function ProductExplorer({ families }: { families: HierarchyNode[] }) {
@@ -163,7 +149,7 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
                 family={family}
                 isActive={family.id === selectedFamilyId}
                 onSelect={() => selectFamily(family.id)}
-                onOpenCatalog={() => openCatalog(family.id, firstCategoryWithProducts(family))}
+                onOpenCatalog={() => openCatalog(family.id)}
               />
             ))}
           </div>
@@ -188,7 +174,7 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
                   expandedCategoryId={expandedCategoryId}
                   onToggleCategory={toggleCategory}
                   onOpenCategoryInCatalog={(categoryId) => openCatalog(selectedFamily.id, categoryId)}
-                  onOpenFamilyCatalog={() => openCatalog(selectedFamily.id, firstCategoryWithProducts(selectedFamily))}
+                  onOpenFamilyCatalog={() => openCatalog(selectedFamily.id)}
                 />
               </div>
             </div>

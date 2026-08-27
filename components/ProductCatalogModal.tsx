@@ -32,6 +32,26 @@ import logisticaPuntoDeVenta from "@/public/brand/Logistica/punto-de-venta.png";
 // rota por familia solo en los divisores de sub-familia.
 import portadaPhoto from "@/public/Catalogo/portada.png";
 import indicePhoto from "@/public/Catalogo/indice.png";
+// Fotos propias por sub-familia de Alimentos (ver
+// conectar-imagenes-subfamilias-alimentos.md) — las otras 4 familias
+// todavía no tienen las suyas, esas siguen con DECORATIVE_PHOTOS rotando.
+import alimentosLacteosYSucedaneos from "@/public/Catalogo/Alimentos/lacteos-y-sucedaneos.png";
+import alimentosConfiteriaYSnacks from "@/public/Catalogo/Alimentos/confiteria-y-snacks.png";
+import alimentosPanaderiaReposteriaGalletas from "@/public/Catalogo/Alimentos/panaderia-reposteria-galletas.png";
+import alimentosEnlatados from "@/public/Catalogo/Alimentos/enlatados.png";
+import alimentosPastasSalsasSopas from "@/public/Catalogo/Alimentos/pastas-salsas-sopas.png";
+import alimentosGranos from "@/public/Catalogo/Alimentos/granos.png";
+import alimentosGrasasYAceites from "@/public/Catalogo/Alimentos/grasas-y-aceites.png";
+import alimentosCongelados from "@/public/Catalogo/Alimentos/congelados.png";
+import alimentosEmbutidos from "@/public/Catalogo/Alimentos/embutidos.png";
+import alimentosCarnes from "@/public/Catalogo/Alimentos/carnes.png";
+import alimentosAzucar from "@/public/Catalogo/Alimentos/azucar.png";
+import alimentosBaking from "@/public/Catalogo/Alimentos/baking.png";
+import alimentosCereales from "@/public/Catalogo/Alimentos/cereales.png";
+import alimentosAlimentosInfantiles from "@/public/Catalogo/Alimentos/alimentos-infantiles.png";
+import alimentosCondimentosYEspecias from "@/public/Catalogo/Alimentos/condimentos-y-especias.png";
+import alimentosTortillas from "@/public/Catalogo/Alimentos/tortillas.png";
+import alimentosMermeladaYSpread from "@/public/Catalogo/Alimentos/mermelada-y-spread.png";
 import "./product-catalog-print.css";
 import "./product-catalog-flipbook.css";
 import "./product-catalog-flipbook-realism.css";
@@ -91,6 +111,51 @@ function pickPhoto(offset: number, slot: number): StaticImageData {
   return DECORATIVE_PHOTOS[(offset + slot) % DECORATIVE_PHOTOS.length];
 }
 
+// Mismo criterio de normalización que lib/mercasavip-catalog.ts
+// (normalizeKey): sin tildes, minúsculas — así "Lácteos y Sucedáneos" y
+// variantes de capitalización de la API matchean el mismo key.
+function normalizeSubFamilyKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Mapa EXPLÍCITO sub-familia -> foto propia (ver
+// conectar-imagenes-subfamilias-alimentos.md). A propósito no es una
+// función de slugify automática: "Panadería Repostería y galletas" y
+// "Pastas Salsas y Sopas" tienen nombre de archivo más corto (sin el "y"
+// de en medio) que el slug que generaría una conversión automática, así
+// que un diccionario explícito evita ese desajuste.
+const ALIMENTOS_SUBFAMILY_PHOTOS: Record<string, StaticImageData> = {
+  [normalizeSubFamilyKey("Lácteos y Sucedáneos")]: alimentosLacteosYSucedaneos,
+  [normalizeSubFamilyKey("Confitería y Snacks")]: alimentosConfiteriaYSnacks,
+  [normalizeSubFamilyKey("Panadería Repostería y galletas")]: alimentosPanaderiaReposteriaGalletas,
+  [normalizeSubFamilyKey("Enlatados")]: alimentosEnlatados,
+  [normalizeSubFamilyKey("Pastas Salsas y Sopas")]: alimentosPastasSalsasSopas,
+  [normalizeSubFamilyKey("Granos")]: alimentosGranos,
+  [normalizeSubFamilyKey("Grasas y Aceites")]: alimentosGrasasYAceites,
+  [normalizeSubFamilyKey("Congelados")]: alimentosCongelados,
+  [normalizeSubFamilyKey("Embutidos")]: alimentosEmbutidos,
+  [normalizeSubFamilyKey("Carnes")]: alimentosCarnes,
+  [normalizeSubFamilyKey("Azúcar")]: alimentosAzucar,
+  [normalizeSubFamilyKey("Baking")]: alimentosBaking,
+  [normalizeSubFamilyKey("Cereales")]: alimentosCereales,
+  [normalizeSubFamilyKey("Alimentos Infantiles")]: alimentosAlimentosInfantiles,
+  [normalizeSubFamilyKey("Condimentos y especias")]: alimentosCondimentosYEspecias,
+  [normalizeSubFamilyKey("Tortillas")]: alimentosTortillas,
+  [normalizeSubFamilyKey("Mermelada y Spread")]: alimentosMermeladaYSpread,
+};
+
+// Foto propia si la sub-familia es una de las 17 de Alimentos ya cubiertas;
+// si no (las otras 4 familias, todavía sin fotos propias), cae al pool
+// genérico que ya rotaba antes — no rompe nada de lo que no se tocó.
+function photoForSubFamily(subFamilyName: string, offset: number, slot: number): StaticImageData {
+  const specific = ALIMENTOS_SUBFAMILY_PHOTOS[normalizeSubFamilyKey(subFamilyName)];
+  return specific ?? pickPhoto(offset, slot);
+}
+
 // Mismos 3 pilares de marca que ya usa la sección Productos (Products.pillars
 // en messages/*.json) — no se inventa copy nuevo.
 const PILLAR_ICONS: Record<string, LucideIcon> = {
@@ -134,7 +199,7 @@ function buildBookPages(family: HierarchyNode, photoOffset: number): BookPage[] 
       pages.push({
         kind: "subfamily-divider",
         subFamily,
-        photo: pickPhoto(photoOffset, 2 + subFamilyIndex),
+        photo: photoForSubFamily(subFamily.name, photoOffset, 2 + subFamilyIndex),
       });
     }
     for (const category of categories) {
@@ -223,15 +288,47 @@ export default function ProductCatalogModal({
   const Icon = FAMILY_ICONS[family.id] ?? Package;
   const bookRef = useRef<{ pageFlip: () => PageFlipController } | null>(null);
 
+  // react-pageflip tarda un momento en terminar de montar TODAS las páginas
+  // (clona cada <Page> hijo, junta sus refs del DOM real, y recién ahí crea
+  // la instancia interna de PageFlip — con revistas grandes como Alimentos,
+  // 116 páginas, esto tarda unos cientos de ms). Dos síntomas distintos de
+  // la MISMA causa, confirmados reproduciendo ambos reportes de Isaac:
+  //   1. Cualquier `.flip()`/`.flipNext()` llamado ANTES de que termine
+  //      (`bookRef.current?.pageFlip()` todavía `undefined`) se pierde en
+  //      silencio — el <select> "Ir a categoría" cambiaba de valor mientras
+  //      el libro se quedaba en la portada (fix-portada-duplicada-
+  //      confirmado.md). Se arregla deshabilitando esos controles hasta
+  //      `isBookReady`.
+  //   2. `startPage` SÍ se aplica correctamente desde el arranque (no hace
+  //      falta ningún `.flip()` imperativo para "Revista"/CTA) — pero
+  //      mientras react-pageflip todavía está montando, el DOM real
+  //      muestra la portada sin su estilo de "página dura" (density hard),
+  //      así que se ve estirada ocupando las dos mitades del spread en vez
+  //      de una sola página — confirmado con capturas frame-a-frame
+  //      (fix-salto-automatico-race-condition.md). No es un problema de
+  //      navegación (el índice de página ya es el correcto desde el
+  //      inicio) sino de que le mostramos al usuario un frame de render a
+  //      medio terminar. Se arregla tapando el libro con un loader hasta
+  //      `isBookReady`, en vez de dejar ver ese estado intermedio.
+  // `onInit` es el evento real de la librería que marca cuándo terminó.
+  const [isBookReady, setIsBookReady] = useState(false);
+
   const photoOffset = useMemo(() => photoOffsetFor(family.id), [family.id]);
   const bookPages = useMemo(() => buildBookPages(family, photoOffset), [family, photoOffset]);
   const totalPages = bookPages.length;
 
+  // Agrupado por sub-familia para el <select> "Ir a categoría" (ver
+  // fix-dropdown-agrupado-y-apertura-pagina.md) — mismo criterio que
+  // buildBookPages/ProductExplorer.CategoryPanel: solo sub-familias con al
+  // menos una categoría con productos.
   const categorySections = useMemo(
     () =>
-      family.children.flatMap((subFamily) =>
-        subFamily.children.filter((category) => (category.products?.length ?? 0) > 0)
-      ),
+      family.children
+        .map((subFamily) => ({
+          subFamily,
+          categories: subFamily.children.filter((category) => (category.products?.length ?? 0) > 0),
+        }))
+        .filter(({ categories }) => categories.length > 0),
     [family]
   );
 
@@ -445,12 +542,15 @@ export default function ProductCatalogModal({
       if (e.key === "Escape") {
         if (isPrintingRef.current) return;
         handleClose();
-      } else if (e.key === "ArrowRight") bookRef.current?.pageFlip()?.flipNext();
-      else if (e.key === "ArrowLeft") bookRef.current?.pageFlip()?.flipPrev();
+      } else if (e.key === "ArrowRight") {
+        if (isBookReady) bookRef.current?.pageFlip()?.flipNext();
+      } else if (e.key === "ArrowLeft") {
+        if (isBookReady) bookRef.current?.pageFlip()?.flipPrev();
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose]);
+  }, [handleClose, isBookReady]);
 
   return createPortal(
     <>
@@ -491,14 +591,19 @@ export default function ProductCatalogModal({
                     const index = categoryPageIndex.get(e.target.value);
                     if (index != null) bookRef.current?.pageFlip()?.flip(index);
                   }}
+                  disabled={!isBookReady}
                   aria-label={t("catalog.jumpToCategoryLabel")}
-                  className="rounded-none border-0 border-b bg-transparent py-1 text-[13px] font-semibold outline-none"
+                  className="rounded-none border-0 border-b bg-transparent py-1 text-[13px] font-semibold outline-none disabled:opacity-40"
                   style={{ borderColor: RULE, color: ACCENT }}
                 >
-                  {categorySections.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
+                  {categorySections.map(({ subFamily, categories }) => (
+                    <optgroup key={subFamily.id} label={subFamily.name}>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </label>
@@ -549,7 +654,7 @@ export default function ProductCatalogModal({
             <button
               type="button"
               onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-              disabled={currentPage <= 0}
+              disabled={!isBookReady || currentPage <= 0}
               aria-label={t("catalog.prevPage")}
               className="ml-1 mr-2 flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:ml-4 sm:mr-5"
               style={{ borderColor: RULE, color: ACCENT }}
@@ -565,8 +670,9 @@ export default function ProductCatalogModal({
 
             {/* Este div (no los botones/franjas de al lado) es lo que mide el
                 ResizeObserver: su tamaño es el espacio real disponible para el
-                libro, ya descontando flechas y cantos de página. */}
-            <div ref={bookAreaRef} className="flipbook-container flex h-full min-w-0 flex-1 items-center justify-center">
+                libro, ya descontando flechas y cantos de página. `relative`
+                es el ancla del loader de abajo. */}
+            <div ref={bookAreaRef} className="flipbook-container relative flex h-full min-w-0 flex-1 items-center justify-center">
               <HTMLFlipBook
                 ref={bookRef}
                 width={BOOK_WIDTH}
@@ -593,6 +699,7 @@ export default function ProductCatalogModal({
                 className="catalog-flipbook"
                 style={{ width: bookBox.width, height: bookBox.height }}
                 onFlip={(e) => setCurrentPage(e.data as number)}
+                onInit={() => setIsBookReady(true)}
               >
                 {bookPages.map((page, index) => (
                   <Page key={index}>
@@ -600,6 +707,27 @@ export default function ProductCatalogModal({
                   </Page>
                 ))}
               </HTMLFlipBook>
+
+              {/* Mientras react-pageflip termina de montar, el DOM real
+                  muestra la portada sin su estilo de página dura (se ve
+                  estirada ocupando las dos mitades del spread) — no es un
+                  problema de a qué página apuntamos (`startPage` ya es el
+                  correcto desde el arranque), es que ese frame intermedio
+                  de render no está listo para mostrarse. Taparlo con este
+                  loader hasta `isBookReady` en vez de dejarlo ver (ver
+                  fix-salto-automatico-race-condition.md). */}
+              {!isBookReady && (
+                <div
+                  className="absolute inset-0 z-20 flex items-center justify-center"
+                  style={{ background: PAGE_BG }}
+                  aria-hidden
+                >
+                  <div
+                    className="h-8 w-8 animate-spin rounded-full border-2"
+                    style={{ borderColor: RULE, borderTopColor: ACCENT }}
+                  />
+                </div>
+              )}
             </div>
 
             <div
@@ -611,7 +739,7 @@ export default function ProductCatalogModal({
             <button
               type="button"
               onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-              disabled={currentPage >= totalPages - 1}
+              disabled={!isBookReady || currentPage >= totalPages - 1}
               aria-label={t("catalog.nextPage")}
               className="ml-2 mr-1 flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:ml-5 sm:mr-4"
               style={{ borderColor: RULE, color: ACCENT }}
