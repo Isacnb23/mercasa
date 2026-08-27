@@ -13,32 +13,19 @@ import ProductCatalogModal from "./ProductCatalogModal";
 // Corrección de dirección (ver fix-product-explorer-acordeon.md): el intento
 // anterior (rediseno-product-explorer.md) convertía esto en 3 pantallas que
 // se reemplazaban entre sí — Isaac lo probó y no es lo que quiere. La
-// dirección correcta es un acordeón contenido en UN SOLO cuadro fijo: click
-// en una familia expande sus categorías hacia ADENTRO del mismo cuadro
-// (nunca reemplaza toda la sección), click en una categoría expande sus
-// productos (solo texto, sin foto/precio) un nivel más adentro. Sin
-// buscador — se eliminó por completo (era de la versión anterior).
+// dirección correcta es un solo cuadro fijo (ver fix-acordeon-altura-fija.md
+// para el alto constante). Layout interno de sidebar + panel (ver
+// fix-sidebar-panel-scroll.md): las familias viven en una columna angosta a
+// la izquierda (solo seleccionan, no empujan nada hacia abajo) y sus
+// categorías/productos se muestran en un panel dedicado a la derecha, con su
+// propio scroll interno — así el contenido de una familia con muchas
+// categorías nunca queda "descolgado" al fondo del cuadro. Sin buscador — se
+// eliminó por completo (era de la versión anterior).
 const ACCENT = "#185FA5";
 const CHIP_BG = "#F0F5FA";
 const INK = "#0c1a26";
 const MUTED = "#5C6B7D";
 const RULE = "#E2E8F0";
-
-// Wash geométrico sutil en navy institucional (mismo tono que usa el resto
-// del sitio, solo varía la intensidad/ángulo por familia para diferenciar
-// filas sin fotos de producto — ver "Estilo general" del rediseño previo,
-// que este fix mantiene).
-const FAMILY_ROW_WASH = [
-  { tint: "rgba(8,43,92,0.045)", angle: 122 },
-  { tint: "rgba(8,43,92,0.075)", angle: 148 },
-  { tint: "rgba(8,43,92,0.095)", angle: 100 },
-  { tint: "rgba(8,43,92,0.06)", angle: 164 },
-  { tint: "rgba(8,43,92,0.085)", angle: 132 },
-];
-
-function familyRowWash(index: number) {
-  return FAMILY_ROW_WASH[index % FAMILY_ROW_WASH.length];
-}
 
 // Primera categoría CON productos reales de la familia (recorre sub-familia
 // -> categoría en orden) — es donde react-pageflip realmente tiene una
@@ -76,15 +63,16 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
     setCatalogCategoryId(undefined);
   };
 
-  // Acordeón clásico: una sola familia expandida a la vez, y dentro de ella
-  // una sola categoría expandida a la vez — así el cuadro se mantiene
-  // manejable (ver punto 5 del fix). Cambiar de familia colapsa la
-  // categoría que hubiera quedado abierta en la anterior.
-  const [expandedFamilyId, setExpandedFamilyId] = useState<string | null>(null);
+  // Sidebar (familias) + panel de contenido (categorías) de la familia
+  // seleccionada. Clickear una familia solo cambia cuál está activa — nunca
+  // expande nada hacia abajo en el propio sidebar. Dentro del panel,
+  // categorías siguen siendo un acordeón (una expandida a la vez).
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string>(families[0]?.id ?? "");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const selectedFamily = families.find((f) => f.id === selectedFamilyId) ?? families[0] ?? null;
 
-  const toggleFamily = (id: string) => {
-    setExpandedFamilyId((current) => (current === id ? null : id));
+  const selectFamily = (id: string) => {
+    setSelectedFamilyId(id);
     setExpandedCategoryId(null);
   };
   const toggleCategory = (id: string) => {
@@ -130,152 +118,214 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
         />
       )}
 
-      {/* Un solo cuadro fijo — no cambia de posición en la página, y su
-          alto crece/encoge con `layout` (framer-motion anima la
-          transición) en vez de saltar de golpe al expandir/colapsar
-          familias o categorías adentro. */}
+      {/* Un solo cuadro de altura FIJA (no max-height) — nunca cambia de
+          tamaño ni empuja el contenido de abajo, en ningún estado (ver
+          fix-acordeon-altura-fija.md). Adentro, dos columnas LADO A LADO por
+          default (flex-row, ver fix-urgente-layout-scroll.md — el intento
+          anterior lo apilaba porque el row solo se activaba desde lg/1024px;
+          ahora row es la base y solo se apila en pantallas realmente chicas
+          con max-sm:). Panel de categorías a la derecha con SU PROPIO
+          overflow-y-auto — un <div> plano, sin ningún motion.div de Framer
+          Motion envolviéndolo. La causa real del scroll roto (confirmado con
+          Playwright: el scrollTop nunca se movía y el wheel terminaba
+          scrolleando la PÁGINA en su lugar) era Lenis
+          (components/SmoothScroll.tsx, smoothWheel:true global) capturando
+          todos los eventos de wheel del sitio — `data-lenis-prevent` en cada
+          contenedor con overflow-y-auto le devuelve el scroll nativo. */}
       <Reveal delay={0.06}>
-        <motion.div
-          layout
-          transition={expandTransition}
-          className="mt-8 overflow-hidden rounded-[28px] border bg-white"
+        <div
+          className="mt-8 flex h-[440px] shrink-0 flex-row overflow-hidden rounded-[28px] border bg-white sm:h-[520px] max-sm:flex-col"
           style={{ borderColor: RULE, boxShadow: "0 16px 44px rgba(16,37,63,0.08)" }}
         >
-          {families.map((family, index) => (
-            <FamilyRow
-              key={family.id}
-              family={family}
-              wash={familyRowWash(index)}
-              isExpanded={expandedFamilyId === family.id}
-              onToggle={() => toggleFamily(family.id)}
-              onOpenCatalog={() => openCatalog(family.id, firstCategoryWithProducts(family))}
-              expandedCategoryId={expandedCategoryId}
-              onToggleCategory={toggleCategory}
-              onOpenCategoryInCatalog={(categoryId) => openCatalog(family.id, categoryId)}
-              isLast={index === families.length - 1}
-            />
-          ))}
-        </motion.div>
+          <div
+            data-lenis-prevent
+            className="flex w-[248px] shrink-0 flex-col gap-1 overflow-y-auto border-r p-3 max-sm:w-full max-sm:flex-row max-sm:gap-1.5 max-sm:overflow-x-auto max-sm:overflow-y-visible max-sm:border-b max-sm:border-r-0 max-sm:p-2.5"
+            style={{ borderColor: RULE }}
+          >
+            {families.map((family) => (
+              <SidebarFamilyItem
+                key={family.id}
+                family={family}
+                isActive={family.id === selectedFamilyId}
+                onSelect={() => selectFamily(family.id)}
+                onOpenCatalog={() => openCatalog(family.id, firstCategoryWithProducts(family))}
+              />
+            ))}
+          </div>
+
+          {/* key={selectedFamily.id}: al cambiar de familia este <div>
+              remonta, lo que resetea su scrollTop a 0 automáticamente — sin
+              necesidad de leer/escribir el DOM a mano. */}
+          {selectedFamily && (
+            // overflow-y-auto vive en ESTE div, sin padding propio — así la
+            // scrollbar queda pegada al borde real del panel. El padding
+            // (ver ajuste-padding-titulos.md) va en el wrapper interno de
+            // abajo, para que el texto tenga aire sin que la barra de scroll
+            // quede flotando a mitad del padding.
+            <div
+              key={selectedFamily.id}
+              data-lenis-prevent
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
+            >
+              <div className="px-7 pb-8 pt-7 max-sm:px-5 max-sm:pb-6 max-sm:pt-5">
+                <CategoryPanel
+                  family={selectedFamily}
+                  expandedCategoryId={expandedCategoryId}
+                  onToggleCategory={toggleCategory}
+                  onOpenCategoryInCatalog={(categoryId) => openCatalog(selectedFamily.id, categoryId)}
+                  onOpenFamilyCatalog={() => openCatalog(selectedFamily.id, firstCategoryWithProducts(selectedFamily))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </Reveal>
     </div>
   );
 }
 
-// Fila de familia — protagonista (ver fix-product-explorer-acordeon.md):
-// ícono grande, nombre, conteo, y su propio acceso directo a la revista. El
-// resto de la fila (no el botón "Revista") expande/colapsa sus categorías
-// hacia ADENTRO del mismo cuadro.
-function FamilyRow({
+// Ítem del sidebar — ícono + nombre + acceso directo a la revista (ver
+// ajuste-padding-vertical-boton-sidebar.md). Dos <button> HERMANOS dentro de
+// un <div> (no un botón anidado dentro de otro, que sería HTML inválido):
+// click en el nombre/ícono = seleccionar familia (cambia el panel derecho);
+// click en el ícono de libro = abre la revista de esa familia directo,
+// funcione o no seleccionada. Columna angosta apilada verticalmente por
+// default (sidebar al lado del panel, lado a lado); solo en pantallas
+// realmente chicas (max-sm:) se listan como chips horizontales.
+function SidebarFamilyItem({
   family,
-  wash,
-  isExpanded,
-  onToggle,
+  isActive,
+  onSelect,
   onOpenCatalog,
+}: {
+  family: HierarchyNode;
+  isActive: boolean;
+  onSelect: () => void;
+  onOpenCatalog: () => void;
+}) {
+  const t = useTranslations("Products");
+  const Icon = FAMILY_ICONS[family.id] ?? Package;
+  const iconColor = isActive ? "#ffffff" : ACCENT;
+  const textColor = isActive ? "#ffffff" : INK;
+
+  return (
+    <div
+      className="flex w-full shrink-0 items-center gap-0.5 rounded-xl transition max-sm:w-auto max-sm:rounded-full"
+      style={{ background: isActive ? ACCENT : CHIP_BG }}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={isActive}
+        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left max-sm:w-auto max-sm:flex-none max-sm:gap-2 max-sm:whitespace-nowrap max-sm:px-3.5 max-sm:py-2"
+      >
+        <Icon className="h-5 w-5 shrink-0 max-sm:h-4 max-sm:w-4" strokeWidth={1.8} style={{ color: iconColor }} aria-hidden />
+        <span className="min-w-0 truncate text-[13.5px] font-semibold max-sm:text-[12.5px]" style={{ color: textColor }}>
+          {family.name}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenCatalog();
+        }}
+        aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
+        title={t("catalog.openFamilyButton", { familyName: family.name })}
+        className="mr-1.5 flex shrink-0 items-center justify-center rounded-lg p-1.5 transition hover:opacity-70"
+        style={{ color: iconColor }}
+      >
+        <BookOpen className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+// Panel de contenido de la familia seleccionada — título + botón "Revista"
+// arriba (fácil de encontrar, ver fix-sidebar-panel-scroll.md), y debajo las
+// categorías de esa familia como acordeón (una expandida a la vez).
+function CategoryPanel({
+  family,
   expandedCategoryId,
   onToggleCategory,
   onOpenCategoryInCatalog,
-  isLast,
+  onOpenFamilyCatalog,
 }: {
   family: HierarchyNode;
-  wash: { tint: string; angle: number };
-  isExpanded: boolean;
-  onToggle: () => void;
-  onOpenCatalog: () => void;
   expandedCategoryId: string | null;
   onToggleCategory: (id: string) => void;
   onOpenCategoryInCatalog: (categoryId: string) => void;
-  isLast: boolean;
+  onOpenFamilyCatalog: () => void;
 }) {
   const t = useTranslations("Products");
   const Icon = FAMILY_ICONS[family.id] ?? Package;
   const subFamiliesWithCategories = family.children.filter((sf) => sf.children.length > 0);
 
   return (
-    <div style={{ borderBottom: isLast ? "none" : `1px solid ${RULE}` }}>
-      <div className="relative flex items-stretch">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: `repeating-linear-gradient(${wash.angle}deg, ${wash.tint} 0px, ${wash.tint} 1px, transparent 1px, transparent 13px)`,
-          }}
-        />
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={isExpanded}
-          className="relative z-10 flex min-w-0 flex-1 items-center gap-4 px-5 py-4 text-left transition hover:bg-black/[0.015] sm:px-7 sm:py-5"
-        >
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
             style={{ background: CHIP_BG }}
           >
-            <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.6} style={{ color: ACCENT }} aria-hidden />
+            <Icon className="h-5 w-5" strokeWidth={1.6} style={{ color: ACCENT }} aria-hidden />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-display text-[17px] font-semibold leading-tight sm:text-[19px]" style={{ color: INK }}>
+          <div className="min-w-0">
+            <p className="truncate font-display text-[17px] font-semibold sm:text-[19px]" style={{ color: INK }}>
               {family.name}
-            </span>
-            <span className="mt-0.5 block text-[12.5px] font-medium" style={{ color: ACCENT }}>
+            </p>
+            <p className="text-[12px] font-medium" style={{ color: ACCENT }}>
               {t("productsCountApprox", { count: formatProductCount(family.itemCount) })}
-            </span>
-          </span>
-          <ChevronDown
-            className="h-4.5 w-4.5 shrink-0 transition-transform duration-300"
-            style={{ color: ACCENT, transform: isExpanded ? "rotate(180deg)" : undefined }}
-            aria-hidden
-          />
-        </button>
+            </p>
+          </div>
+        </div>
 
         <button
           type="button"
-          onClick={onOpenCatalog}
+          onClick={onOpenFamilyCatalog}
           aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
           title={t("catalog.openFamilyButton", { familyName: family.name })}
-          className="relative z-10 my-3 mr-3 flex shrink-0 items-center gap-1.5 self-center rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition hover:opacity-80 sm:mr-5"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition hover:opacity-80"
           style={{ color: ACCENT, background: CHIP_BG }}
         >
           <BookOpen className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
-          <span className="hidden sm:inline">{t("catalog.openFamilyButtonShort")}</span>
+          {t("catalog.openFamilyButtonShort")}
         </button>
       </div>
 
-      <motion.div
-        initial={false}
-        animate={isExpanded ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
-        transition={expandTransition}
-        style={{ overflow: "hidden" }}
-      >
-        <div className="px-5 pb-5 sm:px-7">
-          {subFamiliesWithCategories.map((subFamily) => (
-            <div key={subFamily.id} className="mt-3 first:mt-0">
-              {subFamiliesWithCategories.length > 1 && (
-                <p className="mb-1.5 pl-[60px] text-[10px] font-bold uppercase sm:pl-[68px]" style={{ color: "#8493A5", letterSpacing: "0.08em" }}>
-                  {subFamily.name}
-                </p>
-              )}
-              <div className="space-y-1 pl-[60px] sm:pl-[68px]">
-                {subFamily.children.map((category) => (
-                  <CategoryRow
-                    key={category.id}
-                    category={category}
-                    isExpanded={expandedCategoryId === category.id}
-                    onToggle={() => onToggleCategory(category.id)}
-                    onOpenCatalog={() => onOpenCategoryInCatalog(category.id)}
-                  />
-                ))}
-              </div>
+      <div className="space-y-3">
+        {subFamiliesWithCategories.map((subFamily) => (
+          <div key={subFamily.id}>
+            {subFamiliesWithCategories.length > 1 && (
+              <p
+                className="mb-2 mt-2 text-[12px] font-extrabold uppercase"
+                style={{ color: INK, letterSpacing: "0.07em" }}
+              >
+                {subFamily.name}
+              </p>
+            )}
+            <div className="space-y-1">
+              {subFamily.children.map((category) => (
+                <CategoryRow
+                  key={category.id}
+                  category={category}
+                  isExpanded={expandedCategoryId === category.id}
+                  onToggle={() => onToggleCategory(category.id)}
+                  onOpenCatalog={() => onOpenCategoryInCatalog(category.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
-      </motion.div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// Fila de categoría (indentada, dentro de la familia expandida) — expande
-// para mostrar los nombres de producto en texto plano. Solo una categoría
-// expandida a la vez (acordeón dentro del acordeón, ver punto 5 del fix).
+// Fila de categoría (dentro del panel derecho) — expande para mostrar los
+// nombres de producto en texto plano. Solo una categoría expandida a la vez.
 function CategoryRow({
   category,
   isExpanded,
@@ -335,9 +385,9 @@ function CategoryRow({
               {/* Nivel de productos: solo nombre, sin foto ni precio (ver
                   fix-product-explorer-acordeon.md). max-height + scroll
                   propio acá — una categoría con 400 productos no debe
-                  volver gigante todo el cuadro. */}
-              <div className="max-h-[220px] overflow-y-auto pr-1">
-                <div className="columns-1 gap-x-5 sm:columns-2 lg:columns-3">
+                  consumir todo el alto disponible del panel. */}
+              <div data-lenis-prevent className="max-h-[220px] overflow-y-auto pr-1">
+                <div className="columns-1 gap-x-5 sm:columns-2">
                   {products.map((product) => (
                     <p
                       key={product.id}
