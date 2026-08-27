@@ -254,7 +254,38 @@
       "printCoverFooterTitle": "Soluciones que mueven tu negocio",
       "printPageLabel": "Catálogo 2026 · Página {page}",
       "printFooterTagline": "Distribución y confianza",
-      "printFooterLocation": "Costa Rica"
+      "printFooterLocation": "Costa Rica",
+      "glossaryButtonLabel": "Glosario",
+      "glossaryTitle": "Cómo leer las medidas de empaque",
+      "glossaryGroups": [
+        {
+          "title": "Por Caja",
+          "entries": [
+            { "abbr": "U/C · UND/CAJA", "meaning": "Unidades por Caja" },
+            { "abbr": "P/C", "meaning": "Paquetes por Caja" },
+            { "abbr": "R/C", "meaning": "Rollos por Caja" },
+            { "abbr": "D/C · DISPL/CAJA", "meaning": "Displays por Caja" }
+          ]
+        },
+        {
+          "title": "Por Bulto",
+          "entries": [
+            { "abbr": "U/B", "meaning": "Unidades por Bulto" },
+            { "abbr": "P/B", "meaning": "Paquetes por Bulto" }
+          ]
+        },
+        {
+          "title": "Por Tarima",
+          "entries": [
+            { "abbr": "C/T", "meaning": "Cajas por Tarima" },
+            { "abbr": "B/T", "meaning": "Bultos por Tarima" }
+          ]
+        },
+        {
+          "title": "Otros",
+          "entries": [{ "abbr": "U/P", "meaning": "Unidades por Paquete" }]
+        }
+      ]
     },
     "loadingAria": "Cargando catálogo de productos",
     "errorTitle": "No pudimos cargar el catálogo",

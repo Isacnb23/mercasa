@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Download,
   HeartHandshake,
+  Info,
   Package,
   ShieldCheck,
   X,
@@ -32,9 +33,10 @@ import logisticaPuntoDeVenta from "@/public/brand/Logistica/punto-de-venta.png";
 // rota por familia solo en los divisores de sub-familia.
 import portadaPhoto from "@/public/Catalogo/portada.png";
 import indicePhoto from "@/public/Catalogo/indice.png";
-// Fotos propias por sub-familia de Alimentos (ver
-// conectar-imagenes-subfamilias-alimentos.md) — las otras 4 familias
-// todavía no tienen las suyas, esas siguen con DECORATIVE_PHOTOS rotando.
+// Fotos propias por sub-familia (ver conectar-imagenes-subfamilias-
+// alimentos.md y conectar-imagenes-subfamilias-bebidas.md) — Cuidado del
+// Hogar, Cuidado Personal y Electrónica todavía no tienen las suyas, esas
+// siguen con DECORATIVE_PHOTOS rotando.
 import alimentosLacteosYSucedaneos from "@/public/Catalogo/Alimentos/lacteos-y-sucedaneos.png";
 import alimentosConfiteriaYSnacks from "@/public/Catalogo/Alimentos/confiteria-y-snacks.png";
 import alimentosPanaderiaReposteriaGalletas from "@/public/Catalogo/Alimentos/panaderia-reposteria-galletas.png";
@@ -52,6 +54,23 @@ import alimentosAlimentosInfantiles from "@/public/Catalogo/Alimentos/alimentos-
 import alimentosCondimentosYEspecias from "@/public/Catalogo/Alimentos/condimentos-y-especias.png";
 import alimentosTortillas from "@/public/Catalogo/Alimentos/tortillas.png";
 import alimentosMermeladaYSpread from "@/public/Catalogo/Alimentos/mermelada-y-spread.png";
+import bebidasNoAlcoholicas from "@/public/Catalogo/Bebidas/bebidas-no-alcoholicas.png";
+import bebidasAlcoholicas from "@/public/Catalogo/Bebidas/bebidas-alcoholicas.png";
+import bebidasEnPolvo from "@/public/Catalogo/Bebidas/bebidas-en-polvo-v2.png";
+import hogarDesechables from "@/public/Catalogo/Cuidado-Hogar/desechables.png";
+import hogarCuidadoDeLaRopa from "@/public/Catalogo/Cuidado-Hogar/cuidado-de-la-ropa.png";
+import hogarFerreteria from "@/public/Catalogo/Cuidado-Hogar/ferreteria.png";
+import hogarLimpiezaDelHogar from "@/public/Catalogo/Cuidado-Hogar/limpieza-del-hogar.png";
+import hogarToallasYServilletas from "@/public/Catalogo/Cuidado-Hogar/toallas-y-servilletas.png";
+import hogarInstitucional from "@/public/Catalogo/Cuidado-Hogar/institucional.png";
+import hogarPapelYDispensadores from "@/public/Catalogo/Cuidado-Hogar/papel-y-dispensadores.png";
+import hogarAccesoriosDeCocinaYBano from "@/public/Catalogo/Cuidado-Hogar/accesorios-de-cocina-y-bano.png";
+// OJO: la carpeta real en disco es "Electrodomesticos", no "Electronica"
+// como decía el doc original (ver completar-glosario-y-conectar-hogar-
+// electronica.md) — se usa el nombre real.
+import electronicaLineaBlanca from "@/public/Catalogo/Electrodomesticos/linea-blanca.png";
+import electronicaElectrodomesticos from "@/public/Catalogo/Electrodomesticos/electrodomesticos.png";
+import electronicaTelevisores from "@/public/Catalogo/Electrodomesticos/televisores.png";
 import "./product-catalog-print.css";
 import "./product-catalog-flipbook.css";
 import "./product-catalog-flipbook-realism.css";
@@ -122,13 +141,17 @@ function normalizeSubFamilyKey(value: string): string {
     .trim();
 }
 
-// Mapa EXPLÍCITO sub-familia -> foto propia (ver
-// conectar-imagenes-subfamilias-alimentos.md). A propósito no es una
-// función de slugify automática: "Panadería Repostería y galletas" y
-// "Pastas Salsas y Sopas" tienen nombre de archivo más corto (sin el "y"
-// de en medio) que el slug que generaría una conversión automática, así
-// que un diccionario explícito evita ese desajuste.
-const ALIMENTOS_SUBFAMILY_PHOTOS: Record<string, StaticImageData> = {
+// Mapa EXPLÍCITO sub-familia -> foto propia, centralizado para todas las
+// familias (ver conectar-imagenes-subfamilias-alimentos.md y
+// conectar-imagenes-subfamilias-bebidas.md) — con Bebidas confirmado que
+// alcanza con agregar entradas acá, sin tocar la lógica de lookup. A
+// propósito no es una función de slugify automática: "Panadería
+// Repostería y galletas" y "Pastas Salsas y Sopas" tienen nombre de
+// archivo más corto (sin el "y" de en medio) que el slug que generaría
+// una conversión automática, así que un diccionario explícito evita ese
+// desajuste — mismo motivo por el que "Bebidas en polvo" apunta a un
+// archivo con "-v2" en el nombre real, no al que se había propuesto.
+const SUBFAMILY_PHOTOS: Record<string, StaticImageData> = {
   [normalizeSubFamilyKey("Lácteos y Sucedáneos")]: alimentosLacteosYSucedaneos,
   [normalizeSubFamilyKey("Confitería y Snacks")]: alimentosConfiteriaYSnacks,
   [normalizeSubFamilyKey("Panadería Repostería y galletas")]: alimentosPanaderiaReposteriaGalletas,
@@ -146,13 +169,27 @@ const ALIMENTOS_SUBFAMILY_PHOTOS: Record<string, StaticImageData> = {
   [normalizeSubFamilyKey("Condimentos y especias")]: alimentosCondimentosYEspecias,
   [normalizeSubFamilyKey("Tortillas")]: alimentosTortillas,
   [normalizeSubFamilyKey("Mermelada y Spread")]: alimentosMermeladaYSpread,
+  [normalizeSubFamilyKey("Bebidas No Alcohólicas")]: bebidasNoAlcoholicas,
+  [normalizeSubFamilyKey("Bebidas Alcohólicas")]: bebidasAlcoholicas,
+  [normalizeSubFamilyKey("Bebidas en polvo")]: bebidasEnPolvo,
+  [normalizeSubFamilyKey("Desechables")]: hogarDesechables,
+  [normalizeSubFamilyKey("Cuidado de la Ropa")]: hogarCuidadoDeLaRopa,
+  [normalizeSubFamilyKey("Ferretería")]: hogarFerreteria,
+  [normalizeSubFamilyKey("Limpieza del hogar")]: hogarLimpiezaDelHogar,
+  [normalizeSubFamilyKey("Toallas y servilletas")]: hogarToallasYServilletas,
+  [normalizeSubFamilyKey("Institucional")]: hogarInstitucional,
+  [normalizeSubFamilyKey("Papel y Dispensadores")]: hogarPapelYDispensadores,
+  [normalizeSubFamilyKey("Accesorios de Cocina y Baño")]: hogarAccesoriosDeCocinaYBano,
+  [normalizeSubFamilyKey("Línea Blanca")]: electronicaLineaBlanca,
+  [normalizeSubFamilyKey("Electrodomésticos")]: electronicaElectrodomesticos,
+  [normalizeSubFamilyKey("Televisores")]: electronicaTelevisores,
 };
 
-// Foto propia si la sub-familia es una de las 17 de Alimentos ya cubiertas;
-// si no (las otras 4 familias, todavía sin fotos propias), cae al pool
-// genérico que ya rotaba antes — no rompe nada de lo que no se tocó.
+// Foto propia si la sub-familia está en SUBFAMILY_PHOTOS; si no (Cuidado
+// Personal — la única familia que todavía no tiene fotos propias), cae al
+// pool genérico que ya rotaba antes.
 function photoForSubFamily(subFamilyName: string, offset: number, slot: number): StaticImageData {
-  const specific = ALIMENTOS_SUBFAMILY_PHOTOS[normalizeSubFamilyKey(subFamilyName)];
+  const specific = SUBFAMILY_PHOTOS[normalizeSubFamilyKey(subFamilyName)];
   return specific ?? pickPhoto(offset, slot);
 }
 
@@ -285,6 +322,18 @@ export default function ProductCatalogModal({
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
+  // Solo las abreviaturas CONFIRMADAS por Isaac (ver
+  // fix-truncamiento-y-glosario.md y
+  // completar-glosario-y-conectar-hogar-electronica.md) — agrupadas por
+  // denominador ("por Caja", "por Bulto", "por Tarima") para que se lean
+  // como un patrón general en vez de una lista plana. Variantes de
+  // formato del mismo concepto (U/C con UND/CAJA, D/C con DISPL/CAJA) se
+  // muestran juntas en una sola fila. UND/CM y otros patrones minoritarios
+  // quedan pendientes de confirmar, no están acá.
+  const glossaryGroups = t.raw("catalog.glossaryGroups") as {
+    title: string;
+    entries: { abbr: string; meaning: string }[];
+  }[];
   const Icon = FAMILY_ICONS[family.id] ?? Package;
   const bookRef = useRef<{ pageFlip: () => PageFlipController } | null>(null);
 
@@ -536,11 +585,22 @@ export default function ProductCatalogModal({
     }, 60_000);
   };
 
-  // ESC cierra, flechas del teclado hojean el libro de verdad.
+  // Glosario de abreviaturas de empaque (ver fix-truncamiento-y-glosario.md)
+  // — accesible desde el header en cualquier página del catálogo, no solo
+  // desde la portada.
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+
+  // ESC cierra el glosario si está abierto (sin cerrar TODO el catálogo
+  // detrás); si no, cierra el catálogo. Flechas del teclado hojean el
+  // libro de verdad.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         if (isPrintingRef.current) return;
+        if (isGlossaryOpen) {
+          setIsGlossaryOpen(false);
+          return;
+        }
         handleClose();
       } else if (e.key === "ArrowRight") {
         if (isBookReady) bookRef.current?.pageFlip()?.flipNext();
@@ -550,7 +610,7 @@ export default function ProductCatalogModal({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, isBookReady]);
+  }, [handleClose, isBookReady, isGlossaryOpen]);
 
   return createPortal(
     <>
@@ -580,7 +640,13 @@ export default function ProductCatalogModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* relative: ancla de posicionamiento del popover del glosario
+                de abajo — así queda anclado al borde derecho de TODA esta
+                fila de controles (que coincide con el borde derecho del
+                header) en vez de al botón "Glosario" en sí, que en mobile
+                puede quedar lejos del borde y hacer que el popover se
+                corte contra el borde izquierdo de la pantalla. */}
+            <div className="relative flex items-center gap-4">
               <label className="flex items-center gap-2">
                 <span className="hidden text-[12px] font-medium sm:inline" style={{ color: MUTED }}>
                   {t("catalog.jumpToCategoryLabel")}
@@ -607,6 +673,84 @@ export default function ProductCatalogModal({
                   ))}
                 </select>
               </label>
+
+              {/* Glosario de abreviaturas de empaque (ver
+                  fix-truncamiento-y-glosario.md) — vive en el header, no en
+                  una página del libro, para que sea accesible desde
+                  CUALQUIER punto del catálogo. Backdrop invisible a pantalla
+                  completa para cerrar con click afuera, además de ESC (ver
+                  el handleKeyDown de arriba) y la X propia del popover.
+                  Fragment, no un <div> con `relative`: el ancla real es el
+                  contenedor de todos los controles de arriba, no este
+                  botón puntual (ver comentario ahí). */}
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsGlossaryOpen((current) => !current)}
+                  aria-label={t("catalog.glossaryButtonLabel")}
+                  title={t("catalog.glossaryButtonLabel")}
+                  aria-expanded={isGlossaryOpen}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition hover:opacity-70"
+                  style={{ borderColor: RULE, color: ACCENT }}
+                >
+                  <Info className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                  <span className="hidden sm:inline">{t("catalog.glossaryButtonLabel")}</span>
+                </button>
+
+                {isGlossaryOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsGlossaryOpen(false)}
+                      aria-hidden
+                    />
+                    <div
+                      role="dialog"
+                      aria-label={t("catalog.glossaryTitle")}
+                      className="absolute right-0 top-[calc(100%+10px)] z-40 max-h-[70vh] w-[min(340px,90vw)] overflow-y-auto rounded-2xl border bg-white p-4 text-left shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
+                      style={{ borderColor: RULE }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-display text-[14px] font-semibold" style={{ color: INK }}>
+                          {t("catalog.glossaryTitle")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsGlossaryOpen(false)}
+                          aria-label={t("catalog.close")}
+                          className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 transition hover:opacity-60"
+                          style={{ color: MUTED }}
+                        >
+                          <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                        </button>
+                      </div>
+                      <span aria-hidden className="mt-2 block h-[2px] w-[32px] rounded-full bg-corp-yellow" />
+                      <div className="mt-3 space-y-3">
+                        {glossaryGroups.map((group) => (
+                          <div key={group.title}>
+                            <p
+                              className="mb-1 text-[10px] font-bold uppercase"
+                              style={{ color: MUTED, letterSpacing: "0.08em" }}
+                            >
+                              {group.title}
+                            </p>
+                            <ul className="space-y-1.5">
+                              {group.entries.map((entry) => (
+                                <li key={entry.abbr} className="flex items-baseline gap-2 text-[12.5px] leading-snug">
+                                  <span className="shrink-0 font-semibold" style={{ color: ACCENT }}>
+                                    {entry.abbr}
+                                  </span>
+                                  <span style={{ color: "#3E4C5C" }}>{entry.meaning}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
 
               <button
                 type="button"
@@ -1064,7 +1208,12 @@ function BookPageContent({
       </div>
       <span aria-hidden className="mt-4 block h-[3px] w-[42px] shrink-0 rounded-full bg-corp-yellow" />
 
-      <div className="mt-5 grid flex-1 grid-cols-3 content-start gap-3">
+      {/* items-start: sin esto, CSS grid estira todas las tarjetas de una
+          fila a la altura de la más alta (stretch es el default) — con
+          nombres de largo variable (ver fix-truncamiento-y-glosario.md)
+          eso dejaría hueco vacío abajo de las tarjetas con nombre corto.
+          Cada tarjeta conserva su alto natural en vez de estirarse. */}
+      <div className="mt-5 grid flex-1 grid-cols-3 content-start items-start gap-3">
         {page.products.map((product) => (
           <ProductCard key={product.id} product={product} icon={Icon} />
         ))}
@@ -1091,7 +1240,12 @@ function ProductCard({ product, icon }: { product: ProductSummary; icon: LucideI
           className="h-full w-full object-contain p-1.5"
         />
       </div>
-      <p className="line-clamp-2 text-[9.5px] font-semibold leading-snug" style={{ color: INK }}>
+      {/* Sin line-clamp/truncamiento a propósito (ver
+          fix-truncamiento-y-glosario.md): este catálogo es estático, no
+          hay forma de ver el nombre completo si se corta con "...", así
+          que el nombre SIEMPRE tiene que verse entero, sin importar
+          cuántas líneas necesite. */}
+      <p className="text-[9.5px] font-semibold leading-snug" style={{ color: INK }}>
         {product.name}
       </p>
       {product.packSize && (

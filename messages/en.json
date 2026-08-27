@@ -254,7 +254,38 @@
       "printCoverFooterTitle": "Solutions that move your business",
       "printPageLabel": "2026 Catalog · Page {page}",
       "printFooterTagline": "Distribution and trust",
-      "printFooterLocation": "Costa Rica"
+      "printFooterLocation": "Costa Rica",
+      "glossaryButtonLabel": "Glossary",
+      "glossaryTitle": "How to read packaging measurements",
+      "glossaryGroups": [
+        {
+          "title": "Per Box",
+          "entries": [
+            { "abbr": "U/C · UND/CAJA", "meaning": "Units per Box" },
+            { "abbr": "P/C", "meaning": "Packs per Box" },
+            { "abbr": "R/C", "meaning": "Rolls per Box" },
+            { "abbr": "D/C · DISPL/CAJA", "meaning": "Displays per Box" }
+          ]
+        },
+        {
+          "title": "Per Bundle",
+          "entries": [
+            { "abbr": "U/B", "meaning": "Units per Bundle" },
+            { "abbr": "P/B", "meaning": "Packs per Bundle" }
+          ]
+        },
+        {
+          "title": "Per Pallet",
+          "entries": [
+            { "abbr": "C/T", "meaning": "Boxes per Pallet" },
+            { "abbr": "B/T", "meaning": "Bundles per Pallet" }
+          ]
+        },
+        {
+          "title": "Other",
+          "entries": [{ "abbr": "U/P", "meaning": "Units per Pack" }]
+        }
+      ]
     },
     "loadingAria": "Loading product catalog",
     "errorTitle": "We couldn't load the catalog",
