@@ -8,6 +8,12 @@ export interface ProductSummary {
   id: string;
   /** ItemName normalizado (ver normalizeLabel en mercasavip-catalog.ts). */
   name: string;
+  /**
+   * Tamaño de empaque (Hierarchy4 cuando matchea PACKAGING_SIZE_RE, ej.
+   * "25kg", "500 ml") de ESTE producto puntual, si la API lo trae. No todos
+   * los productos tienen uno.
+   */
+  packSize?: string;
 }
 
 export interface HierarchyNode {

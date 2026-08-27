@@ -1,0 +1,149 @@
+/* Contenedor del catálogo: antes pantalla completa (fondo blanco cubriendo
+   el viewport), ahora un panel flotante centrado con backdrop oscuro +
+   blur detrás, para que se sienta como una capa "encima" de Mercasa y no
+   como una navegación a otra página. Ver catalogo-overlay-flotante.md. */
+
+.catalog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(8, 43, 92, 0.55); /* corp-ink (#082B5C) con opacidad */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+  animation: catalog-backdrop-appear 0.25s ease-out;
+}
+
+.catalog-backdrop.is-closing {
+  animation: catalog-backdrop-appear 0.2s ease-in reverse;
+}
+
+.catalog-panel {
+  width: 100%;
+  max-width: 1400px;
+  height: 90vh;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: catalog-panel-appear 0.3s ease-out;
+}
+
+.catalog-panel.is-closing {
+  animation: catalog-panel-appear 0.2s ease-in reverse;
+}
+
+.catalog-header,
+.catalog-footer {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Envuelve SOLO el área del libro (flechas + flipbook) — no el header ni
+   el footer, ver fix-canto-paginas-scope.md. Ocupa el espacio entre ambos
+   dentro de .catalog-panel (flex:1 + min-height:0). `position: relative`
+   es el ancla de los `.page-stack` (position:absolute, ver más abajo),
+   que ProductCatalogModal.tsx posiciona con `left`/`right` medidos contra
+   el elemento REAL que renderiza react-pageflip — ver
+   fix-canto-paginas-medicion-real.md. */
+.catalog-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow: hidden;
+}
+
+@keyframes catalog-backdrop-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes catalog-panel-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Canto de páginas apiladas (ver canto-paginas-flipbook.md): franja de
+   textura papel a cada lado del libro, cuyo ancho (fijado inline por
+   ProductCatalogModal.tsx según currentPage/totalPages) representa
+   páginas ya pasadas (izquierda) vs. páginas restantes (derecha).
+   position:absolute (no un hermano más del flex, ver
+   fix-canto-paginas-medicion-real.md) porque `.flipbook-container` centra
+   el libro real dentro de un área más ancha que él — el `left`/`right`
+   inline que fija ProductCatalogModal.tsx usa el borde REAL medido del
+   libro, no el borde de ese contenedor, así la franja queda pegada al
+   canto de las hojas sin importar cuánto espacio de centrado haya
+   alrededor. `left`/`right` transicionan junto con `width` para que el
+   borde pegado al libro no salte mientras cambia el ancho entre flips. */
+.page-stack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(to bottom, #f4f1ea 0px, #f4f1ea 1px, #d8d4c8 1px, #d8d4c8 2px);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.15);
+  transition:
+    width 0.4s ease,
+    left 0.4s ease,
+    right 0.4s ease;
+}
+
+.page-stack-left::after,
+.page-stack-right::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+}
+
+.page-stack-left::after {
+  right: -8px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
+}
+
+.page-stack-right::after {
+  left: -8px;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
+}
+
+/* En pantallas chicas el panel debe aprovechar casi todo el viewport — con
+   márgenes de 2rem/bordes de 16px se ve apretado junto al flipbook. El
+   canto de página no se aprecia igual en ese tamaño y solo resta espacio
+   útil, así que se oculta. */
+@media (max-width: 640px) {
+  .catalog-backdrop {
+    padding: 0.5rem;
+  }
+
+  .catalog-panel {
+    height: 96vh;
+    max-height: 96vh;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-stack {
+    display: none;
+  }
+}

@@ -139,12 +139,12 @@ interface HierarchyAccumulator {
   children: Map<string, HierarchyAccumulator>;
   packSizes?: Set<string>;
   /**
-   * ItemId -> ItemName de TODOS los productos bajo este nodo (directos o
-   * anidados en una sub-categoría). Solo se llena para nodos de categoría
-   * (ver buildProductHierarchy) — es el único nivel que la UI expande para
-   * listar productos.
+   * ItemId -> {name, packSize} de TODOS los productos bajo este nodo
+   * (directos o anidados en una sub-categoría). Solo se llena para nodos de
+   * categoría (ver buildProductHierarchy) — es el único nivel que la UI
+   * expande para listar productos.
    */
-  productNames?: Map<string, string>;
+  productNames?: Map<string, { name: string; packSize?: string }>;
 }
 
 function makeAccumulator(label: string): HierarchyAccumulator {
@@ -166,9 +166,11 @@ function toNodes(
         : {}),
       ...(acc.productNames
         ? {
-            products: Array.from(acc.productNames, ([id, name]) => ({ id, name })).sort(
-              (a, b) => a.name.localeCompare(b.name, "es")
-            ),
+            products: Array.from(acc.productNames, ([id, p]) => ({
+              id,
+              name: p.name,
+              ...(p.packSize ? { packSize: p.packSize } : {}),
+            })).sort((a, b) => a.name.localeCompare(b.name, "es")),
           }
         : {}),
       children: toNodes(acc.children, path),
@@ -206,17 +208,25 @@ export function buildProductHierarchy(
     if (!h3) continue;
     const category = getOrCreate(subFamily.children, h3);
     category.itemIds.add(item.ItemId);
-    // Se registra ACÁ (antes de la rama de Hierarchy4) para que el producto
-    // quede en la categoría sin importar si termina anidado en una
-    // sub-categoría, agrupado como tamaño de empaque, o directo sin
-    // Hierarchy4 — la categoría es el único nivel que expone `products`.
-    category.productNames ??= new Map();
-    category.productNames.set(item.ItemId, normalizeLabel(item.ItemName));
 
     const h4 = normalizeLabel(item.Hierarchy4);
+    const packSize = h4 && isPackagingSize(h4) ? h4 : undefined;
+
+    // Se registra ACÁ (antes de la rama de sub-categoría) para que el
+    // producto quede en la categoría sin importar si termina anidado en una
+    // sub-categoría, agrupado como tamaño de empaque, o directo sin
+    // Hierarchy4 — la categoría es el único nivel que expone `products`. Si
+    // el mismo ItemId ya se vio (otra fila item+sucursal) sin packSize
+    // todavía, esta pasada lo completa.
+    category.productNames ??= new Map();
+    const existingProduct = category.productNames.get(item.ItemId);
+    if (!existingProduct || (!existingProduct.packSize && packSize)) {
+      category.productNames.set(item.ItemId, { name: normalizeLabel(item.ItemName), packSize });
+    }
+
     if (!h4) continue;
 
-    if (isPackagingSize(h4)) {
+    if (packSize) {
       category.packSizes ??= new Set();
       category.packSizes.add(h4);
       continue;

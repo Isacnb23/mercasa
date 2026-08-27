@@ -1,0 +1,47 @@
+/* Afinado de "sensación de papel real" sobre react-pageflip (ver
+   afinar-pageflip-realismo.md) — react-pageflip solo da el doblez y su
+   sombra interna (drawShadow/maxShadowOpacity, ver props en
+   ProductCatalogModal.tsx); estas capas de encima (sombra de lomo entre
+   páginas, sombra del libro completo contra el fondo, textura sutil de
+   papel) no las da la librería, hay que agregarlas a mano. Vive aparte del
+   CSS estructural vendorizado (product-catalog-flipbook.css) para no
+   mezclar ajustes propios con ese archivo, que es una copia literal de un
+   paquete de terceros. */
+
+.flipbook-container {
+  position: relative;
+  /* filter: drop-shadow (no box-shadow) porque el libro no es un
+     rectángulo perfecto durante el flip — drop-shadow sigue la silueta
+     real, incluida la página curvándose, en vez de la caja del contenedor. */
+  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.35)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.25));
+}
+
+/* Sombra del "lomo" del libro abierto, centrada entre las dos páginas del
+   spread — puramente decorativa, el motor de la librería no la dibuja.
+   z-index bien por encima de lo que usa page-flip para sus páginas: en
+   reposo las páginas quedan en startZIndex+1 (11, con startZIndex={10} en
+   ProductCatalogModal.tsx) y la que se está doblando llega hasta
+   startZIndex+5 (15) durante la animación — confirmado inspeccionando
+   elementsFromPoint() en el centro del spread, donde la sombra quedaba
+   completamente tapada con z-index:10. 20 deja margen sin depender de un
+   número mágico ajustado al pixel. */
+.flipbook-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 100%;
+  background: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.15) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Textura de papel muy sutil en cada página — rompe la planitud del blanco
+   puro sin leerse como una textura obvia. */
+.page-content {
+  background:
+    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+    linear-gradient(135deg, #fefefe 0%, #f7f6f3 100%);
+}
