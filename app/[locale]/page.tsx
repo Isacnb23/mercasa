@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import AboutSection from "@/components/AboutSection";
@@ -6,6 +7,7 @@ import BrandsSection from "@/components/BrandsSection";
 import LogisticsTimeline from "@/components/LogisticsTimeline";
 import CollaboratorsSection from "@/components/CollaboratorsSection";
 import ContactSection from "@/components/ContactSection";
+import ContactSectionLoader from "@/components/ContactSectionLoader";
 import Footer from "@/components/Footer";
 import SectionReveal from "@/components/SectionReveal";
 
@@ -33,7 +35,15 @@ export default function Home() {
           <BrandsSection />
         </SectionReveal>
         <SectionReveal z={50}>
-          <ContactSection />
+          {/* Suspense con la propia ContactSection (families=[]) como
+              fallback: el resto de la sección (dirección, mapa, WhatsApp)
+              no depende de esta data, así que se ve y funciona igual desde
+              el primer render — los chips de "categorías que te interesan"
+              solo se vuelven clickeables una vez que resuelve el fetch
+              (normalmente ya tibio en caché, ver ContactSectionLoader). */}
+          <Suspense fallback={<ContactSection />}>
+            <ContactSectionLoader />
+          </Suspense>
         </SectionReveal>
       </main>
       <SectionReveal variant="fade" z={60}>

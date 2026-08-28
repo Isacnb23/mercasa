@@ -169,45 +169,70 @@ export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "co
 
 // Selector "Soluciones por tipo de negocio" en Contacto. Label, frase de
 // valor y el sustantivo para el mensaje de WhatsApp viven en
-// Contact.segments.<key> (son texto visible, traducible). `categories` son
-// las keys de `brandCategories` relevantes para ese segmento — punto de
-// partida a validar con el cliente, por eso vive acá y no hardcodeado en el
-// JSX.
+// Contact.segments.<key> (son texto visible, traducible).
+//
+// `categories` son chips clickeables que abren el catálogo real (ver
+// customer-class-chips-reales.md) — cada key es o bien el slug de una
+// Familia completa ("alimentos", "bebidas") o el slug de una Sub-familia
+// puntual ("cuidado-del-bebe", "higiene-personal" -> Familia "Cuidado
+// Personal"; "limpieza-del-hogar", "institucional" -> Familia "Cuidado del
+// Hogar") — mismo esquema de slug que usa el árbol real de
+// lib/mercasavip-catalog.ts, resuelto en ContactSection.tsx (CHIP_TARGETS)
+// contra los datos reales de MercasaVIP. Antes esto usaba 4 etiquetas
+// compuestas ("bebe-cuidado", "hogar-institucional") que NO correspondían a
+// ninguna Familia/Sub-familia real 1 a 1 — divididas en sus componentes
+// reales. Los labels viven en Contact.segmentCategories.<key> (ya no en
+// Brands.categories, que sigue siendo exclusivo del filtro del muro de
+// marcas — no se toca acá).
 export const businessSegments = [
   {
     key: "supermercados",
     icon: "store",
-    categories: ["alimentos", "bebe-cuidado", "hogar-institucional", "bebidas"],
+    categories: [
+      "alimentos",
+      "cuidado-del-bebe",
+      "higiene-personal",
+      "limpieza-del-hogar",
+      "institucional",
+      "bebidas",
+    ],
   },
   {
     key: "hoteleria",
     icon: "hotel",
-    categories: ["bebe-cuidado", "hogar-institucional", "bebidas", "alimentos"],
+    categories: [
+      "cuidado-del-bebe",
+      "higiene-personal",
+      "limpieza-del-hogar",
+      "institucional",
+      "bebidas",
+      "alimentos",
+    ],
   },
   {
     key: "restaurantes",
     icon: "chef-hat",
-    categories: ["alimentos", "hogar-institucional", "bebidas"],
+    categories: ["alimentos", "limpieza-del-hogar", "institucional", "bebidas"],
   },
   {
     key: "comercio-local",
     icon: "shopping-bag",
-    categories: ["alimentos", "bebidas", "hogar-institucional"],
+    categories: ["alimentos", "bebidas", "limpieza-del-hogar", "institucional"],
   },
   {
     key: "panaderias",
     icon: "cookie",
-    categories: ["alimentos", "hogar-institucional"],
+    categories: ["alimentos", "limpieza-del-hogar", "institucional"],
   },
   {
     key: "instituciones",
     icon: "building",
-    categories: ["hogar-institucional", "bebe-cuidado", "alimentos"],
+    categories: ["limpieza-del-hogar", "institucional", "cuidado-del-bebe", "higiene-personal", "alimentos"],
   },
   {
     key: "retail",
     icon: "shopping-cart",
-    categories: ["alimentos", "bebidas", "bebe-cuidado"],
+    categories: ["alimentos", "bebidas", "cuidado-del-bebe", "higiene-personal"],
   },
 ];
 

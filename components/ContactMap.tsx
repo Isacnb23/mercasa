@@ -25,8 +25,13 @@ maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 /**
  * Mapa de fondo para la sección de Contacto: vista plana (top-down, sin tilt
  * ni rotación) para que se lea al instante como "aquí está la bodega", no
- * como un render abstracto. Usa OpenFreeMap (estilo "positron", claro) vía
- * MapLibre GL — sin API key ni facturación.
+ * como un render abstracto. Usa OpenFreeMap (estilo "liberty", ver
+ * ajuste-customer-class-y-mapa.md) vía MapLibre GL — sin API key ni
+ * facturación. Antes usaba "positron" (deliberadamente pálido/monocromático,
+ * pensado para overlays de datos) — se veía "lavado" y se confundía con el
+ * fondo beige de la página; "liberty" trae colores reales de fábrica (agua
+ * azul, parques verdes, calles con jerarquía) sin necesidad de repintar casi
+ * nada.
  *
  * El único marcador y su info viven en la card flotante de ContactSection
  * (no hay popup nativo de MapLibre acá): dos tarjetas mostrando lo mismo se
@@ -47,15 +52,21 @@ export default function ContactMap() {
     // Salvavidas: en redes restringidas (proxy corporativo, firewall) la
     // petición al tile server a veces queda "colgada" en vez de disparar un
     // error limpio — el mapa se queda con el lienzo negro para siempre. Si
-    // no terminó de cargar en 6s, se fuerza el fallback a Google Maps para
-    // que la sección nunca se quede con un recuadro vacío.
+    // no terminó de cargar en 16s, se fuerza el fallback a Google Maps para
+    // que la sección nunca se quede con un recuadro vacío. Antes eran 6s:
+    // medido en la práctica (ver fix-altura-fija-y-mapa-personalizado.md),
+    // el worker + las tiles vectoriales de la vista inicial pueden tardar
+    // 10-13s en una conexión fría/con proxy — con 6s el fail-safe disparaba
+    // ANTES de que el mapa real terminara de cargar, y el usuario terminaba
+    // viendo siempre el fallback de Google (pin rojo genérico) creyendo que
+    // el mapa personalizado nunca se había aplicado.
     const failSafeTimer = window.setTimeout(() => {
       if (!loaded) setFailed(true);
-    }, 6000);
+    }, 16000);
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/positron",
+      style: "https://tiles.openfreemap.org/styles/liberty",
       center: [site.address.lng, site.address.lat],
       // Vista plana: zoom 17 deja el CEDI como protagonista, con la vía de
       // acceso y las cuadras inmediatas a su alrededor, sin el ruido de
@@ -80,41 +91,58 @@ export default function ContactMap() {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    // El estilo "positron" de OpenFreeMap ya trae buen contraste de vías de
-    // fábrica (casing gris sobre calle blanca, jerarquía por ancho) — a
-    // diferencia del "dark" que este mapa usaba antes, acá no hace falta
-    // repintar la red vial completa para que se lea. Confirmé los layer IDs
-    // reales vía GET https://tiles.openfreemap.org/styles/positron (55
-    // layers, mismos IDs que el estilo "dark": background/water/building/
-    // highway_* no cambian entre estilos de OpenFreeMap, solo su paleta).
-    // Los únicos ajustes son de marca: fondo cálido a juego con el beige de
-    // la sección (#F7F3EB) en vez del gris frío por defecto, agua en un azul
-    // reconocible (el "positron" de fábrica la deja gris), y un tinte sutil
-    // de azul institucional en la carretera principal/motorway para que se
-    // sienta parte de la identidad, deliberadamente discreto.
+    // "liberty" ya trae colores reales de fábrica (agua rgb(158,189,255),
+    // parques/landcover en verde, casing de calles en naranja tipo mapa de
+    // carretera) que se leen bien de entrada, pero para que el mapa se
+    // sienta "de Mercasa" y no un OSM genérico insertado sin tratamiento de
+    // marca (ver fix-altura-fija-y-mapa-personalizado.md), se repinta la
+    // paleta completa hacia los tonos institucionales (navy/beige/verde
+    // apagado) en vez de solo el casing de calles. Layer IDs confirmados vía
+    // GET https://tiles.openfreemap.org/styles/liberty (111 layers, base
+    // completamente distinta a "positron": el casing ya no se llama
+    // "highway_major_casing"/"highway_motorway_casing" sino
+    // "road_trunk_primary_casing"/"road_motorway_casing").
     map.on("style.load", () => {
       // setPaintProperty exige el nombre de capa en pantalla (getLayer) antes
       // de tocarla, por si el estilo remoto la renombró o quitó.
       const setLineColor = (layerId: string, color: string) => {
         if (map.getLayer(layerId)) map.setPaintProperty(layerId, "line-color", color);
       };
+      const setFillColor = (layerId: string, color: string) => {
+        if (map.getLayer(layerId)) map.setPaintProperty(layerId, "fill-color", color);
+      };
 
       if (map.getLayer("background")) {
         map.setPaintProperty("background", "background-color", "#F6F1E6");
       }
-      if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#BFD9EC");
-      if (map.getLayer("building")) {
-        map.setPaintProperty("building", "fill-color", "#ECE4D3");
-        map.setPaintProperty("building", "fill-outline-color", "#DCD0B8");
+
+      // Agua: de fábrica un celeste pastel genérico (rgb(158,189,255)) — se
+      // acerca al azul institucional sin perder lectura como agua real.
+      setFillColor("water", "#7FA3D1");
+
+      // Parques/vegetación: de fábrica un verde brillante de mapa turístico
+      // — se apaga hacia un verde institucional grisáceo, a juego con el
+      // resto de la paleta desaturada del sitio.
+      setFillColor("park", "#C7D3BC");
+      setFillColor("landcover_wood", "#B9C9AC");
+      setFillColor("landcover_grass", "#C3D2B5");
+
+      // Edificios: de fábrica un gris cálido neutro — se corre hacia el
+      // mismo beige de marca que el fondo de la sección, para que se sientan
+      // parte del mismo mundo visual en vez de "grises de OSM".
+      setFillColor("building", "#E4D9C2");
+      if (map.getLayer("building-3d")) {
+        map.setPaintProperty("building-3d", "fill-extrusion-color", "#E4D9C2");
       }
 
-      setLineColor("highway_major_casing", "rgba(12,68,124,0.22)");
-      setLineColor("highway_motorway_casing", "rgba(12,68,124,0.28)");
+      setLineColor("road_motorway_casing", "rgba(12,68,124,0.32)");
+      setLineColor("road_trunk_primary_casing", "rgba(12,68,124,0.26)");
 
       // Etiquetas de calles residenciales/de servicio (Avenida 48, Calle 58,
       // etc.) solo generan ruido a esta escala y hacen que el CEDI se pierda
       // entre nombres de vías secundarias — se ocultan, dejando visibles
-      // solo las etiquetas de vías principales ("highway-name-major").
+      // solo las etiquetas de vías principales ("highway-name-major", mismo
+      // ID en liberty).
       if (map.getLayer("highway-name-minor")) {
         map.setLayoutProperty("highway-name-minor", "visibility", "none");
       }

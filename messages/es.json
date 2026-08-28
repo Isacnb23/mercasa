@@ -307,6 +307,14 @@
     "segmentsSelectorLabel": "Customer class",
     "segmentsCategoriesLabel": "Categorías que te interesan",
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",
+    "segmentCategories": {
+      "alimentos": { "label": "Alimentos" },
+      "bebidas": { "label": "Bebidas" },
+      "cuidado-del-bebe": { "label": "Cuidado del Bebé" },
+      "higiene-personal": { "label": "Higiene Personal" },
+      "limpieza-del-hogar": { "label": "Limpieza del hogar" },
+      "institucional": { "label": "Institucional" }
+    },
     "segments": {
       "supermercados": {
         "label": "Supermercados y cadenas",

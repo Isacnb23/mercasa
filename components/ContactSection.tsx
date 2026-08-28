@@ -9,10 +9,54 @@ import Container from "./Container";
 import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
 import BusinessSegments from "./BusinessSegments";
+import ProductCatalogModal from "./ProductCatalogModal";
 import { businessSegments, site } from "@/lib/data";
+import type { HierarchyNode } from "@/lib/product-types";
 
 function buildWhatsappHref(baseHref: string, message: string) {
   return `${baseHref}?text=${encodeURIComponent(message)}`;
+}
+
+// Resuelve cada chip de categoría (ver customer-class-chips-reales.md) a
+// dónde tiene que abrir el catálogo: o bien una Familia completa
+// (alimentos, bebidas), o una Sub-familia puntual dentro de otra Familia
+// (las 4 que antes eran las etiquetas compuestas "bebe-cuidado"/
+// "hogar-institucional"). Los slugs son los mismos que genera `slugify` en
+// lib/mercasavip-catalog.ts para el árbol real, así que matchean contra
+// `family.id`/`subFamily.id` tal cual vienen de la API — no hace falta
+// mantener esto sincronizado a mano salvo que cambien los nombres reales
+// de Familia/Sub-familia en MercasaVIP.
+const CHIP_TARGETS: Record<string, { family: string; subFamily?: string }> = {
+  alimentos: { family: "alimentos" },
+  bebidas: { family: "bebidas" },
+  "cuidado-del-bebe": { family: "cuidado-personal", subFamily: "cuidado-del-bebe" },
+  "higiene-personal": { family: "cuidado-personal", subFamily: "higiene-personal" },
+  "limpieza-del-hogar": { family: "cuidado-del-hogar", subFamily: "limpieza-del-hogar" },
+  institucional: { family: "cuidado-del-hogar", subFamily: "institucional" },
+};
+
+// Primera categoría CON productos reales de una Familia completa (recorre
+// todas sus sub-familias en orden) — mismo criterio que usaba el botón
+// "Revista" antes de simplificarse a abrir siempre en portada; acá SÍ
+// tiene sentido apuntar directo al contenido, porque el chip promete
+// "esto te interesa", no "hojeá desde la tapa".
+function firstCategoryInFamily(family: HierarchyNode): string | undefined {
+  for (const subFamily of family.children) {
+    for (const category of subFamily.children) {
+      if ((category.products?.length ?? 0) > 0) return category.id;
+    }
+  }
+  return undefined;
+}
+
+// Primera categoría CON productos de UNA sub-familia puntual (no de toda
+// la familia) — para que el chip de "Institucional" no aterrice en la
+// primera categoría de otra sub-familia de Cuidado del Hogar.
+function firstCategoryInSubFamily(subFamily: HierarchyNode): string | undefined {
+  for (const category of subFamily.children) {
+    if ((category.products?.length ?? 0) > 0) return category.id;
+  }
+  return undefined;
 }
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
@@ -112,7 +156,7 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
  * impreso, a juego con el resto de la sección en vez de ser el único
  * contraste oscuro.
  */
-export default function ContactSection() {
+export default function ContactSection({ families = [] }: { families?: HierarchyNode[] }) {
   const t = useTranslations("Contact");
 
   // Único estado de segmento para toda la sección: lo consume el selector
@@ -125,6 +169,42 @@ export default function ContactSection() {
     site.whatsappHref,
     t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
   );
+
+  // Catálogo abierto desde un chip de "categorías que te interesan" (ver
+  // customer-class-chips-reales.md) — mismo patrón de ProductExplorer
+  // (family+categoryId en vez de un booleano "open"): `catalogFamily` es
+  // null cuando no hay ninguna abierta, así que ProductCatalogModal se
+  // desmonta por completo al cerrar en vez de solo ocultarse.
+  const [catalogFamilyId, setCatalogFamilyId] = useState<string | null>(null);
+  const [catalogCategoryId, setCatalogCategoryId] = useState<string | undefined>(undefined);
+  const catalogFamily = families.find((f) => f.id === catalogFamilyId) ?? null;
+  const closeCatalog = () => {
+    setCatalogFamilyId(null);
+    setCatalogCategoryId(undefined);
+  };
+
+  // Resuelve el chip clickeado (ver CHIP_TARGETS arriba) contra los datos
+  // reales de MercasaVIP y abre el catálogo posicionado ahí. Si `families`
+  // todavía no llegó (fetch en curso o falló) o el slug no matchea nada
+  // real, no hace nada — el chip queda igual de clickeable, solo que esta
+  // vez no encuentra destino (no vale la pena un estado de error visible
+  // para un caso tan puntual).
+  const handleSelectCategory = (categoryKey: string) => {
+    const target = CHIP_TARGETS[categoryKey];
+    if (!target) return;
+    const family = families.find((f) => f.id === target.family);
+    if (!family) return;
+
+    if (!target.subFamily) {
+      setCatalogFamilyId(family.id);
+      setCatalogCategoryId(firstCategoryInFamily(family));
+      return;
+    }
+    const subFamily = family.children.find((sf) => sf.id === `${family.id}/${target.subFamily}`);
+    if (!subFamily) return;
+    setCatalogFamilyId(family.id);
+    setCatalogCategoryId(firstCategoryInSubFamily(subFamily));
+  };
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
   // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
@@ -189,10 +269,51 @@ export default function ContactSection() {
           </p>
         </Reveal>
 
-        {/* ---------- Paso 1: ¿qué tipo de negocio sos? ---------- */}
-        <div className="mt-12">
-          <BusinessSegments activeKey={activeSegmentKey} onSelect={setActiveSegmentKey} />
+        {/* ---------- Paso 1: ¿qué tipo de negocio sos? ----------
+            Es la interacción principal de la sección (ver
+            ajuste-customer-class-y-mapa.md) — antes flotaba directo sobre
+            el fondo beige de la página como el resto del contenido; ahora
+            vive en su propia tarjeta blanca con sombra propia, al mismo
+            nivel de protagonismo que la tarjeta de info+mapa de abajo, en
+            vez de sentirse como un detalle secundario.
+
+            Alto FIJO (no max-height, mismo criterio que el acordeón de
+            ProductExplorer — ver fix-altura-fija-y-mapa-personalizado.md):
+            sin esto, la tarjeta cambiaba de alto según cuántos chips de
+            "categorías que te interesan" tuviera el segmento activo (3 a 6),
+            empujando el bloque de info+mapa de abajo cada vez que se cambiaba
+            de segmento. Los valores por breakpoint salen de medir con
+            Playwright el caso más alto (más chips + textos más largos, ES y
+            EN) en cada ancho real — no son estéticos, son el peor caso
+            observado + ~30-40px de margen. Al no cambiar el layout entre
+            breakpoints de Tailwind, el alto requerido solo se achica en
+            escalones (más ancho → más chips por fila → menos filas), por eso
+            son 5 tramos en vez de uno solo: un único valor fijo para todo el
+            rango tendría que ser el del caso más angosto (320px, ~1200px de
+            alto) y dejaría un espacio vacío enorme en desktop.
+            overflow-hidden es red de seguridad: con el margen ya puesto no
+            debería recortar nada real, solo evita que un texto más largo
+            de lo medido rompa el layout en vez de solo perder un poco de
+            aire libre abajo. */}
+        <div
+          className="mt-12 h-[1240px] overflow-hidden rounded-[28px] border bg-white p-7 sm:h-[915px] sm:p-10 md:h-[725px] lg:h-[660px] xl:h-[600px]"
+          style={{ borderColor: "#D8E1EC", boxShadow: "0 20px 60px rgba(16,37,63,0.10)" }}
+        >
+          <BusinessSegments
+            activeKey={activeSegmentKey}
+            onSelect={setActiveSegmentKey}
+            onSelectCategory={handleSelectCategory}
+          />
         </div>
+
+        {catalogFamily && (
+          <ProductCatalogModal
+            family={catalogFamily}
+            allFamilies={families}
+            initialCategoryId={catalogCategoryId}
+            onClose={closeCatalog}
+          />
+        )}
 
         {/* ---------- Paso 2: info de contacto + mapa ---------- */}
         <div className="mt-16 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
