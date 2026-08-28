@@ -1,7 +1,16 @@
-var admin = require("firebase-admin");
-
-var serviceAccount = require("path/to/serviceAccountKey.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+{
+  "hosting": {
+    "public": "build",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
