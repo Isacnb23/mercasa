@@ -1,57 +1,195 @@
-# Mercasa — Sitio institucional
+# Mercasa Web
 
-Sitio one-page para Distribuidora Mercasa (Grupo Inteca), construido con Next.js 16, TypeScript, Tailwind CSS 4, Framer Motion, GSAP/ScrollTrigger y Lenis (smooth scroll).
+Sitio corporativo de **Mercasa** (distribuidora de consumo masivo, Costa
+Rica, parte de Grupo Inteca). Next.js + TypeScript + Tailwind CSS.
 
-## Desarrollo
+## Stack
+
+- **Framework**: Next.js 16 (Turbopack)
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS v4
+- **Animaciones**: Framer Motion, AOS
+- **Mapa**: MapLibre GL JS (tiles de OpenFreeMap, estilo "liberty")
+- **Catálogo/Revista**: `react-pageflip`
+- **Excel**: ExcelJS (reportes de diagnóstico)
+- **Deploy**: Vercel
+
+## Requisitos previos
+
+- Node.js (versión compatible con Next.js 16)
+- Acceso a la red interna de Mercasa (VPN o similar) para conectar con
+  `sjodb01` (SQL Server) si vas a trabajar con fotos de producto en local
+- Variables de entorno (ver abajo)
+
+## Instalación
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000).
+Sitio disponible en `http://localhost:3000`.
 
-```bash
-npm run build   # build de producción
-npm run start   # sirve el build de producción
-npm run lint    # eslint
+## Variables de entorno (`.env.local`)
+
+```
+# Conexión a tabla Arte (fotos de producto)
+ARTE_DB_USER=
+ARTE_DB_PASSWORD=
+ARTE_DB_SERVER=sjodb01
+ARTE_DB_DATABASE=GIPLUS
+
+# Microsoft Graph / SharePoint (archivo real de las fotos)
+SHAREPOINT_TENANT_ID=
+SHAREPOINT_CLIENT_ID=
+SHAREPOINT_CLIENT_SECRET=
 ```
 
-## Estructura
+> ⚠️ **Seguridad**: la conexión a SQL Server debe usar un usuario de
+> **SOLO LECTURA** acotado a la tabla `Arte`. Nunca usar `sa` en
+> producción/Vercel — hay un `console.warn` en el código que lo recuerda
+> en cada arranque si detecta ese usuario.
 
-- `app/page.tsx` — ensambla todas las secciones del one-page.
-- `app/layout.tsx` — fuentes (Inter + Spectral, autohospedadas vía `@fontsource`), metadata SEO/OG, proveedor de scroll suave.
-- `components/` — un componente por sección (`Hero`, `StatsCounter`, `AboutSection`, `BrandsSection`, `LogisticsTimeline`, `ContactSection`, `Header`, `Footer`, `PageLoader`) más utilidades de animación (`Reveal.tsx`).
-- `lib/data.ts` — **todo el contenido editable vive aquí** (cifras, textos, contactos, dirección). Para actualizar datos del negocio no hace falta tocar los componentes.
-- `app/api/contact` — recibe el formulario de contacto del sitio.
+> ⚠️ **Bug conocido de entorno (Windows)**: si ves errores de
+> autenticación con Microsoft Graph que no coinciden con lo que dice
+> `.env.local` (ej. "Application not found in directory X" con un
+> tenant distinto al configurado), es probable que una terminal/IDE
+> vieja tenga una variable de entorno de Windows heredada en memoria.
+> Cerrá **todas** las terminales/VS Code/servidores de dev abiertos y
+> reiniciá desde cero (en casos persistentes, reiniciar la PC completa).
 
-## Contenido pendiente de reemplazar
+## Estructura relevante
 
-- **Logo real de Mercasa**: hoy el header/footer usan un ícono de camión como marcador de posición.
-- **Fotos reales** (bodegas, CEDIs, camiones, equipo, productos Clinx/Girol): el sitio hoy es 100% tipografía/color/ilustración vectorial, sin fotografía, para no bloquear el desarrollo mientras llegan los activos reales.
-- Verificar que dirección, teléfonos y correos en `lib/data.ts` coincidan exactamente antes de publicar.
+```
+app/
+  api/product-images/[itemId]/route.ts   # Endpoint de fotos de producto (SQL + Graph)
+components/
+  ProductExplorer.tsx        # Sección "Nuestros Productos" (home) — acordeón sidebar+panel
+  ProductCatalogModal.tsx    # Catálogo tipo revista (flipbook)
+  ContactSection.tsx         # Sección Contacto + Customer Class
+  BusinessSegments.tsx       # Selector de "Customer Class"
+lib/
+  arte.ts                    # Conexión SQL + Microsoft Graph para fotos
+  data.ts                    # businessSegments (Customer Class) — hardcodeado
+public/
+  Catalogo/
+    portada.png               # Portada del catálogo
+    indice.png                 # Página "Nuestro Portafolio"
+    Alimentos/                # 17 imágenes divisoras de sub-familia
+    Bebidas/                  # 3 imágenes
+    Cuidado-Hogar/            # 8 imágenes
+    Electrodomesticos/        # 3 imágenes (familia Electrónica)
+scripts/
+  diagnostics/                # Scripts de solo lectura para investigar datos
+    output/                    # Reportes generados (CSV, txt)
+```
 
-## Formularios y correo
+## Catálogo de productos (revista digital)
 
-El formulario de Contacto llama a `/api/contact`, que intenta enviar el correo vía [Resend](https://resend.com). **Sin configurar `RESEND_API_KEY`, el sitio sigue funcionando** (la persona ve el mensaje de éxito) pero el contenido solo queda en los logs del servidor — nada se pierde, pero tampoco llega a un correo real. Para activarlo:
+El catálogo (`ProductCatalogModal.tsx`) es un flipbook interactivo con
+tres tipos de página:
 
-1. Copia `.env.example` a `.env.local`.
-2. Crea una cuenta en Resend y verifica un dominio de envío (idealmente un subdominio de `grupointeca.com`).
-3. Completa `RESEND_API_KEY` y `RESEND_FROM`.
+1. **Portada** — imagen fija (`public/Catalogo/portada.png`).
+2. **Nuestro Portafolio** — imagen fija (`public/Catalogo/indice.png`) +
+   listado de las 5 familias.
+3. **Divisores de sub-familia** — una imagen por cada sub-familia
+   (`public/Catalogo/[Familia]/[sub-familia].png`), generadas con IA
+   (estilo fotografía de producto sin marca, ver sección abajo).
+4. **Grillas de producto** — nombre + foto real (si existe en `Arte`) o
+   ícono de fallback por familia.
 
-Si se prefiere otro proveedor (SMTP propio, SendGrid, etc.), solo hay que editar `lib/mailer.ts` — el resto del sitio no cambia.
+### Origen de los datos
 
-## Mapa
+- **Estructura del catálogo** (Familia → Sub-familia → Categoría,
+  nombres y conteos de producto): MercasaVIP API
+  (`HE_GetInventoryItemsFMCM`). Es la fuente de verdad — el sitio
+  refleja esta jerarquía tal cual la define el ERP de Mercasa, no la
+  reorganiza.
+- **Fotos de producto**: tabla `Arte` en SQL Server (`sjodb01/GIPLUS`)
+  mapea `ITEMID` → nombre de archivo + variante (s/m/l). Los archivos
+  reales viven en SharePoint (tenant `parnersenseitcs`, no confundir con
+  `grupointeca.sharepoint.com`, que es el tenant nuevo aún sin usar).
+  Cobertura real: **~82-85%** de los productos tienen foto — el resto
+  cae al ícono genérico de familia. Esto es esperado, no un bug.
 
-El mapa de la sección de Contacto usa un iframe público de Google Maps (sin API key) apuntando a la dirección en `lib/data.ts` (`site.address.mapQuery`). No renderiza en entornos sin salida a internet (como el sandbox donde se construyó este sitio), pero funciona normalmente en cualquier navegador con conexión.
+### Imágenes divisoras de sub-familia — estado actual
 
-## Animaciones
+| Familia | Sub-familias | Estado |
+|---|---|---|
+| Alimentos | 17 | ✅ Completo |
+| Bebidas | 3 | ✅ Completo |
+| Cuidado del Hogar | 8 | ✅ Completo |
+| Electrónica | 3 | ✅ Completo |
+| Cuidado Personal | 6 | ⏳ Pendiente (usa placeholder genérico) |
 
-- **Framer Motion**: reveals al hacer scroll, transiciones de header/menú, contadores animados, hover de tarjetas.
-- **GSAP + ScrollTrigger**: la sección "Logística y Cobertura" usa scroll pineado (solo en pantallas ≥768px; en mobile se muestra una versión apilada simple para evitar jank).
-- **Lenis**: scroll suave global, sincronizado con ScrollTrigger.
-- Todas las animaciones respetan `prefers-reduced-motion`.
+Las imágenes se generan con IA (ChatGPT), estilo "fotografía de producto
+profesional, surtido genérico sin marca, superficie limpia" — los
+prompts usados quedaron documentados en el historial de trabajo del
+proyecto (no versionados en el repo).
+
+### Glosario de abreviaturas de empaque
+
+El catálogo incluye un botón de glosario (ícono info, en el header,
+persistente en cualquier página) que explica las abreviaturas de empaque
+que aparecen en los nombres de producto:
+
+| Abreviatura | Significado |
+|---|---|
+| U/P | Unidades por Paquete |
+| P/C | Paquetes por Caja |
+| C/T | Cajas por Tarima |
+| U/C, UND/CAJA | Unidades por Caja |
+| B/T | Bultos por Tarima |
+| P/B | Paquetes por Bulto |
+| U/B | Unidades por Bulto |
+| R/C | Rollos por Caja |
+| D/C, DISPL/CAJA | Displays por Caja |
+
+## ProductExplorer (sección "Nuestros Productos")
+
+Acordeón de una sola pieza (sidebar de familias + panel de
+categorías/productos), con **altura fija** (no crece/encoge al expandir,
+para no mover el resto de la página) y scroll interno donde haga falta.
+Sin buscador. Cada familia tiene un botón "Revista" que abre el catálogo
+posicionado directo ahí.
+
+## Customer Class (sección Contacto)
+
+Selector de 7 tipos de negocio (Supermercados, Hotelería, Restaurantes,
+Comercio local, Panaderías, Instituciones, Retail) — **100% hardcodeado**
+en `lib/data.ts` (`businessSegments`), no viene de base de datos. Cada
+segmento muestra "categorías que te interesan" como chips clickeables
+que enlazan directo al catálogo, ya sea a nivel de Familia (Alimentos,
+Bebidas) o Sub-familia específica (Cuidado del Bebé, Higiene Personal,
+Limpieza del hogar, Institucional).
+
+## Repos remotos
+
+El proyecto está conectado a **dos** remotos de git:
+
+```bash
+git remote -v
+# origin      https://github.com/Isacnb23/mercasa.git
+# bitbucket   https://bitbucket.org/grupointeca/mercasa-web.git
+```
+
+No hay push automático a ambos — hacerlo explícito:
+
+```bash
+git push origin main
+git push bitbucket main
+```
+
+## Scripts de diagnóstico
+
+`scripts/diagnostics/` contiene scripts de solo lectura para investigar
+datos (cobertura de fotos, jerarquía de categorías, listado de
+sub-familias, etc.) — no forman parte del build, se corren manualmente
+con `node scripts/diagnostics/[script].mjs`. Salidas en
+`scripts/diagnostics/output/`.
 
 ## Deploy
 
-Cualquier plataforma compatible con Next.js App Router (Vercel, Netlify, un VPS con `next start`, etc.). No requiere base de datos. Si se activa el envío de correo, recordar configurar las variables de entorno en la plataforma de destino.
+Vercel. Confirmar que las variables de entorno de producción usan el
+usuario de SQL de solo lectura (no `sa`) antes de cada deploy que toque
+la conexión a `Arte`.
