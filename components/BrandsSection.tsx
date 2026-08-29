@@ -54,7 +54,11 @@ export default function BrandsSection() {
   }, [muralKey, reduceMotion]);
 
   return (
-    <section id="marcas" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[112px] sm:pb-[64px] sm:pt-[120px]">
+    // pt subido de 112/120px a 130/150px (ver header-spacing-fix.md): daba
+    // el mínimo para no quedar tapado por el header (~96px reales) pero casi
+    // sin aire visual — mismo valor que el resto de las secciones para un
+    // espaciado parejo en todo el sitio.
+    <section id="marcas" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px]">
       {/* Seam de salida hacia Contacto. La entrada (Productos → Marcas) la
           marca la curva inferior de ProductsSection, no se duplica acá. */}
       <SoftCurve position="bottom" flip />

@@ -140,7 +140,12 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
 
       <section
         id="hablemos-de-negocios"
-        className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden py-24 md:py-28"
+        // pt separado de pb y subido a 130/150px (ver header-spacing-fix.md):
+        // antes compartían el mismo py-24/28 (96/112px) — suficiente para no
+        // quedar tapado por el header (~96px reales) pero con poco aire
+        // visual arriba. Mismo valor de pt que el resto de las secciones
+        // para un espaciado parejo; pb se deja igual, no es el problema acá.
+        className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-24 pt-[130px] md:pb-28 md:pt-[150px]"
         style={{ background: "#FFFFFF" }}
       >
         {/* El seam Customer Class → Contacto ya lo marca la curva inferior de

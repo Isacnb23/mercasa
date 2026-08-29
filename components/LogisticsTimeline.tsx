@@ -33,7 +33,10 @@ export default function LogisticsTimeline() {
   return (
     <section
       id="logistica"
-      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-24 md:pb-20 md:pt-32"
+      // pt subido de 96/128px a 130/150px (ver header-spacing-fix.md): mismo
+      // valor que el resto de las secciones para un espaciado parejo en
+      // todo el sitio.
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px]"
       style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F7F3EB 100%)" }}
     >
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de

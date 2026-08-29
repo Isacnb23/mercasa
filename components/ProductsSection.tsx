@@ -21,9 +21,13 @@ export default function ProductsSection() {
     // es lo único que evita que el título quede tapado. Medido en vivo
     // (post-click): pt-98/108 alcanzaba, pero con solo ~4px de margen — se
     // subió un poco más para no depender de ese margen tan ajustado.
+    // Subido de nuevo a 130/150px (ver header-spacing-fix.md): 112/120px no
+    // tapaba el título pero el margen real seguía sintiéndose apretado (esta
+    // fue justo la sección de referencia del reporte de Isaac) — mismo valor
+    // que el resto de las secciones para un espaciado parejo.
     <section
       id="productos"
-      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[112px] sm:pb-[48px] sm:pt-[120px]"
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[130px] sm:pb-[48px] sm:pt-[150px]"
       style={{ background: "#F7F3EB" }}
     >
       {/* Entrada (Colaboradores → Productos) ya la marca la curva inferior

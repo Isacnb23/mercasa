@@ -101,7 +101,13 @@ export default function AboutSection() {
   return (
     <section
       id="nosotros"
-      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-16 md:pb-20 md:pt-20"
+      // pt subido de 64/80px a 130/150px (ver header-spacing-fix.md): el
+      // header real mide ~96px — con 64/80px el título quedaba a solo unos
+      // px de aire real bajo el navbar, se sentía pegado al navegar acá
+      // directo desde el menú. Mismo valor que el resto de las secciones
+      // (About/Brands/Collaborators/Contact/Logistics/Products/Customer
+      // Class) para que el espaciado se sienta parejo en todo el sitio.
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px]"
       style={{ background: "#F7F3EB" }}
     >
       <Container className="relative z-10">

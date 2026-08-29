@@ -60,8 +60,10 @@ export default function CollaboratorsSection() {
     // scroll-mt-[-8px] la sección aterriza a ras del header (~86-96px
     // reales) — medido en vivo, el título quedaba tapado con el pt-40/56
     // original (el eyebrow+separación antes del h2 no alcanzaba los ~96px
-    // del header).
-    <section id="colaboradores" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[72px] sm:pb-[64px] sm:pt-[84px]">
+    // del header). Subido de nuevo a 130/150px (ver header-spacing-fix.md):
+    // 72/84px ya no tapaba el título, pero quedaba casi sin aire visual —
+    // mismo valor que el resto de las secciones para un espaciado parejo.
+    <section id="colaboradores" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px]">
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior
           de Logística. Acá se agrega la salida hacia Productos. */}
       <SoftCurve position="bottom" flip />

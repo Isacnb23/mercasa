@@ -53,7 +53,13 @@ const categoryIcons = {
 // spec/mockup para esta sección puntual, tal como autoriza el propio spec
 // ("está bien usar las de este spec para esta sección específica").
 const NAVY = "#0B2F63";
-const GOLD = "#FFC400";
+// Antes #FFC400 (amarillo puro/muy saturado, se veía "chillón" — ver
+// customer-class-fixes-2.md, punto 2). Bajado a un dorado/mostaza más suave
+// sin perder contraste contra el navy: es el único lugar del proyecto que
+// usa este valor (confirmado por grep), así que ajustarlo acá no toca el
+// botón "Reclutamiento" del navbar (ese usa su propio "#FFD21A" hardcodeado
+// en RecruitmentPopover.tsx, variable completamente aparte).
+const GOLD = "#E3A93D";
 const IVORY = "#F6F2E9";
 const MUTED = "#53637A";
 
@@ -145,7 +151,9 @@ export default function CustomerClassSection({
   return (
     <section
       id="contacto"
-      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[112px] sm:pb-[48px] sm:pt-[120px]"
+      // pt subido de 112/120px a 130/150px (ver header-spacing-fix.md):
+      // mismo valor que el resto de las secciones para un espaciado parejo.
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[130px] sm:pb-[48px] sm:pt-[150px]"
       style={{ background: IVORY }}
     >
       <Container className="relative z-10">
@@ -246,11 +254,35 @@ export default function CustomerClassSection({
             exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
             transition={panelTransition}
             className="relative mx-auto mt-12 max-w-[1380px] overflow-hidden rounded-[30px]"
-            style={{ boxShadow: "0 30px 70px rgba(11,47,99,0.22)" }}
+            style={{ background: NAVY, boxShadow: "0 30px 70px rgba(11,47,99,0.22)" }}
           >
             <div className="grid grid-cols-1 md:min-h-[500px] md:grid-cols-[47%_53%]">
               {/* Columna izquierda: fotografía */}
-              <div className="relative h-[260px] sm:h-[280px] md:h-full md:overflow-hidden">
+              {/* Corte cóncavo tipo "cuarto de círculo" en la esquina
+                  inferior (ver customer-class-fixes-2.md, punto 1 — el
+                  intento anterior con un círculo NAVY superpuesto +
+                  overflow-hidden SÍ se renderizaba bien (confirmado a fondo
+                  con DevTools: rect, clip y color correctos), pero al ser
+                  una "pintura" de un círculo del mismo color que el fondo en
+                  vez de un recorte real, cualquier duda razonable sobre si
+                  "de verdad" corta algo quedaba sin poder zanjarse — y en la
+                  práctica, contra fotos con textura/color variado, terminaba
+                  leyéndose igual que ningún cambio. Se reemplaza acá por un
+                  `mask-image` real (radial-gradient transparente centrado en
+                  la esquina): esto SÍ recorta el propio elemento de la foto
+                  — no una ilusión de color superpuesto — así que es
+                  verificable sin ambigüedad en DevTools (aparece la
+                  propiedad `mask-image`). El agujero real necesita sí o sí
+                  algo navy detrás para leerse como "muerde hacia el panel"
+                  en vez de mostrar el fondo beige de la sección — por eso el
+                  motion.div contenedor del panel (el padre, ver más arriba)
+                  ahora tiene `background: NAVY` explícito; antes no hacía
+                  falta porque el color lo pintaba el propio círculo
+                  superpuesto. Solo desktop/tablet — mobile apila el layout y
+                  no necesita el corte. */}
+              <div
+                className="relative h-[260px] overflow-hidden sm:h-[280px] md:h-full md:[-webkit-mask-image:radial-gradient(circle_110px_at_100%_100%,transparent_99%,black_100%)] md:[mask-image:radial-gradient(circle_110px_at_100%_100%,transparent_99%,black_100%)]"
+              >
                 <Image
                   key={activeSegment.key}
                   src={activeSegment.image}
@@ -259,31 +291,6 @@ export default function CustomerClassSection({
                   className="object-cover"
                   sizes="(min-width: 768px) 47vw, 100vw"
                   priority={activeSegment.key === "supermercados"}
-                />
-                {/* Corte cóncavo tipo "cuarto de círculo" en la esquina
-                    inferior, donde la imagen se encuentra con el panel (ver
-                    ajustes-customer-class-4-puntos.md, punto 2 — antes esto
-                    era una curva recta/suave a lo largo de todo el borde, no
-                    coincidía con el mockup). Solo desktop/tablet (spec ya
-                    pide eliminarla en mobile, layout apilado ahí).
-                    Técnica: un círculo NAVY (mismo color que el panel)
-                    centrado exactamente sobre la esquina inferior derecha de
-                    la imagen (translate 50%/50% desde bottom-right) —
-                    overflow-hidden del contenedor recorta todo menos el
-                    cuarto que cae dentro de la imagen, que "muerde" esa
-                    esquina con la curva cóncava.
-                    Radio subido de h-16/w-16 (64px, cuarto de 32px) a 160px
-                    (cuarto de 80px, ver fix-path-fotos-y-curva-otra-vez.md):
-                    con 32px el corte SÍ se renderizaba (confirmado clip +
-                    color correctos via DevTools) pero contra fotos reales
-                    con textura/color variado era casi imperceptible a simple
-                    vista — el problema no era que faltara el elemento, era
-                    que el radio quedaba demasiado chico para leerse como
-                    corte intencional en vez de ruido de la foto. */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 right-0 hidden h-40 w-40 translate-x-1/2 translate-y-1/2 rounded-full md:block"
-                  style={{ background: NAVY }}
                 />
               </div>
 
