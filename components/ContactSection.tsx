@@ -154,14 +154,14 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
             duplicar el mismo trazo. Fondo blanco (ver
             ajustes-customer-class-4-puntos.md, punto 4): alterna con el
             beige de Customer Class arriba — antes ambas secciones eran
-            beige y se sentían pegadas/mezcladas. El id="contacto" (target
-            del nav) y su scroll-mt ahora viven en CustomerClassSection, que
-            es la primera de las dos al hacer click en "Contacto" desde el
-            header. id="hablemos-de-negocios" acá es un segundo target,
-            propio de esta sección, usado por el CTA "Contactar sobre..." de
-            CustomerClassSection (ver customer-class-fixes.md, punto 4) para
-            bajar el usuario hasta el WhatsApp ya personalizado con el
-            segmento elegido arriba. */}
+            beige y se sentían pegadas/mezcladas. id="hablemos-de-negocios" es
+            el target directo del ítem "Contacto" del nav (ver
+            navbar-customer-class.md — antes "Contacto" apuntaba a
+            CustomerClassSection, que ahora tiene su propio ítem con id
+            "customer-class"). El mismo id también lo usa el CTA "Contactar
+            sobre..." de CustomerClassSection (ver customer-class-fixes.md,
+            punto 4) para bajar el usuario hasta el WhatsApp ya personalizado
+            con el segmento elegido arriba. */}
         <SoftCurve position="bottom" flip />
 
         <Container className="relative z-10">

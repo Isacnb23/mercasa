@@ -39,12 +39,18 @@ export const site = {
 };
 
 // href + key (el label sale de Nav.<key> en los mensajes).
+// "Contacto" apunta a id="hablemos-de-negocios" (el formulario en
+// ContactSection): antes apuntaba a id="contacto", que en realidad vivía en
+// CustomerClassSection (ver navbar-customer-class.md) — ahora esa sección
+// tiene su propio ítem ("customerClass" → id="customer-class") así que
+// "Contacto" ya puede apuntar directo a su propia sección.
 export const navLinks = [
   { href: "#inicio", key: "inicio" },
   { href: "#nosotros", key: "nosotros" },
   { href: "#logistica", key: "logistica" },
   { href: "#productos", key: "productos" },
-  { href: "#contacto", key: "contacto" },
+  { href: "#customer-class", key: "customerClass" },
+  { href: "#hablemos-de-negocios", key: "contacto" },
 ];
 
 /* Datos destacados de la tarjeta del Hero — label/value en Hero.highlights.<key> */

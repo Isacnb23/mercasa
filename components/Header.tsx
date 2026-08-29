@@ -99,7 +99,7 @@ export default function Header() {
     scrollTo(href);
   };
 
-  const linkClass = (href: string) => cn("group relative rounded-full px-4 py-2 font-display text-[14.5px] font-medium tracking-wide transition-colors duration-300 hover:bg-corp-blue/[0.06]", activeHref === href ? "text-corp-blue" : "text-corp-ink/75 hover:text-corp-blue");
+  const linkClass = (href: string) => cn("group relative whitespace-nowrap rounded-full px-3 py-2 font-display text-[14.5px] font-medium tracking-wide transition-colors duration-300 hover:bg-corp-blue/[0.06] xl:px-4", activeHref === href ? "text-corp-blue" : "text-corp-ink/75 hover:text-corp-blue");
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-5 md:pt-4">
@@ -111,18 +111,25 @@ export default function Header() {
             <Image src={logo} alt="Mercasa" priority className="hidden h-9 w-auto sm:block md:h-10" />
           </a>
 
-          <nav className="hidden items-center justify-center gap-1 md:flex">
+          {/* Umbral subido de md (768px) a lg (1024px, ver
+              navbar-customer-class.md): con 6 ítems (se agregó "Customer
+              Class") el nav horizontal ya no cabía en una fila entre 768 y
+              1023px — el texto se partía en 2 líneas y empujaba el botón de
+              Reclutamiento/selector de idioma fuera del pill. Debajo de
+              lg ahora se usa el menú hamburguesa (que ya soporta 6 ítems
+              apilados sin problema). */}
+          <nav className="hidden items-center justify-center gap-0.5 lg:flex xl:gap-1">
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={linkClass(link.href)}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "contacto")}<span className={cn("absolute -bottom-[1px] left-1/2 h-[2px] w-0 -translate-x-1/2 rounded-full bg-corp-blue transition-all duration-300", activeHref === link.href ? "w-6" : "group-hover:w-6")} /></a>
+              <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={linkClass(link.href)}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "customerClass" | "contacto")}<span className={cn("absolute -bottom-[1px] left-1/2 h-[2px] w-0 -translate-x-1/2 rounded-full bg-corp-blue transition-all duration-300", activeHref === link.href ? "w-6" : "group-hover:w-6")} /></a>
             ))}
           </nav>
 
           <div className="col-start-3 flex items-center justify-end gap-3">
-            <div className="hidden md:flex">
+            <div className="hidden lg:flex">
               <RecruitmentPopover variant="desktop" />
             </div>
             <LocaleSwitcher />
-            <button ref={triggerRef} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-corp-ink transition hover:bg-corp-ink/[0.06] md:hidden" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen((v) => !v)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
+            <button ref={triggerRef} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-corp-ink transition hover:bg-corp-ink/[0.06] lg:hidden" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen((v) => !v)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
           </div>
         </div>
       </div>
@@ -136,7 +143,7 @@ export default function Header() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.22 }}
-              className="fixed inset-0 z-10 bg-corp-ink/40 md:hidden"
+              className="fixed inset-0 z-10 bg-corp-ink/40 lg:hidden"
               onClick={() => setOpen(false)}
               aria-hidden
             />
@@ -147,12 +154,12 @@ export default function Header() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-              className="relative z-20 mx-auto mt-2 max-w-[1320px] overflow-hidden rounded-[20px] bg-white shadow-[0_16px_40px_-8px_rgba(8,43,92,0.16)] md:hidden"
+              className="relative z-20 mx-auto mt-2 max-w-[1320px] overflow-hidden rounded-[20px] bg-white shadow-[0_16px_40px_-8px_rgba(8,43,92,0.16)] lg:hidden"
               style={{ border: "1px solid #E8ECF1" }}
             >
               <div className="flex flex-col gap-1 p-3">
                 {navLinks.map((link) => (
-                  <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={cn("rounded-2xl px-4 py-3 text-base font-medium transition", activeHref === link.href ? "bg-corp-blue/[0.06] text-corp-blue" : "text-corp-ink hover:bg-corp-ink/[0.05]")}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "contacto")}</a>
+                  <a key={link.href} href={link.href} onClick={(e) => handleNav(e, link.href)} className={cn("rounded-2xl px-4 py-3 text-base font-medium transition", activeHref === link.href ? "bg-corp-blue/[0.06] text-corp-blue" : "text-corp-ink hover:bg-corp-ink/[0.05]")}>{tNav(link.key as "inicio" | "nosotros" | "logistica" | "productos" | "customerClass" | "contacto")}</a>
                 ))}
                 <RecruitmentPopover variant="mobile" />
               </div>

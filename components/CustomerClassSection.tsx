@@ -150,9 +150,12 @@ export default function CustomerClassSection({
 
   return (
     <section
-      id="contacto"
+      id="customer-class"
       // pt subido de 112/120px a 130/150px (ver header-spacing-fix.md):
       // mismo valor que el resto de las secciones para un espaciado parejo.
+      // id renombrado de "contacto" a "customer-class" (ver
+      // navbar-customer-class.md): esta sección ahora tiene su propio ítem
+      // en el navbar en vez de compartir target con "Contacto".
       className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[130px] sm:pb-[48px] sm:pt-[150px]"
       style={{ background: IVORY }}
     >
