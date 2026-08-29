@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { MapPin, Mail, Phone } from "lucide-react";
 import { site } from "@/lib/data";
 import logo from "@/public/models/mercasa-logo-transparent.png";
-import Container from "./Container";
+import Container from "../ui/Container";
 import FooterNav from "./FooterNav";
 
 /* lucide-react ya no incluye íconos de marcas (Facebook/LinkedIn/Instagram),

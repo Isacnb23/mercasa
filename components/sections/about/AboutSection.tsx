@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 import { Award, Handshake, Users, Warehouse } from "lucide-react";
 import { aboutStats, site } from "@/lib/data";
 import cediPhoto from "@/public/brand/Nosotros/ChatGPT Image 25 ago 2026, 10_34_48.png";
-import Container from "./Container";
-import SoftCurve from "./SoftCurve";
+import Container from "../../ui/Container";
+import SoftCurve from "../../ui/SoftCurve";
 
 const statIcons = {
   colaboradores: Users,

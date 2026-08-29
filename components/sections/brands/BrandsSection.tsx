@@ -4,9 +4,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import Container from "./Container";
-import Reveal from "./Reveal";
-import SoftCurve from "./SoftCurve";
+import Container from "../../ui/Container";
+import Reveal from "../../ui/Reveal";
+import SoftCurve from "../../ui/SoftCurve";
 import { brandCategories, brandsMuralImage } from "@/lib/data";
 
 // Cada cuánto avanza sola la rotación automática del mural. Sección

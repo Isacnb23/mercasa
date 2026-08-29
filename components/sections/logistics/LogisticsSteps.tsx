@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Ship, Warehouse, Truck, Store } from "lucide-react";
-import Reveal from "./Reveal";
+import Reveal from "../../ui/Reveal";
 import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import { logisticsSteps } from "@/lib/data";
 import { cn } from "@/lib/utils";

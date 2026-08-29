@@ -11,9 +11,9 @@ import "@fontsource/spectral/700.css";
 import "../globals.css";
 import { routing } from "@/i18n/routing";
 import { site } from "@/lib/data";
-import SmoothScroll from "@/components/SmoothScroll";
-import PageLoader from "@/components/PageLoader";
-import AmbientBackdrop from "@/components/AmbientBackdrop";
+import SmoothScroll from "@/components/chrome/SmoothScroll";
+import PageLoader from "@/components/chrome/PageLoader";
+import AmbientBackdrop from "@/components/chrome/AmbientBackdrop";
 
 const SITE_URL = "https://www.mercasa.cr";
 

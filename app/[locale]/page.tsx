@@ -1,15 +1,15 @@
 import { Suspense } from "react";
-import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import AboutSection from "@/components/AboutSection";
-import ProductsSection from "@/components/ProductsSection";
-import BrandsSection from "@/components/BrandsSection";
-import LogisticsTimeline from "@/components/LogisticsTimeline";
-import CollaboratorsSection from "@/components/CollaboratorsSection";
-import ContactSection from "@/components/ContactSection";
-import ContactSectionLoader from "@/components/ContactSectionLoader";
-import Footer from "@/components/Footer";
-import SectionReveal from "@/components/SectionReveal";
+import Header from "@/components/layout/Header";
+import Hero from "@/components/sections/hero/Hero";
+import AboutSection from "@/components/sections/about/AboutSection";
+import ProductsSection from "@/components/sections/products/ProductsSection";
+import BrandsSection from "@/components/sections/brands/BrandsSection";
+import LogisticsTimeline from "@/components/sections/logistics/LogisticsTimeline";
+import CollaboratorsSection from "@/components/sections/collaborators/CollaboratorsSection";
+import ContactSection from "@/components/sections/contact/ContactSection";
+import ContactSectionLoader from "@/components/sections/contact/ContactSectionLoader";
+import Footer from "@/components/layout/Footer";
+import SectionReveal from "@/components/ui/SectionReveal";
 
 export default function Home() {
   return (

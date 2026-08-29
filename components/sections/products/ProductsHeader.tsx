@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Boxes, PackageCheck, ShoppingCart } from "lucide-react";
-import Reveal from "./Reveal";
+import Reveal from "../../ui/Reveal";
 
 const pillarIcons = {
   catalogo: Boxes,

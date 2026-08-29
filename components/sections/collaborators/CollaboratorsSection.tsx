@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import Container from "./Container";
-import Reveal, { RevealGroup, RevealItem } from "./Reveal";
-import SoftCurve from "./SoftCurve";
+import Container from "../../ui/Container";
+import Reveal, { RevealGroup, RevealItem } from "../../ui/Reveal";
+import SoftCurve from "../../ui/SoftCurve";
 import { collaboratorPhotos } from "@/lib/data";
 import { cn } from "@/lib/utils";
 

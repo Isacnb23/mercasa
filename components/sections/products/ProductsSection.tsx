@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import Container from "./Container";
-import SoftCurve from "./SoftCurve";
+import Container from "../../ui/Container";
+import SoftCurve from "../../ui/SoftCurve";
 import ProductsHeader from "./ProductsHeader";
 import ProductsExplorerLoader from "./ProductsExplorerLoader";
 import ProductsSkeleton from "./ProductsSkeleton";

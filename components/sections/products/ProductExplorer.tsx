@@ -7,8 +7,8 @@ import { BookOpen, ChevronDown, Package } from "lucide-react";
 import type { HierarchyNode } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
-import Reveal from "./Reveal";
-import ProductCatalogModal from "./ProductCatalogModal";
+import Reveal from "../../ui/Reveal";
+import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
 
 // Corrección de dirección (ver fix-product-explorer-acordeon.md): el intento
 // anterior (rediseno-product-explorer.md) convertía esto en 3 pantallas que

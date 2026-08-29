@@ -24,9 +24,9 @@ import type { HierarchyNode } from "@/lib/product-types";
 import { businessSegments } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { useScrollTo } from "@/lib/hooks/useScrollTo";
-import Container from "./Container";
-import Reveal from "./Reveal";
-import SoftCurve from "./SoftCurve";
+import Container from "../../ui/Container";
+import Reveal from "../../ui/Reveal";
+import SoftCurve from "../../ui/SoftCurve";
 
 const segmentIcons = {
   store: Store,
