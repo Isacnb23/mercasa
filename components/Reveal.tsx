@@ -17,20 +17,23 @@ type RevealProps = {
    viewport (subiendo o bajando). `once` sigue disponible para los pocos
    casos puntuales que deban animarse una sola vez. */
 
-const baseVariants: Variants = {
-  hidden: { opacity: 0, y: 28, filter: "blur(6px)" },
+const buildVariants = (y: number): Variants => ({
+  hidden: { opacity: 0, y, filter: "blur(6px)" },
   visible: {
     opacity: 1,
     y: 0,
     filter: "blur(0px)",
     transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
   },
-};
+});
+
+const baseVariants = buildVariants(28);
 
 export default function Reveal({
   children,
   className,
   delay = 0,
+  y = 28,
   once = false,
   style,
 }: RevealProps) {
@@ -50,7 +53,7 @@ export default function Reveal({
       initial="hidden"
       whileInView="visible"
       viewport={{ once, margin: "-80px" }}
-      variants={baseVariants}
+      variants={y === 28 ? baseVariants : buildVariants(y)}
       transition={{ delay }}
     >
       {children}

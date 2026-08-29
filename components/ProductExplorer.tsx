@@ -158,23 +158,53 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
               remonta, lo que resetea su scrollTop a 0 automáticamente — sin
               necesidad de leer/escribir el DOM a mano. */}
           {selectedFamily && (
-            // overflow-y-auto vive en ESTE div, sin padding propio — así la
-            // scrollbar queda pegada al borde real del panel. El padding
-            // (ver ajuste-padding-titulos.md) va en el wrapper interno de
-            // abajo, para que el texto tenga aire sin que la barra de scroll
-            // quede flotando a mitad del padding.
-            <div
-              key={selectedFamily.id}
-              data-lenis-prevent
-              className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
-            >
-              <div className="px-7 pb-8 pt-7 max-sm:px-5 max-sm:pb-6 max-sm:pt-5">
-                <CategoryPanel
-                  family={selectedFamily}
-                  expandedCategoryId={expandedCategoryId}
-                  onToggleCategory={toggleCategory}
-                  onOpenCategoryInCatalog={(categoryId) => openCatalog(selectedFamily.id, categoryId)}
-                  onOpenFamilyCatalog={() => openCatalog(selectedFamily.id)}
+            <div key={selectedFamily.id} className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {/* Header de familia (ícono + nombre + conteo + botón Revista):
+                  fuera del área con overflow-y-auto, así se queda fijo arriba
+                  mientras solo la lista de abajo scrollea (ver
+                  fix-header-familia-sticky.md — antes vivía dentro del mismo
+                  contenedor scrolleable y se cortaba contra el borde superior
+                  al scrollear). border-b sutil para marcar que es un bloque
+                  distinto de la lista. */}
+              <div
+                className="shrink-0 border-b px-7 pb-4 pt-7 max-sm:px-5 max-sm:pb-3 max-sm:pt-5"
+                style={{ borderColor: RULE }}
+              >
+                <CategoryPanelHeader family={selectedFamily} onOpenFamilyCatalog={() => openCatalog(selectedFamily.id)} />
+              </div>
+
+              {/* overflow-y-auto vive en el div de adentro, sin padding propio
+                  — así la scrollbar queda pegada al borde real del panel. El
+                  padding (ver ajuste-padding-titulos.md) va en el wrapper
+                  interno de abajo, para que el texto tenga aire sin que la
+                  barra de scroll quede flotando a mitad del padding.
+
+                  Fade en los bordes superior/inferior (ver
+                  fix-fade-scroll-panel-categorias.md): un mask-image en el
+                  propio elemento con overflow-y-auto no se renderizaba acá
+                  (confirmado visualmente con Chrome MCP — probablemente un
+                  bug de compositing de Chromium con el ancestro animado de
+                  Reveal), así que se usa la alternativa que ya preveía el fix:
+                  dos overlays absolutos con gradiente blanco-a-transparente,
+                  superpuestos sobre el borde del scroll en vez de un mask. */}
+              <div className="relative min-h-0 flex-1">
+                <div data-lenis-prevent className="h-full overflow-y-auto overscroll-contain">
+                  <div className="px-7 pb-8 pt-5 max-sm:px-5 max-sm:pb-6 max-sm:pt-4">
+                    <CategoryPanelList
+                      family={selectedFamily}
+                      expandedCategoryId={expandedCategoryId}
+                      onToggleCategory={toggleCategory}
+                      onOpenCategoryInCatalog={(categoryId) => openCatalog(selectedFamily.id, categoryId)}
+                    />
+                  </div>
+                </div>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-white to-transparent"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-white to-transparent"
                 />
               </div>
             </div>
@@ -243,84 +273,96 @@ function SidebarFamilyItem({
   );
 }
 
-// Panel de contenido de la familia seleccionada — título + botón "Revista"
-// arriba (fácil de encontrar, ver fix-sidebar-panel-scroll.md), y debajo las
-// categorías de esa familia como acordeón (una expandida a la vez).
-function CategoryPanel({
+// Header fijo del panel de familia — ícono + nombre + conteo + botón
+// "Revista" (fácil de encontrar, ver fix-sidebar-panel-scroll.md). Vive
+// fuera del área scrolleable (ver fix-header-familia-sticky.md), separado
+// de CategoryPanelList.
+function CategoryPanelHeader({
+  family,
+  onOpenFamilyCatalog,
+}: {
+  family: HierarchyNode;
+  onOpenFamilyCatalog: () => void;
+}) {
+  const t = useTranslations("Products");
+  const Icon = FAMILY_ICONS[family.id] ?? Package;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+          style={{ background: CHIP_BG }}
+        >
+          <Icon className="h-5 w-5" strokeWidth={1.6} style={{ color: ACCENT }} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-[17px] font-semibold sm:text-[19px]" style={{ color: INK }}>
+            {family.name}
+          </p>
+          <p className="text-[12px] font-medium" style={{ color: ACCENT }}>
+            {t("productsCountApprox", { count: formatProductCount(family.itemCount) })}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenFamilyCatalog}
+        aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
+        title={t("catalog.openFamilyButton", { familyName: family.name })}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition hover:opacity-80"
+        style={{ color: ACCENT, background: CHIP_BG }}
+      >
+        <BookOpen className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
+        {t("catalog.openFamilyButtonShort")}
+      </button>
+    </div>
+  );
+}
+
+// Lista scrolleable del panel: sub-familias + categorías de la familia
+// seleccionada, como acordeón (una expandida a la vez). Separada de
+// CategoryPanelHeader (ver fix-header-familia-sticky.md) para que el header
+// no se mueva con este scroll.
+function CategoryPanelList({
   family,
   expandedCategoryId,
   onToggleCategory,
   onOpenCategoryInCatalog,
-  onOpenFamilyCatalog,
 }: {
   family: HierarchyNode;
   expandedCategoryId: string | null;
   onToggleCategory: (id: string) => void;
   onOpenCategoryInCatalog: (categoryId: string) => void;
-  onOpenFamilyCatalog: () => void;
 }) {
-  const t = useTranslations("Products");
-  const Icon = FAMILY_ICONS[family.id] ?? Package;
   const subFamiliesWithCategories = family.children.filter((sf) => sf.children.length > 0);
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-            style={{ background: CHIP_BG }}
-          >
-            <Icon className="h-5 w-5" strokeWidth={1.6} style={{ color: ACCENT }} aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-display text-[17px] font-semibold sm:text-[19px]" style={{ color: INK }}>
-              {family.name}
+    <div className="space-y-3">
+      {subFamiliesWithCategories.map((subFamily) => (
+        <div key={subFamily.id}>
+          {subFamiliesWithCategories.length > 1 && (
+            <p
+              className="mb-2 mt-2 text-[12px] font-extrabold uppercase"
+              style={{ color: INK, letterSpacing: "0.07em" }}
+            >
+              {subFamily.name}
             </p>
-            <p className="text-[12px] font-medium" style={{ color: ACCENT }}>
-              {t("productsCountApprox", { count: formatProductCount(family.itemCount) })}
-            </p>
+          )}
+          <div className="space-y-1">
+            {subFamily.children.map((category) => (
+              <CategoryRow
+                key={category.id}
+                category={category}
+                isExpanded={expandedCategoryId === category.id}
+                onToggle={() => onToggleCategory(category.id)}
+                onOpenCatalog={() => onOpenCategoryInCatalog(category.id)}
+              />
+            ))}
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onOpenFamilyCatalog}
-          aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
-          title={t("catalog.openFamilyButton", { familyName: family.name })}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition hover:opacity-80"
-          style={{ color: ACCENT, background: CHIP_BG }}
-        >
-          <BookOpen className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
-          {t("catalog.openFamilyButtonShort")}
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {subFamiliesWithCategories.map((subFamily) => (
-          <div key={subFamily.id}>
-            {subFamiliesWithCategories.length > 1 && (
-              <p
-                className="mb-2 mt-2 text-[12px] font-extrabold uppercase"
-                style={{ color: INK, letterSpacing: "0.07em" }}
-              >
-                {subFamily.name}
-              </p>
-            )}
-            <div className="space-y-1">
-              {subFamily.children.map((category) => (
-                <CategoryRow
-                  key={category.id}
-                  category={category}
-                  isExpanded={expandedCategoryId === category.id}
-                  onToggle={() => onToggleCategory(category.id)}
-                  onOpenCatalog={() => onOpenCategoryInCatalog(category.id)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      ))}
     </div>
   );
 }

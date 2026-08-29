@@ -2,151 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Clock, Compass, Mail, MapPin, Navigation, Phone } from "lucide-react";
+import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import Container from "./Container";
 import Reveal from "./Reveal";
 import SoftCurve from "./SoftCurve";
-import BusinessSegments from "./BusinessSegments";
+import CustomerClassSection, { resolveChipTarget } from "./CustomerClassSection";
 import ProductCatalogModal from "./ProductCatalogModal";
 import { businessSegments, site } from "@/lib/data";
+import { cn } from "@/lib/utils";
 import type { HierarchyNode } from "@/lib/product-types";
 
 function buildWhatsappHref(baseHref: string, message: string) {
   return `${baseHref}?text=${encodeURIComponent(message)}`;
 }
 
-// Resuelve cada chip de categoría (ver customer-class-chips-reales.md) a
-// dónde tiene que abrir el catálogo: o bien una Familia completa
-// (alimentos, bebidas), o una Sub-familia puntual dentro de otra Familia
-// (las 4 que antes eran las etiquetas compuestas "bebe-cuidado"/
-// "hogar-institucional"). Los slugs son los mismos que genera `slugify` en
-// lib/mercasavip-catalog.ts para el árbol real, así que matchean contra
-// `family.id`/`subFamily.id` tal cual vienen de la API — no hace falta
-// mantener esto sincronizado a mano salvo que cambien los nombres reales
-// de Familia/Sub-familia en MercasaVIP.
-const CHIP_TARGETS: Record<string, { family: string; subFamily?: string }> = {
-  alimentos: { family: "alimentos" },
-  bebidas: { family: "bebidas" },
-  "cuidado-del-bebe": { family: "cuidado-personal", subFamily: "cuidado-del-bebe" },
-  "higiene-personal": { family: "cuidado-personal", subFamily: "higiene-personal" },
-  "limpieza-del-hogar": { family: "cuidado-del-hogar", subFamily: "limpieza-del-hogar" },
-  institucional: { family: "cuidado-del-hogar", subFamily: "institucional" },
-};
-
-// Primera categoría CON productos reales de una Familia completa (recorre
-// todas sus sub-familias en orden) — mismo criterio que usaba el botón
-// "Revista" antes de simplificarse a abrir siempre en portada; acá SÍ
-// tiene sentido apuntar directo al contenido, porque el chip promete
-// "esto te interesa", no "hojeá desde la tapa".
-function firstCategoryInFamily(family: HierarchyNode): string | undefined {
-  for (const subFamily of family.children) {
-    for (const category of subFamily.children) {
-      if ((category.products?.length ?? 0) > 0) return category.id;
-    }
-  }
-  return undefined;
-}
-
-// Primera categoría CON productos de UNA sub-familia puntual (no de toda
-// la familia) — para que el chip de "Institucional" no aterrice en la
-// primera categoría de otra sub-familia de Cuidado del Hogar.
-function firstCategoryInSubFamily(subFamily: HierarchyNode): string | undefined {
-  for (const category of subFamily.children) {
-    if ((category.products?.length ?? 0) > 0) return category.id;
-  }
-  return undefined;
-}
+// Réplica exacta de la referencia (ver rediseno-exacto-hablemos-de-
+// negocios.md) — reemplaza por completo el panel navy del rediseño anterior
+// (rediseno-contacto-y-mapa.md): tarjeta única clara (crema), NO navy.
+const NAVY = "#0B2F63";
+const CARD_BG = "#F6F2E9";
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-[#F6F1E6]" />,
+  loading: () => <div className="absolute inset-0 bg-[#F2F3F0]" />,
 });
-
-/* Menú "Cómo llegar": un solo botón que despliega dos opciones (Google Maps /
-   Waze) en vez de un link directo — coordenadas puras en ambos links, nunca
-   el nombre "Mercasa" como búsqueda de texto, por la ferretería homónima en
-   Agua Caliente que Google prioriza por reseñas. Se cierra al hacer clic
-   fuera (listener en document, solo mientras está abierto). */
-function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
-  const t = useTranslations("Contact");
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
-
-  const googleHref = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  const wazeHref = `https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-
-  return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="inline-flex h-11 w-full items-center justify-center gap-1.5 px-3 text-[12px] font-semibold text-white transition hover:brightness-110"
-        style={{ borderRadius: "8px", background: "#075FD8" }}
-      >
-        {t("directionsCta")}
-        <Navigation className="h-3 w-3" />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-20 overflow-hidden"
-            style={{
-              borderRadius: "10px",
-              border: "1px solid rgba(7,95,216,0.25)",
-              background: "#0c1a2e",
-              boxShadow: "0 14px 34px rgba(0,0,0,0.45), 0 0 0 1px rgba(7,95,216,0.06)",
-            }}
-          >
-            <a
-              role="menuitem"
-              href={googleHref}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(7,95,216,0.16)]"
-            >
-              <Navigation className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
-              {t("openInGoogleMaps")}
-            </a>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
-            <a
-              role="menuitem"
-              href={wazeHref}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-[rgba(7,95,216,0.16)]"
-            >
-              <Compass className="h-3.5 w-3.5 shrink-0" style={{ color: "#6ba5ff" }} />
-              {t("openInWaze")}
-            </a>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 /**
  * Productos, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
@@ -159,10 +40,11 @@ function DirectionsMenu({ lat, lng }: { lat: number; lng: number }) {
 export default function ContactSection({ families = [] }: { families?: HierarchyNode[] }) {
   const t = useTranslations("Contact");
 
-  // Único estado de segmento para toda la sección: lo consume el selector
-  // (BusinessSegments, ahora controlado) y también el CTA de WhatsApp del
-  // cierre, para que el mensaje pre-armado quede contextualizado con el
-  // segmento elegido arriba.
+  // Único estado de segmento para las DOS secciones (Customer Class +
+  // Hablemos de negocios, ver rediseno-customer-class-spec-completo.md):
+  // aunque ahora son dos <section> independientes en el DOM, el estado
+  // sigue viviendo acá arriba para no perder la contextualización del
+  // WhatsApp de cierre con el segmento elegido en Customer Class.
   const [activeSegmentKey, setActiveSegmentKey] = useState("supermercados");
   const activeSegment = businessSegments.find((seg) => seg.key === activeSegmentKey) ?? businessSegments[0];
   const whatsappHref = buildWhatsappHref(
@@ -170,11 +52,13 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
     t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
   );
 
-  // Catálogo abierto desde un chip de "categorías que te interesan" (ver
-  // customer-class-chips-reales.md) — mismo patrón de ProductExplorer
-  // (family+categoryId en vez de un booleano "open"): `catalogFamily` es
-  // null cuando no hay ninguna abierta, así que ProductCatalogModal se
-  // desmonta por completo al cerrar en vez de solo ocultarse.
+  // Catálogo abierto desde un chip de "categorías" o el botón "Explorar
+  // productos" de Customer Class (ver customer-class-chips-reales.md y
+  // rediseno-customer-class-spec-completo.md) — mismo patrón de
+  // ProductExplorer (family+categoryId en vez de un booleano "open"):
+  // `catalogFamily` es null cuando no hay ninguna abierta, así que
+  // ProductCatalogModal se desmonta por completo al cerrar en vez de solo
+  // ocultarse.
   const [catalogFamilyId, setCatalogFamilyId] = useState<string | null>(null);
   const [catalogCategoryId, setCatalogCategoryId] = useState<string | undefined>(undefined);
   const catalogFamily = families.find((f) => f.id === catalogFamilyId) ?? null;
@@ -183,27 +67,24 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
     setCatalogCategoryId(undefined);
   };
 
-  // Resuelve el chip clickeado (ver CHIP_TARGETS arriba) contra los datos
-  // reales de MercasaVIP y abre el catálogo posicionado ahí. Si `families`
-  // todavía no llegó (fetch en curso o falló) o el slug no matchea nada
-  // real, no hace nada — el chip queda igual de clickeable, solo que esta
-  // vez no encuentra destino (no vale la pena un estado de error visible
-  // para un caso tan puntual).
+  // Resuelve el chip/categoría clickeado (ver resolveChipTarget en
+  // CustomerClassSection.tsx) contra los datos reales de MercasaVIP y abre
+  // el catálogo posicionado ahí. Si `families` todavía no llegó (fetch en
+  // curso o falló) o el slug no matchea nada real, no hace nada — el chip
+  // queda igual de clickeable, solo que esta vez no encuentra destino (no
+  // vale la pena un estado de error visible para un caso tan puntual).
   const handleSelectCategory = (categoryKey: string) => {
-    const target = CHIP_TARGETS[categoryKey];
-    if (!target) return;
-    const family = families.find((f) => f.id === target.family);
-    if (!family) return;
+    const resolved = resolveChipTarget(families, categoryKey);
+    if (!resolved) return;
+    setCatalogFamilyId(resolved.familyId);
+    setCatalogCategoryId(resolved.categoryId);
+  };
 
-    if (!target.subFamily) {
-      setCatalogFamilyId(family.id);
-      setCatalogCategoryId(firstCategoryInFamily(family));
-      return;
-    }
-    const subFamily = family.children.find((sf) => sf.id === `${family.id}/${target.subFamily}`);
-    if (!subFamily) return;
-    setCatalogFamilyId(family.id);
-    setCatalogCategoryId(firstCategoryInSubFamily(subFamily));
+  // Botón "Explorar productos" del panel de Customer Class: mismo
+  // comportamiento que ya tenían los chips, aplicado a la primera categoría
+  // del segmento activo — no es un botón nuevo sin función (ver spec).
+  const handleExploreProducts = () => {
+    handleSelectCategory(activeSegment.categories[0]);
   };
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
@@ -233,213 +114,209 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
   }, []);
 
   return (
-    <section
-      id="contacto"
-      className="relative scroll-mt-20 overflow-hidden py-24 md:py-28"
-      style={{ background: "#F7F3EB" }}
-    >
-      {/* El seam Productos → Contacto ya lo marca la curva inferior de
-          Productos; acá solo se agrega la de salida hacia el Footer (que
-          cierra en un tono distinto, #F3F5F7) para no duplicar el mismo
-          trazo. */}
-      <SoftCurve position="bottom" flip />
+    <>
+      {/* Customer Class ahora es su propia sección independiente, ubicada
+          antes de "Hablemos de negocios" (ver
+          rediseno-customer-class-spec-completo.md — reemplaza por completo
+          el módulo anterior de dos columnas dentro de esta tarjeta). El
+          estado del segmento activo se queda acá arriba (ver comentario en
+          los hooks) para que el WhatsApp de cierre de abajo siga
+          contextualizado. */}
+      <CustomerClassSection
+        activeKey={activeSegmentKey}
+        onSelect={setActiveSegmentKey}
+        onSelectCategory={handleSelectCategory}
+        onExploreProducts={handleExploreProducts}
+      />
 
-      <Container className="relative z-10">
-        {/* ---------- Encabezado único de la sección ---------- */}
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <span
-            className="inline-flex items-center gap-3 text-[13px] font-semibold uppercase"
-            style={{ letterSpacing: "0.22em", color: "#075FD8" }}
-          >
-            <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
-            {t("eyebrow")}
-            <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
-          </span>
-          <h2
-            className="mt-5 font-display text-corp-ink"
-            style={{ fontSize: "clamp(36px, 4vw, 56px)", lineHeight: 1.05, fontWeight: 600, letterSpacing: "-0.02em" }}
-          >
-            {t("title")}
-          </h2>
-          <p
-            className="mx-auto mt-4 max-w-[700px] text-[15px] leading-[1.55] md:text-[16px]"
-            style={{ color: "#3A4A5F" }}
-          >
-            {t("paragraph")}
-          </p>
-        </Reveal>
+      {catalogFamily && (
+        <ProductCatalogModal
+          family={catalogFamily}
+          allFamilies={families}
+          initialCategoryId={catalogCategoryId}
+          onClose={closeCatalog}
+        />
+      )}
 
-        {/* ---------- Paso 1: ¿qué tipo de negocio sos? ----------
-            Es la interacción principal de la sección (ver
-            ajuste-customer-class-y-mapa.md) — antes flotaba directo sobre
-            el fondo beige de la página como el resto del contenido; ahora
-            vive en su propia tarjeta blanca con sombra propia, al mismo
-            nivel de protagonismo que la tarjeta de info+mapa de abajo, en
-            vez de sentirse como un detalle secundario.
+      <section
+        id="hablemos-de-negocios"
+        className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden py-24 md:py-28"
+        style={{ background: "#FFFFFF" }}
+      >
+        {/* El seam Customer Class → Contacto ya lo marca la curva inferior de
+            CustomerClassSection; acá solo se agrega la de salida hacia el
+            Footer (que cierra en un tono distinto, #F3F5F7) para no
+            duplicar el mismo trazo. Fondo blanco (ver
+            ajustes-customer-class-4-puntos.md, punto 4): alterna con el
+            beige de Customer Class arriba — antes ambas secciones eran
+            beige y se sentían pegadas/mezcladas. El id="contacto" (target
+            del nav) y su scroll-mt ahora viven en CustomerClassSection, que
+            es la primera de las dos al hacer click en "Contacto" desde el
+            header. id="hablemos-de-negocios" acá es un segundo target,
+            propio de esta sección, usado por el CTA "Contactar sobre..." de
+            CustomerClassSection (ver customer-class-fixes.md, punto 4) para
+            bajar el usuario hasta el WhatsApp ya personalizado con el
+            segmento elegido arriba. */}
+        <SoftCurve position="bottom" flip />
 
-            Alto FIJO (no max-height, mismo criterio que el acordeón de
-            ProductExplorer — ver fix-altura-fija-y-mapa-personalizado.md):
-            sin esto, la tarjeta cambiaba de alto según cuántos chips de
-            "categorías que te interesan" tuviera el segmento activo (3 a 6),
-            empujando el bloque de info+mapa de abajo cada vez que se cambiaba
-            de segmento. Los valores por breakpoint salen de medir con
-            Playwright el caso más alto (más chips + textos más largos, ES y
-            EN) en cada ancho real — no son estéticos, son el peor caso
-            observado + ~30-40px de margen. Al no cambiar el layout entre
-            breakpoints de Tailwind, el alto requerido solo se achica en
-            escalones (más ancho → más chips por fila → menos filas), por eso
-            son 5 tramos en vez de uno solo: un único valor fijo para todo el
-            rango tendría que ser el del caso más angosto (320px, ~1200px de
-            alto) y dejaría un espacio vacío enorme en desktop.
-            overflow-hidden es red de seguridad: con el margen ya puesto no
-            debería recortar nada real, solo evita que un texto más largo
-            de lo medido rompa el layout en vez de solo perder un poco de
-            aire libre abajo. */}
-        <div
-          className="mt-12 h-[1240px] overflow-hidden rounded-[28px] border bg-white p-7 sm:h-[915px] sm:p-10 md:h-[725px] lg:h-[660px] xl:h-[600px]"
-          style={{ borderColor: "#D8E1EC", boxShadow: "0 20px 60px rgba(16,37,63,0.10)" }}
-        >
-          <BusinessSegments
-            activeKey={activeSegmentKey}
-            onSelect={setActiveSegmentKey}
-            onSelectCategory={handleSelectCategory}
-          />
-        </div>
-
-        {catalogFamily && (
-          <ProductCatalogModal
-            family={catalogFamily}
-            allFamilies={families}
-            initialCategoryId={catalogCategoryId}
-            onClose={closeCatalog}
-          />
-        )}
-
-        {/* ---------- Paso 2: info de contacto + mapa ---------- */}
-        <div className="mt-16 grid min-w-0 gap-[22px] lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
-          {/* Info */}
-          <Reveal
-            className="flex min-w-0 flex-col bg-white p-[26px] sm:p-[28px]"
-            style={{
-              borderRadius: "20px",
-              border: "1px solid #D8E1EC",
-              boxShadow: "0 16px 50px rgba(16,37,63,0.10)",
-            }}
-          >
-            <InfoRow icon={MapPin} title={t("sedeTitle")}>
-              {site.address.line1}
-              <br />
-              {site.address.line2} · CP {site.address.postalCode}
-            </InfoRow>
-            <InfoRow icon={Phone} title={t("telefonoTitle")}>
-              <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
-                {site.phone}
-              </a>{" "}
-              · {site.phonesExtra.join(" · ")}
-            </InfoRow>
-            <InfoRow icon={Mail} title={t("correosTitle")}>
-              <a
-                href={`mailto:${site.emails.comunicaciones}`}
-                className="transition hover:text-[#075FD8]"
-              >
-                {site.emails.comunicaciones}
-              </a>
-              <br />
-              <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
-                {site.emails.rh}
-              </a>{" "}
-              {t("correosRh")}
-            </InfoRow>
-            <InfoRow icon={Clock} title={t("horarioTitle")} last>
-              {t("horarioWeekdays")}
-              <br />
-              {t("horarioSaturday")}
-            </InfoRow>
+        <Container className="relative z-10">
+          {/* ---------- Encabezado único de la sección ---------- */}
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <span
+              className="inline-flex items-center gap-3 text-[13px] font-semibold uppercase"
+              style={{ letterSpacing: "0.22em", color: "#075FD8" }}
+            >
+              <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
+              {t("eyebrow")}
+              <span className="h-px w-6" style={{ background: "rgba(7,95,216,0.5)" }} />
+            </span>
+            <h2
+              className="mt-5 font-display text-corp-ink"
+              style={{ fontSize: "clamp(36px, 4vw, 56px)", lineHeight: 1.05, fontWeight: 600, letterSpacing: "-0.02em" }}
+            >
+              {t("title")}
+            </h2>
+            <p
+              className="mx-auto mt-4 max-w-[700px] text-[15px] leading-[1.55] md:text-[16px]"
+              style={{ color: "#3A4A5F" }}
+            >
+              {t("paragraph")}
+            </p>
           </Reveal>
 
-          {/* Mapa: marco y sombra reforzados (azul de marca #0C447C, 2.5px)
-              para que se despegue del fondo beige, en el que antes se
-              camuflaba con un borde gris casi imperceptible. */}
+          {/* ---------- Tarjeta única, dos columnas (NO panel navy) ----------
+              Réplica exacta de la referencia (ver
+              rediseno-exacto-hablemos-de-negocios.md) — reemplaza por
+              completo el panel navy del rediseño anterior
+              (rediseno-contacto-y-mapa.md), que no convenció. Fondo claro
+              crema (mismo tono que Customer Class), columna de info ~40% a
+              la izquierda, mapa ~60% a la derecha ocupando toda la altura
+              (esquinas redondeadas solo del lado derecho, heredadas del
+              rounded-[30px] + overflow-hidden del contenedor único). */}
           <Reveal
-            delay={0.1}
-            className="group relative min-h-[420px] w-full min-w-0 overflow-hidden lg:min-h-0"
-            style={{
-              borderRadius: "20px",
-              border: "2.5px solid #0C447C",
-              boxShadow: "0 28px 60px rgba(12,68,124,0.22), 0 10px 24px rgba(16,37,63,0.16)",
-            }}
+            className="relative mx-auto mt-14 max-w-[1380px] overflow-hidden rounded-[30px]"
+            style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
           >
-            <div ref={mapHostRef} className="relative h-full min-h-[420px] w-full bg-[#F6F1E6] lg:min-h-0">
-              {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-[#F6F1E6]" />}
-              {/* Viñeta sutil para que el marco se sienta intencional aun si
-                  el mapa todavía está cargando teselas — aclarada a juego
-                  con el mapa claro (antes oscurecía bordes sobre un mapa
-                  dark). */}
-              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_50px_16px_rgba(16,37,63,0.12)]" />
-
-              {/* Tarjeta flotante superpuesta: en la esquina inferior
-                  izquierda, lejos del pin (centrado en el mapa) y de los
-                  controles de zoom (arriba a la derecha), para que el pin
-                  respire sin competir con otro elemento azul fuerte. */}
-              <div
-                className="absolute bottom-4 left-4 max-w-[280px] bg-white p-4"
-                style={{
-                  borderRadius: "12px",
-                  boxShadow: "0 14px 30px -10px rgba(0,0,0,0.35)",
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0" style={{ color: "#12233f" }} />
-                  <p className="text-[13px] font-bold" style={{ color: "#12233f", letterSpacing: "0.02em" }}>
-                    {t("mapCardTitle")}
+            <div className="grid grid-cols-1 lg:min-h-[520px] lg:grid-cols-[2fr_3fr]">
+              {/* Columna izquierda (~40%) */}
+              <div className="relative flex flex-col gap-8 p-8 sm:p-10 md:p-12">
+                <div>
+                  <span
+                    className="text-[12px] font-bold uppercase"
+                    style={{ letterSpacing: "0.18em", color: NAVY }}
+                  >
+                    {t("infoEyebrow")}
+                  </span>
+                  <h3
+                    className="mt-3 font-display"
+                    style={{ fontSize: "clamp(24px, 2.4vw, 32px)", lineHeight: 1.2, fontWeight: 700, color: NAVY }}
+                  >
+                    {t("infoTitle")}
+                  </h3>
+                  <p className="mt-3 text-[15px] leading-[1.6]" style={{ color: "#5C6B7D" }}>
+                    {t("infoDescription")}
                   </p>
                 </div>
-                <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: "rgba(18,35,63,0.65)" }}>
-                  {site.address.line1}
-                </p>
-                <div className="mt-3">
-                  <DirectionsMenu lat={site.address.lat} lng={site.address.lng} />
+
+                <div>
+                  <InfoRow icon={MapPin} title={t("sedeTitle")}>
+                    {site.address.line1}
+                    <br />
+                    {site.address.line2} · CP {site.address.postalCode}
+                  </InfoRow>
+                  <InfoRow icon={Phone} title={t("telefonoTitle")}>
+                    <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
+                      {site.phone}
+                    </a>
+                  </InfoRow>
+                  <InfoRow icon={Mail} title={t("correosTitle")}>
+                    <a href={`mailto:${site.emails.comunicaciones}`} className="transition hover:text-[#075FD8]">
+                      {site.emails.comunicaciones}
+                    </a>
+                    <br />
+                    <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
+                      {site.emails.rh}
+                    </a>{" "}
+                    {t("correosRh")}
+                  </InfoRow>
+                  <InfoRow icon={Clock} title={t("horarioTitle")} last>
+                    {t("horarioWeekdays")}
+                    <br />
+                    {t("horarioSaturday")}
+                  </InfoRow>
+                </div>
+
+                {/* Dos botones en fila: WhatsApp sólido navy, Llamar ahora
+                    con borde navy — ambos tipo píldora. */}
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <motion.a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    whileTap={{ scale: 0.97 }}
+                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
+                    style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
+                  >
+                    <WhatsAppIcon className="h-[18px] w-[18px]" />
+                    {t("whatsappCta")}
+                  </motion.a>
+                  <motion.a
+                    href={site.phoneHref}
+                    whileTap={{ scale: 0.97 }}
+                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)]"
+                    style={{ border: `1.5px solid ${NAVY}`, color: NAVY }}
+                  >
+                    <Phone className="h-4 w-4" />
+                    {t("callCta")}
+                  </motion.a>
+                </div>
+              </div>
+
+              {/* Columna derecha (~60%): mapa a pantalla completa, sin marco
+                  propio — el corte lo da el rounded-[30px] del contenedor
+                  único que lo envuelve. */}
+              <div className="relative min-h-[360px] lg:min-h-0">
+                <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
+                  {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
+                  {/* Viñeta sutil para que el marco se sienta intencional aun si
+                      el mapa todavía está cargando teselas. */}
+                  <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
+
+                  {/* Tarjeta flotante compacta (ver
+                      rediseno-exacto-hablemos-de-negocios.md, punto 6): en
+                      vez del botón "Cómo llegar" con menú Google Maps/Waze,
+                      ahora un link de texto directo a Google Maps. */}
+                  <div
+                    className="absolute bottom-4 left-4 max-w-[240px] bg-white p-3.5"
+                    style={{ borderRadius: "14px", boxShadow: "0 10px 24px -6px rgba(0,0,0,0.2)" }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: NAVY }} />
+                      <p className="text-[12.5px] font-bold" style={{ color: NAVY, letterSpacing: "0.01em" }}>
+                        {t("mapCardTitle")}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-[11.5px] leading-snug" style={{ color: "#5C6B7D" }}>
+                      {site.address.line1}
+                    </p>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${site.address.lat},${site.address.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold transition hover:gap-1.5"
+                      style={{ color: NAVY }}
+                    >
+                      {t("openInGoogleMaps")}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
           </Reveal>
-        </div>
-
-        {/* ---------- Paso 3: un solo CTA de cierre, contextualizado con el
-            segmento elegido arriba ---------- */}
-        <Reveal className="mx-auto mt-14 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <motion.a
-            href={whatsappHref}
-            target="_blank"
-            rel="noreferrer"
-            whileTap={{ scale: 0.97 }}
-            className="inline-flex h-[50px] w-full items-center justify-center gap-2.5 px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-auto"
-            style={{
-              borderRadius: "10px",
-              background: "#075FD8",
-              boxShadow: "0 6px 18px rgba(7,95,216,0.30)",
-            }}
-          >
-            <WhatsAppIcon className="h-[18px] w-[18px]" />
-            {t("whatsappCta")}
-          </motion.a>
-          <motion.a
-            href={site.phoneHref}
-            whileTap={{ scale: 0.97 }}
-            className="inline-flex h-[50px] w-full items-center justify-center gap-2.5 px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 sm:w-auto"
-            style={{
-              borderRadius: "10px",
-              border: "1px solid rgba(7,95,216,0.5)",
-              color: "#082B5C",
-              background: "#ffffff",
-            }}
-          >
-            <Phone className="h-4 w-4" style={{ color: "#075FD8" }} />
-            {t("callCta")}
-          </motion.a>
-        </Reveal>
-      </Container>
-    </section>
+        </Container>
+      </section>
+    </>
   );
 }
 
@@ -455,28 +332,21 @@ function InfoRow({
   last?: boolean;
 }) {
   return (
-    <div className="flex gap-3.5">
+    <div className="flex gap-4">
       <span
-        className="flex h-[58px] w-[58px] shrink-0 items-center justify-center"
-        style={{
-          borderRadius: "12px",
-          background: "rgba(7,95,216,0.05)",
-          border: "1px solid rgba(7,95,216,0.16)",
-        }}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white"
+        style={{ border: "1px solid rgba(11,47,99,0.08)" }}
       >
-        <Icon className="h-6 w-6" style={{ color: "#075FD8" }} />
+        <Icon className="h-5 w-5" style={{ color: NAVY }} />
       </span>
       <div
-        className={`min-w-0 flex-1 pb-4 ${!last ? "border-b" : ""}`}
-        style={!last ? { borderColor: "rgba(15,40,75,0.11)" } : undefined}
+        className={cn("min-w-0 flex-1 py-3.5", !last && "border-b")}
+        style={!last ? { borderColor: "rgba(11,47,99,0.14)" } : undefined}
       >
-        <p
-          className="text-[13px] font-bold"
-          style={{ letterSpacing: "0.04em", color: "#075FD8" }}
-        >
-          {title.toUpperCase()}
+        <p className="text-[11.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
+          {title}
         </p>
-        <p className="mt-1 break-words text-[14px] leading-[1.55]" style={{ color: "#0c1a26" }}>
+        <p className="mt-1 break-words text-[14px] leading-[1.55]" style={{ color: "#3A4A5F" }}>
           {children}
         </p>
       </div>

@@ -54,13 +54,15 @@ export default function BrandsSection() {
   }, [muralKey, reduceMotion]);
 
   return (
-    <section id="marcas" className="relative overflow-hidden scroll-mt-20 bg-white pb-[48px] pt-[40px] sm:pb-[64px] sm:pt-[56px]">
+    <section id="marcas" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[112px] sm:pb-[64px] sm:pt-[120px]">
       {/* Seam de salida hacia Contacto. La entrada (Productos → Marcas) la
           marca la curva inferior de ProductsSection, no se duplica acá. */}
       <SoftCurve position="bottom" flip />
 
       <Container className="relative">
-        <Reveal className="text-center">
+        {/* y={0}: título de la sección navegable (#marcas), ver
+            fix-padding-secciones-raiz.md — mismo motivo que en LogisticsTimeline. */}
+        <Reveal y={0} className="text-center">
           <h2
             className="font-display text-corp-ink"
             style={{ fontSize: "clamp(30px, 3.2vw, 44px)", fontWeight: 600, letterSpacing: "-0.01em", lineHeight: 1.1 }}

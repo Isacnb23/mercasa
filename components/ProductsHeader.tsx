@@ -22,7 +22,9 @@ export default function ProductsHeader() {
 
   return (
     <>
-      <Reveal className="mx-auto max-w-[640px] text-center">
+      {/* y={0}: título de la sección navegable (#productos), ver
+          fix-padding-secciones-raiz.md — mismo motivo que en LogisticsTimeline. */}
+      <Reveal y={0} className="mx-auto max-w-[640px] text-center">
         <h2
           className="font-display text-corp-ink"
           style={{

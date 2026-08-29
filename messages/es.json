@@ -303,9 +303,16 @@
       "hogar-institucional": { "label": "Limpieza del hogar e institucional" }
     }
   },
+  "CustomerClass": {
+    "eyebrow": "Soluciones por tipo de cliente",
+    "title": "Customer Class",
+    "subtitle": "Entendemos las necesidades de cada negocio y creamos soluciones a su medida.",
+    "categoriesLabel": "Categorías disponibles",
+    "exploreCta": "Explorar productos",
+    "contactCta": "Contactar sobre {segment}",
+    "photoAlt": "Abastecimiento de Mercasa para {segment}"
+  },
   "Contact": {
-    "segmentsSelectorLabel": "Customer class",
-    "segmentsCategoriesLabel": "Categorías que te interesan",
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",
     "segmentCategories": {
       "alimentos": { "label": "Alimentos" },
@@ -313,12 +320,14 @@
       "cuidado-del-bebe": { "label": "Cuidado del Bebé" },
       "higiene-personal": { "label": "Higiene Personal" },
       "limpieza-del-hogar": { "label": "Limpieza del hogar" },
-      "institucional": { "label": "Institucional" }
+      "institucional": { "label": "Sector Público" }
     },
     "segments": {
       "supermercados": {
         "label": "Supermercados y cadenas",
         "valuePhrase": "Un solo proveedor para todo tu surtido: del anaquel de despensa al de limpieza.",
+        "title": "Todo lo que tu negocio necesita, en un solo proveedor.",
+        "description": "Abastecimiento completo y constante para que tus operaciones nunca se detengan. Productos de calidad, marcas confiables y entregas puntuales en todo Costa Rica.",
         "whatsappNoun": "un supermercado"
       },
       "hoteleria": {
@@ -342,7 +351,7 @@
         "whatsappNoun": "una panadería"
       },
       "instituciones": {
-        "label": "Instituciones",
+        "label": "Sector Público",
         "valuePhrase": "Abastecimiento institucional confiable, en el volumen que tu operación exige.",
         "whatsappNoun": "una institución"
       },
@@ -355,6 +364,9 @@
     "eyebrow": "Contacto",
     "title": "Hablemos de negocios",
     "paragraph": "Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o escríbanos directamente — atendemos proveedores internacionales y clientes locales.",
+    "infoEyebrow": "Información de contacto",
+    "infoTitle": "Estamos cerca de vos",
+    "infoDescription": "Contactanos o visitá nuestro CEDI en El Guarco.",
     "sedeTitle": "Sede central (CEDI)",
     "telefonoTitle": "Teléfono central",
     "correosTitle": "Correos oficiales",
@@ -364,10 +376,8 @@
     "horarioSaturday": "Sábados: 8:00 a.m. – 12:00 m.d.",
     "whatsappCta": "Escríbanos por WhatsApp",
     "callCta": "Llamar ahora",
-    "mapCardTitle": "CEDI - El Guarco",
-    "directionsCta": "Cómo llegar",
-    "openInGoogleMaps": "Abrir en Google Maps",
-    "openInWaze": "Abrir en Waze"
+    "mapCardTitle": "CEDI · El Guarco",
+    "openInGoogleMaps": "Abrir en Google Maps"
   },
   "ContactMap": {
     "iframeTitle": "Ubicación de Mercasa en El Guarco, Cartago"

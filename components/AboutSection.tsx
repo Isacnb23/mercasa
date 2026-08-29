@@ -101,7 +101,7 @@ export default function AboutSection() {
   return (
     <section
       id="nosotros"
-      className="relative scroll-mt-20 overflow-hidden pb-16 pt-16 md:pb-20 md:pt-20"
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-16 md:pb-20 md:pt-20"
       style={{ background: "#F7F3EB" }}
     >
       <Container className="relative z-10">
@@ -111,9 +111,11 @@ export default function AboutSection() {
           <div>
             <Eyebrow>{t("eyebrow")}</Eyebrow>
 
+            {/* y quitado (antes 22): este es el título de la sección
+                navegable (#nosotros) — ver fix-padding-secciones-raiz.md. */}
             <motion.h2
-              initial={{ opacity: 0, y: 22 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: false, margin: "-60px" }}
               transition={{ duration: 0.6, delay: 0.1, ease: EASE_CORP }}
               className="mt-6 font-display text-corp-ink"

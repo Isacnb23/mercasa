@@ -19,22 +19,32 @@ export default function Home() {
       {/* </div> */}
       <main className="relative" style={{ zIndex: 10 }}>
         <Hero />
-        <SectionReveal z={20}>
+        {/* variant="fade" (sin slide-up) en las 6 secciones con id navegable:
+            el variant="lift" por defecto anima un `transform: translateY(36px)`
+            en el wrapper que envuelve a la sección, y ese transform todavía no
+            se resolvió cuando Lenis calcula el destino del scroll en el click
+            del navbar (si la sección nunca entró a pantalla). El salto que eso
+            genera al terminar el reveal (~37-47px) variaba según el historial
+            de scroll del usuario y rompía el scroll-margin-top calibrado — ver
+            fix-padding-secciones-raiz.md. Con fade no hay transform de
+            posición, así que el punto de scroll calculado por Lenis siempre
+            coincide con el punto final de reposo. */}
+        <SectionReveal variant="fade" z={20}>
           <AboutSection />
         </SectionReveal>
-        <SectionReveal z={30}>
+        <SectionReveal variant="fade" z={30}>
           <LogisticsTimeline />
         </SectionReveal>
-        <SectionReveal z={32}>
+        <SectionReveal variant="fade" z={32}>
           <CollaboratorsSection />
         </SectionReveal>
-        <SectionReveal z={35}>
+        <SectionReveal variant="fade" z={35}>
           <ProductsSection />
         </SectionReveal>
-        <SectionReveal z={40}>
+        <SectionReveal variant="fade" z={40}>
           <BrandsSection />
         </SectionReveal>
-        <SectionReveal z={50}>
+        <SectionReveal variant="fade" z={50}>
           {/* Suspense con la propia ContactSection (families=[]) como
               fallback: el resto de la sección (dirección, mapa, WhatsApp)
               no depende de esta data, así que se ve y funciona igual desde

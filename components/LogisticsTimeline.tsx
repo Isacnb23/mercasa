@@ -33,7 +33,7 @@ export default function LogisticsTimeline() {
   return (
     <section
       id="logistica"
-      className="relative overflow-hidden scroll-mt-20 pb-16 pt-24 md:pb-20 md:pt-32"
+      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-24 md:pb-20 md:pt-32"
       style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F7F3EB 100%)" }}
     >
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de
@@ -44,7 +44,11 @@ export default function LogisticsTimeline() {
       <Container className="relative z-10">
         {/* ---------- Bloque superior: editorial + collage ---------- */}
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[425px_minmax(0,1fr)] lg:gap-[70px]">
-          <Reveal>
+          {/* y={0}: este bloque tiene el título navegable (#logistica) — un
+              transform de posición todavía sin resolver en el click del
+              navbar hacía que el título terminara más abajo de lo calculado
+              por Lenis (ver fix-padding-secciones-raiz.md). */}
+          <Reveal y={0}>
             <div className="flex items-center gap-4">
               <span
                 className="whitespace-nowrap text-[13px] font-bold uppercase text-corp-blue"

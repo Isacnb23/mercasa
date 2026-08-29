@@ -8,11 +8,11 @@ export const site = {
   name: "Mercasa",
   parentCompany: "Grupo Inteca",
   foundedYear: 1963, // año de fundación de MERCASA (no de Grupo Inteca)
-  phone: "+506 2217-3600",
-  phoneHref: "tel:+50622173600",
-  phonesExtra: ["2217-3818", "2217-3778"],
+  phone: "+506 7071-3042",
+  phoneHref: "tel:+50670713042",
+  // phonesExtra: ["2217-3818", "2217-3778"],
   emails: {
-    comunicaciones: "comunicaciones.mercasa@grupointeca.com",
+    comunicaciones: "servicio_al_cliente@grupointeca.com",
     rh: "reclutamiento@grupointeca.com",
   },
   address: {
@@ -29,7 +29,7 @@ export const site = {
     lat: 9.84671923526572,
     lng: -83.9500356896771,
   },
-  whatsappHref: "https://wa.me/50622173600",
+  whatsappHref: "https://wa.me/50670713042",
   facebook: "https://www.facebook.com/mercasacr/",
   // AJUSTAR: Mercasa todavía no tiene estas cuentas activas — se deja el
   // botón listo en el footer, pero el link queda vacío ("#") a propósito
@@ -177,29 +177,38 @@ export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "co
 // puntual ("cuidado-del-bebe", "higiene-personal" -> Familia "Cuidado
 // Personal"; "limpieza-del-hogar", "institucional" -> Familia "Cuidado del
 // Hogar") — mismo esquema de slug que usa el árbol real de
-// lib/mercasavip-catalog.ts, resuelto en ContactSection.tsx (CHIP_TARGETS)
-// contra los datos reales de MercasaVIP. Antes esto usaba 4 etiquetas
-// compuestas ("bebe-cuidado", "hogar-institucional") que NO correspondían a
-// ninguna Familia/Sub-familia real 1 a 1 — divididas en sus componentes
-// reales. Los labels viven en Contact.segmentCategories.<key> (ya no en
-// Brands.categories, que sigue siendo exclusivo del filtro del muro de
-// marcas — no se toca acá).
+// lib/mercasavip-catalog.ts, resuelto en CustomerClassSection.tsx
+// (CHIP_TARGETS) contra los datos reales de MercasaVIP. Antes esto usaba 4
+// etiquetas compuestas ("bebe-cuidado", "hogar-institucional") que NO
+// correspondían a ninguna Familia/Sub-familia real 1 a 1 — divididas en sus
+// componentes reales. Los labels viven en Contact.segmentCategories.<key>
+// (ya no en Brands.categories, que sigue siendo exclusivo del filtro del
+// muro de marcas — no se toca acá).
+//
+// `image`: foto de fondo de la columna izquierda del panel (ver
+// rediseno-customer-class-spec-completo.md). Fotos reales de cada segmento,
+// una por una, en `public/customer-class/` (ver fix-path-fotos-y-curva-
+// otra-vez.md — la carpeta real tenía un typo, "custumer-class", corregido
+// acá; el nombre de archivo de "restaurantes" trae un espacio literal).
+
 export const businessSegments = [
   {
     key: "supermercados",
     icon: "store",
-    categories: [
-      "alimentos",
-      "cuidado-del-bebe",
-      "higiene-personal",
-      "limpieza-del-hogar",
-      "institucional",
-      "bebidas",
-    ],
+    image: "/customer-class/supermercados-cadenas.png",
+    // Único segmento con copy detallado propio en el spec (título +
+    // descripción distintos del valuePhrase corto de los otros 6 — ver
+    // rediseno-customer-class-spec-completo.md). Categorías tal cual las
+    // enumera el spec para este segmento (5, sin "cuidado-del-bebe": ese
+    // recorte es intencional del mockup, no un olvido).
+    detailedCopy: true,
+    categories: ["alimentos", "bebidas", "higiene-personal", "limpieza-del-hogar", "institucional"],
   },
   {
     key: "hoteleria",
     icon: "hotel",
+    image: "/customer-class/hotelería-turismo.png",
+    detailedCopy: false,
     categories: [
       "cuidado-del-bebe",
       "higiene-personal",
@@ -212,26 +221,36 @@ export const businessSegments = [
   {
     key: "restaurantes",
     icon: "chef-hat",
+    image: "/customer-class/restaurantes-food service.png",
+    detailedCopy: false,
     categories: ["alimentos", "limpieza-del-hogar", "institucional", "bebidas"],
   },
   {
     key: "comercio-local",
     icon: "shopping-bag",
+    image: "/customer-class/comercio-local-pulperías.png",
+    detailedCopy: false,
     categories: ["alimentos", "bebidas", "limpieza-del-hogar", "institucional"],
   },
   {
     key: "panaderias",
     icon: "cookie",
+    image: "/customer-class/panaderias.png",
+    detailedCopy: false,
     categories: ["alimentos", "limpieza-del-hogar", "institucional"],
   },
   {
     key: "instituciones",
     icon: "building",
+    image: "/customer-class/sector-público.png",
+    detailedCopy: false,
     categories: ["limpieza-del-hogar", "institucional", "cuidado-del-bebe", "higiene-personal", "alimentos"],
   },
   {
     key: "retail",
     icon: "shopping-cart",
+    image: "/customer-class/retail-tiendas-de-conveniencia.png",
+    detailedCopy: false,
     categories: ["alimentos", "bebidas", "cuidado-del-bebe", "higiene-personal"],
   },
 ];

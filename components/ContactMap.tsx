@@ -23,15 +23,27 @@ import { site } from "@/lib/data";
 maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
 /**
- * Mapa de fondo para la sección de Contacto: vista plana (top-down, sin tilt
- * ni rotación) para que se lea al instante como "aquí está la bodega", no
- * como un render abstracto. Usa OpenFreeMap (estilo "liberty", ver
- * ajuste-customer-class-y-mapa.md) vía MapLibre GL — sin API key ni
- * facturación. Antes usaba "positron" (deliberadamente pálido/monocromático,
- * pensado para overlays de datos) — se veía "lavado" y se confundía con el
- * fondo beige de la página; "liberty" trae colores reales de fábrica (agua
- * azul, parques verdes, calles con jerarquía) sin necesidad de repintar casi
- * nada.
+ * Mapa de fondo para la sección de Contacto: usa OpenFreeMap, estilo
+ * "positron" (ver rediseno-exacto-hablemos-de-negocios.md). Historia de
+ * este valor, va y viene:
+ * - Originalmente "positron" — se descartó por "lavado"/muy monocromático.
+ * - Se pasó a "liberty" con paleta institucional (navy/beige, ver
+ *   fix-altura-fija-y-mapa-personalizado.md) y después a colores tipo
+ *   Google Maps (ver rediseno-contacto-y-mapa.md).
+ * - Ahora la referencia exacta que Isaac compartió pide justo lo que antes
+ *   se había descartado: un mapa pálido/casi monocromático, estilo "reporte
+ *   editorial" — así que se vuelve a "positron" a propósito. Sus valores de
+ *   fábrica (fondo rgb(242,243,240), agua/parques/edificios en grises muy
+ *   claros, casing de autopista gris claro sin color saturado, labels en
+ *   #666 con halo blanco) YA SON exactamente la paleta pedida — no hace
+ *   falta repintar nada acá, a diferencia de los estilos anteriores.
+ *
+ * pitch 0 (antes 45°, ver fix-mapa-relieve.md): ese pitch existía solo para
+ * que se notara el relieve de la capa `building-3d` (fill-extrusion) de
+ * "liberty" — "positron" no tiene esa capa (edificios son un fill 2D plano,
+ * sin altura), así que un pitch inclinado acá no revelaría relieve alguno,
+ * solo inclinaría un plano vacío. La referencia además es explícitamente
+ * una vista plana de arriba, tipo mapa impreso — pitch 0 es lo correcto acá.
  *
  * El único marcador y su info viven en la card flotante de ContactSection
  * (no hay popup nativo de MapLibre acá): dos tarjetas mostrando lo mismo se
@@ -66,13 +78,12 @@ export default function ContactMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
+      style: "https://tiles.openfreemap.org/styles/positron",
       center: [site.address.lng, site.address.lat],
-      // Vista plana: zoom 17 deja el CEDI como protagonista, con la vía de
-      // acceso y las cuadras inmediatas a su alrededor, sin el ruido de
-      // calles lejanas que aparecía a zoom 15; pitch/bearing en 0 para que
-      // se lea como un mapa de ubicación normal, orientado al norte, no
-      // como un render 3D.
+      // zoom 17 deja el CEDI como protagonista, con la vía de acceso y las
+      // cuadras inmediatas a su alrededor, sin el ruido de calles lejanas que
+      // aparecía a zoom 15. pitch/bearing en 0 (ver comentario arriba): vista
+      // plana de arriba, orientada al norte, tipo mapa impreso.
       zoom: 17,
       pitch: 0,
       bearing: 0,
@@ -91,81 +102,44 @@ export default function ContactMap() {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    // "liberty" ya trae colores reales de fábrica (agua rgb(158,189,255),
-    // parques/landcover en verde, casing de calles en naranja tipo mapa de
-    // carretera) que se leen bien de entrada, pero para que el mapa se
-    // sienta "de Mercasa" y no un OSM genérico insertado sin tratamiento de
-    // marca (ver fix-altura-fija-y-mapa-personalizado.md), se repinta la
-    // paleta completa hacia los tonos institucionales (navy/beige/verde
-    // apagado) en vez de solo el casing de calles. Layer IDs confirmados vía
-    // GET https://tiles.openfreemap.org/styles/liberty (111 layers, base
-    // completamente distinta a "positron": el casing ya no se llama
-    // "highway_major_casing"/"highway_motorway_casing" sino
-    // "road_trunk_primary_casing"/"road_motorway_casing").
-    map.on("style.load", () => {
-      // setPaintProperty exige el nombre de capa en pantalla (getLayer) antes
-      // de tocarla, por si el estilo remoto la renombró o quitó.
-      const setLineColor = (layerId: string, color: string) => {
-        if (map.getLayer(layerId)) map.setPaintProperty(layerId, "line-color", color);
-      };
-      const setFillColor = (layerId: string, color: string) => {
-        if (map.getLayer(layerId)) map.setPaintProperty(layerId, "fill-color", color);
-      };
-
-      if (map.getLayer("background")) {
-        map.setPaintProperty("background", "background-color", "#F6F1E6");
-      }
-
-      // Agua: de fábrica un celeste pastel genérico (rgb(158,189,255)) — se
-      // acerca al azul institucional sin perder lectura como agua real.
-      setFillColor("water", "#7FA3D1");
-
-      // Parques/vegetación: de fábrica un verde brillante de mapa turístico
-      // — se apaga hacia un verde institucional grisáceo, a juego con el
-      // resto de la paleta desaturada del sitio.
-      setFillColor("park", "#C7D3BC");
-      setFillColor("landcover_wood", "#B9C9AC");
-      setFillColor("landcover_grass", "#C3D2B5");
-
-      // Edificios: de fábrica un gris cálido neutro — se corre hacia el
-      // mismo beige de marca que el fondo de la sección, para que se sientan
-      // parte del mismo mundo visual en vez de "grises de OSM".
-      setFillColor("building", "#E4D9C2");
-      if (map.getLayer("building-3d")) {
-        map.setPaintProperty("building-3d", "fill-extrusion-color", "#E4D9C2");
-      }
-
-      setLineColor("road_motorway_casing", "rgba(12,68,124,0.32)");
-      setLineColor("road_trunk_primary_casing", "rgba(12,68,124,0.26)");
-
-      // Etiquetas de calles residenciales/de servicio (Avenida 48, Calle 58,
-      // etc.) solo generan ruido a esta escala y hacen que el CEDI se pierda
-      // entre nombres de vías secundarias — se ocultan, dejando visibles
-      // solo las etiquetas de vías principales ("highway-name-major", mismo
-      // ID en liberty).
-      if (map.getLayer("highway-name-minor")) {
-        map.setLayoutProperty("highway-name-minor", "visibility", "none");
-      }
-    });
+    // Sin repintar nada acá a propósito (ver rediseno-exacto-hablemos-de-
+    // negocios.md): la paleta de fábrica de "positron" (fondo gris muy claro,
+    // agua/parques/edificios en grises pálidos, casing de autopista gris
+    // claro, labels chicos en #666) YA ES la paleta pálida/editorial pedida.
+    // Los fixes anteriores necesitaban repintar porque el estilo base
+    // ("liberty") traía colores vivos — acá sería trabajo de más, y el
+    // riesgo de no matchear "exacto" es mayor que dejarlo tal cual viene.
+    // Layer IDs confirmados vía GET
+    // https://tiles.openfreemap.org/styles/positron (55 layers — nombres de
+    // casing "highway_major_casing"/"highway_motorway_casing", distintos de
+    // los "road_..._casing" de "liberty").
 
     map.on("load", () => {
       loaded = true;
       window.clearTimeout(failSafeTimer);
 
-      // Marcador del CEDI: imagen de marca (gota azul con isotipo, ver
-      // globals.css para el detalle de por qué el contenedor mide 51px con
-      // una imagen de 56px) y halo pulsante detrás. Sin popup propio: la
-      // card flotante de ContactSection ya muestra el nombre y el botón
-      // "Cómo llegar" — un popup nativo acá encima duplicaba esa info y
-      // tapaba el pin.
+      // Marcador del CEDI: círculo navy sólido con ícono de ubicación blanco
+      // y una colita triangular abajo apuntando al punto exacto (ver
+      // rediseno-exacto-hablemos-de-negocios.md — reemplaza la gota/pin
+      // clásico anterior, ver globals.css .mercasa-map-pin__circle/__tail
+      // para las medidas). Halo pulsante detrás, anclado en la punta de la
+      // colita. Sin popup propio: la card flotante de ContactSection ya
+      // muestra el nombre y el link "Abrir en Google Maps" — un popup nativo
+      // acá encima duplicaba esa info y tapaba el marcador.
       const el = document.createElement("div");
       el.className = "mercasa-map-pin";
       el.innerHTML = `
         <span class="mercasa-map-pin__pulse"></span>
-        <img class="mercasa-map-pin__img" src="/brand/Mapa/pin-mapa-sin-fondo.png" alt="" draggable="false" />
+        <span class="mercasa-map-pin__circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </span>
+        <span class="mercasa-map-pin__tail"></span>
       `;
-      // anchor "bottom": la punta de la gota (no su centro visual) es la que
-      // debe caer exactamente sobre la coordenada del CEDI.
+      // anchor "bottom": la punta de la colita (no el centro del círculo) es
+      // la que debe caer exactamente sobre la coordenada del CEDI.
       new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([site.address.lng, site.address.lat])
         .addTo(map);

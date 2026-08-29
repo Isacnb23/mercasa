@@ -235,19 +235,17 @@ body {
   filter: none;
 }
 
-/* Pin del CEDI: imagen PNG de marca (gota azul con isotipo, fondo
-   transparente — public/brand/Mapa/pin-mapa-sin-fondo.png). El archivo
-   fuente tiene ~8.5% de relleno transparente debajo de la punta real de la
-   gota (medido: 1536px de alto, la forma visible termina en el pixel 1404),
-   así que el contenedor se achica esa misma proporción respecto a la altura
-   de la imagen — la punta real queda exactamente en el borde inferior del
-   contenedor, que es el punto que ancla la coordenada (anchor:"bottom" en
-   el JS), en vez de dejar la gota "flotando" unos px arriba de la ubicación
-   real. El halo pulsante sigue detrás, centrado en ese mismo borde. */
+/* Marcador del CEDI: círculo navy con colita triangular (ver
+   rediseno-exacto-hablemos-de-negocios.md — reemplaza la gota/pin clásico
+   anterior, que usaba public/brand/Mapa/pin-mapa-sin-fondo.png). El
+   contenedor apila círculo (arriba) + colita (abajo); anchor:"bottom" en el
+   JS ancla la PUNTA de la colita (no el centro del círculo) sobre la
+   coordenada real. El halo pulsante queda detrás, centrado en esa misma
+   punta. */
 .mercasa-map-pin {
   position: relative;
-  width: 38px;
-  height: 51px; /* 56px de imagen − 8.5% de relleno transparente inferior */
+  width: 44px;
+  height: 54px; /* 44px círculo + 10px colita */
 }
 .mercasa-map-pin__pulse {
   position: absolute;
@@ -261,16 +259,35 @@ body {
   background: rgba(12, 68, 124, 0.35);
   animation: mercasa-pin-pulse 2.2s ease-out infinite;
 }
-.mercasa-map-pin__img {
+.mercasa-map-pin__circle {
   position: absolute;
   left: 50%;
   top: 0;
-  height: 56px;
-  width: auto;
+  width: 44px;
+  height: 44px;
   transform: translateX(-50%);
-  filter: drop-shadow(0 6px 14px rgba(12, 68, 124, 0.4)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+  border-radius: 50%;
+  background: #0b2f63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 14px rgba(12, 68, 124, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.2);
   -webkit-user-drag: none;
   user-select: none;
+}
+.mercasa-map-pin__tail {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid #0b2f63;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.15));
 }
 @keyframes mercasa-pin-pulse {
   0% {

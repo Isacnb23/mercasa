@@ -56,13 +56,20 @@ export default function CollaboratorsSection() {
   const t = useTranslations("Collaborators");
 
   return (
-    <section id="colaboradores" className="relative overflow-hidden scroll-mt-20 bg-white pb-[48px] pt-[40px] sm:pb-[64px] sm:pt-[56px]">
+    // pt subido (72/84px, ver fix-padding-secciones-raiz.md): con
+    // scroll-mt-[-8px] la sección aterriza a ras del header (~86-96px
+    // reales) — medido en vivo, el título quedaba tapado con el pt-40/56
+    // original (el eyebrow+separación antes del h2 no alcanzaba los ~96px
+    // del header).
+    <section id="colaboradores" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[72px] sm:pb-[64px] sm:pt-[84px]">
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior
           de Logística. Acá se agrega la salida hacia Productos. */}
       <SoftCurve position="bottom" flip />
 
       <Container className="relative">
-        <Reveal className="mx-auto max-w-[640px] text-center">
+        {/* y={0}: título de la sección navegable (#colaboradores), ver
+            fix-padding-secciones-raiz.md — mismo motivo que en LogisticsTimeline. */}
+        <Reveal y={0} className="mx-auto max-w-[640px] text-center">
           <span
             className="text-[12px] font-bold uppercase text-corp-blue"
             style={{ letterSpacing: "0.16em" }}

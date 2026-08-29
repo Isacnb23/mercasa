@@ -303,9 +303,16 @@
       "hogar-institucional": { "label": "Home & institutional cleaning" }
     }
   },
+  "CustomerClass": {
+    "eyebrow": "Solutions by customer type",
+    "title": "Customer Class",
+    "subtitle": "We understand what every business needs and build solutions tailored to it.",
+    "categoriesLabel": "Available categories",
+    "exploreCta": "Explore products",
+    "contactCta": "Contact us about {segment}",
+    "photoAlt": "Mercasa supply for {segment}"
+  },
   "Contact": {
-    "segmentsSelectorLabel": "Customer class",
-    "segmentsCategoriesLabel": "Categories relevant to you",
     "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
     "segmentCategories": {
       "alimentos": { "label": "Alimentos" },
@@ -313,12 +320,14 @@
       "cuidado-del-bebe": { "label": "Cuidado del Bebé" },
       "higiene-personal": { "label": "Higiene Personal" },
       "limpieza-del-hogar": { "label": "Limpieza del hogar" },
-      "institucional": { "label": "Institucional" }
+      "institucional": { "label": "Sector Público" }
     },
     "segments": {
       "supermercados": {
         "label": "Supermarkets & chains",
         "valuePhrase": "One supplier for your entire assortment: from pantry shelves to cleaning aisles.",
+        "title": "Everything your business needs, from a single supplier.",
+        "description": "Complete, constant supply so your operations never stop. Quality products, trusted brands, and on-time deliveries across Costa Rica.",
         "whatsappNoun": "a supermarket"
       },
       "hoteleria": {
@@ -342,7 +351,7 @@
         "whatsappNoun": "a bakery"
       },
       "instituciones": {
-        "label": "Institutions",
+        "label": "Public Sector",
         "valuePhrase": "Reliable institutional supply, at the volume your operation demands.",
         "whatsappNoun": "an institution"
       },
@@ -355,6 +364,9 @@
     "eyebrow": "Contact",
     "title": "Let's talk business",
     "paragraph": "Visit us at our distribution center in El Tejar, El Guarco, Cartago, or reach out directly — we serve international suppliers and local customers alike.",
+    "infoEyebrow": "Contact information",
+    "infoTitle": "We're close to you",
+    "infoDescription": "Reach out or visit our distribution center in El Guarco.",
     "sedeTitle": "Head office (CEDI)",
     "telefonoTitle": "Main phone line",
     "correosTitle": "Official emails",
@@ -364,10 +376,8 @@
     "horarioSaturday": "Saturdays: 8:00 AM – 12:00 PM",
     "whatsappCta": "Message us on WhatsApp",
     "callCta": "Call now",
-    "mapCardTitle": "CEDI - El Guarco",
-    "directionsCta": "Get directions",
-    "openInGoogleMaps": "Open in Google Maps",
-    "openInWaze": "Open in Waze"
+    "mapCardTitle": "CEDI · El Guarco",
+    "openInGoogleMaps": "Open in Google Maps"
   },
   "ContactMap": {
     "iframeTitle": "Mercasa's location in El Guarco, Cartago"
