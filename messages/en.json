@@ -258,6 +258,9 @@
       "printFooterLocation": "Costa Rica",
       "glossaryButtonLabel": "Glossary",
       "glossaryTitle": "How to read packaging measurements",
+      "productDetailPhotoNotAvailable": "Photo not available",
+      "productDetailPackagingLabel": "Packaging",
+      "productDetailAriaLabel": "View {name} enlarged",
       "glossaryGroups": [
         {
           "title": "Per Box",
@@ -321,7 +324,7 @@
       "cuidado-del-bebe": { "label": "Cuidado del Bebé" },
       "higiene-personal": { "label": "Higiene Personal" },
       "limpieza-del-hogar": { "label": "Limpieza del hogar" },
-      "institucional": { "label": "Sector Público" }
+      "institucional": { "label": "Institucional" }
     },
     "segments": {
       "supermercados": {
@@ -367,8 +370,20 @@
     "paragraph": "Visit us at our distribution center in El Tejar, El Guarco, Cartago, or reach out directly — we serve international suppliers and local customers alike.",
     "infoEyebrow": "Contact information",
     "infoTitle": "We're close to you",
-    "infoDescription": "Reach out or visit our distribution center in El Guarco.",
-    "sedeTitle": "Head office (CEDI)",
+    "infoDescription": "Reach out or visit either of our locations.",
+    "sitesSelectorLabel": "Choose a location",
+    "sites": {
+      "cedi-central": {
+        "tabLabel": "CEDI Central",
+        "sedeTitle": "Head office (CEDI)",
+        "mapCardTitle": "CEDI · El Guarco"
+      },
+      "san-antonio": {
+        "tabLabel": "San Antonio",
+        "sedeTitle": "Grupo Inteca Offices",
+        "mapCardTitle": "Grupo Inteca · San Antonio"
+      }
+    },
     "telefonoTitle": "Main phone line",
     "correosTitle": "Official emails",
     "correosRh": "(HR)",
@@ -377,11 +392,22 @@
     "horarioSaturday": "Saturdays: 8:00 AM – 12:00 PM",
     "whatsappCta": "Message us on WhatsApp",
     "callCta": "Call now",
-    "mapCardTitle": "CEDI · El Guarco",
-    "openInGoogleMaps": "Open in Google Maps"
+    "openInGoogleMaps": "Google Maps",
+    "openInWaze": "Waze",
+    "copyLocation": "Copy location",
+    "copiedFeedback": "Copied!"
   },
   "ContactMap": {
-    "iframeTitle": "Mercasa's location in El Guarco, Cartago"
+    "sites": {
+      "cedi-central": {
+        "iframeTitle": "Mercasa's location in El Guarco, Cartago",
+        "badgeLabel": "CEDI Mercasa · El Guarco"
+      },
+      "san-antonio": {
+        "iframeTitle": "Grupo Inteca's location in San Antonio de Desamparados",
+        "badgeLabel": "Grupo Inteca · San Antonio"
+      }
+    }
   },
   "Recruitment": {
     "navLabel": "Careers",

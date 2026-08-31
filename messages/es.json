@@ -258,6 +258,9 @@
       "printFooterLocation": "Costa Rica",
       "glossaryButtonLabel": "Glosario",
       "glossaryTitle": "Cómo leer las medidas de empaque",
+      "productDetailPhotoNotAvailable": "Foto no disponible",
+      "productDetailPackagingLabel": "Empaque",
+      "productDetailAriaLabel": "Ver {name} en grande",
       "glossaryGroups": [
         {
           "title": "Por Caja",
@@ -321,14 +324,14 @@
       "cuidado-del-bebe": { "label": "Cuidado del Bebé" },
       "higiene-personal": { "label": "Higiene Personal" },
       "limpieza-del-hogar": { "label": "Limpieza del hogar" },
-      "institucional": { "label": "Sector Público" }
+      "institucional": { "label": "Institucional" }
     },
     "segments": {
       "supermercados": {
         "label": "Supermercados y cadenas",
         "valuePhrase": "Un solo proveedor para todo tu surtido: del anaquel de despensa al de limpieza.",
         "title": "Todo lo que tu negocio necesita, en un solo proveedor.",
-        "description": "Abastecimiento completo y constante para que tus operaciones nunca se detengan. Productos de calidad, marcas confiables y entregas puntuales en todo Costa Rica.",
+        "description": "Abastecimiento completo y constante para que tus operaciones nunca se detengan. Productos de calidad, marcas confiables y entregas en todo Costa Rica.",
         "whatsappNoun": "un supermercado"
       },
       "hoteleria": {
@@ -367,8 +370,20 @@
     "paragraph": "Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o escríbanos directamente — atendemos proveedores internacionales y clientes locales.",
     "infoEyebrow": "Información de contacto",
     "infoTitle": "Estamos cerca de vos",
-    "infoDescription": "Contactanos o visitá nuestro CEDI en El Guarco.",
-    "sedeTitle": "Sede central (CEDI)",
+    "infoDescription": "Contactanos o visitá cualquiera de nuestras sedes.",
+    "sitesSelectorLabel": "Elegir sede",
+    "sites": {
+      "cedi-central": {
+        "tabLabel": "CEDI Central",
+        "sedeTitle": "Sede central (CEDI)",
+        "mapCardTitle": "CEDI · El Guarco"
+      },
+      "san-antonio": {
+        "tabLabel": "San Antonio",
+        "sedeTitle": "Oficinas Grupo Inteca",
+        "mapCardTitle": "Grupo Inteca · San Antonio"
+      }
+    },
     "telefonoTitle": "Teléfono central",
     "correosTitle": "Correos oficiales",
     "correosRh": "(RH)",
@@ -377,17 +392,28 @@
     "horarioSaturday": "Sábados: 8:00 a.m. – 12:00 m.d.",
     "whatsappCta": "Escríbanos por WhatsApp",
     "callCta": "Llamar ahora",
-    "mapCardTitle": "CEDI · El Guarco",
-    "openInGoogleMaps": "Abrir en Google Maps"
+    "openInGoogleMaps": "Google Maps",
+    "openInWaze": "Waze",
+    "copyLocation": "Copiar ubicación",
+    "copiedFeedback": "¡Copiado!"
   },
   "ContactMap": {
-    "iframeTitle": "Ubicación de Mercasa en El Guarco, Cartago"
+    "sites": {
+      "cedi-central": {
+        "iframeTitle": "Ubicación de Mercasa en El Guarco, Cartago",
+        "badgeLabel": "CEDI Mercasa · El Guarco"
+      },
+      "san-antonio": {
+        "iframeTitle": "Ubicación de Grupo Inteca en San Antonio de Desamparados",
+        "badgeLabel": "Grupo Inteca · San Antonio"
+      }
+    }
   },
   "Recruitment": {
     "navLabel": "Reclutamiento",
     "title": "Reclutamiento",
-    "intro": "¿Querés sumarte a nuestro equipo?",
-    "intro2": "Envia tu CV a este correo.",
+    "intro": "¿Querés sumarte a nuestro equipo? ",
+    "intro2": " Envia tu CV a este correo.",
     "emailLabel": "Correo",
     "close": "Cerrar"
   },
