@@ -46,7 +46,21 @@ export default function Hero() {
     <section
       id="inicio"
       ref={ref}
-      className="relative flex min-h-[min(880px,100dvh)] items-center overflow-hidden bg-white"
+      // pt-[130px]/[150px] (ver hero-header-tapa-contenido.md): mismo valor
+      // que el resto de las secciones (ver comentario en AboutSection), pero
+      // acá hace falta además porque el Hero es la ÚNICA sección que se ve
+      // sin haber scrolleado nunca (carga inicial de "/") — las demás ya
+      // tenían este aire aplicado, pero el Hero seguía centrando su
+      // contenido (items-center) sobre la altura COMPLETA de la sección,
+      // sin reservar nada para el navbar fijo (~84px mobile / ~94px
+      // desktop) por encima. El pt ahora vive en la sección (flex-col) y el
+      // centrado vertical se mueve a un wrapper interno con flex-1 +
+      // items-center, así el contenido se centra en el espacio que QUEDA
+      // después del navbar, no en la altura total — si sólo se le hubiera
+      // puesto padding-top al contenido con items-center en la sección, el
+      // centrado flex lo habría compensado shifteando solo la mitad del pt,
+      // sin garantizar el aire real bajo el header.
+      className="relative flex min-h-[min(880px,100dvh)] flex-col overflow-hidden bg-white pt-[130px] md:pt-[150px]"
     >
       {/* Imagen de escritorio con máscara simétrica */}
       <div className="absolute inset-y-0 left-[34%] right-[-2px] z-0 hidden md:block">
@@ -90,40 +104,44 @@ export default function Hero() {
         />
       </svg>
 
-      {/* Contenido principal */}
-      <motion.div
-        style={{ opacity: contentOpacity }}
-        className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-col gap-10 px-5 py-24 md:flex-row md:items-center md:justify-between md:py-20 lg:px-16"
-      >
-        <div className="w-full md:max-w-[560px]">
-          <HeroContent />
+      {/* Contenido principal — centrado verticalmente en el espacio que
+          queda DESPUÉS del pt de arriba (ver comentario en el <section>),
+          no en la altura completa de la sección. */}
+      <div className="flex flex-1 items-center">
+        <motion.div
+          style={{ opacity: contentOpacity }}
+          className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-col gap-10 px-5 py-24 md:flex-row md:items-center md:justify-between md:py-20 lg:px-16"
+        >
+          <div className="w-full md:max-w-[560px]">
+            <HeroContent />
 
-          {/* Imagen para mobile */}
-          <div className="relative mt-8 aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-[0_20px_45px_rgba(11,46,95,0.16)] md:hidden">
-            <Image
-              src={heroPhoto}
-              alt={t("photoAlt")}
-              fill
-              quality={90}
-              sizes="(min-width: 768px) 0px, calc(100vw - 40px)"
-              className="object-cover object-center"
-            />
+            {/* Imagen para mobile */}
+            <div className="relative mt-8 aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-[0_20px_45px_rgba(11,46,95,0.16)] md:hidden">
+              <Image
+                src={heroPhoto}
+                alt={t("photoAlt")}
+                fill
+                quality={90}
+                sizes="(min-width: 768px) 0px, calc(100vw - 40px)"
+                className="object-cover object-center"
+              />
+            </div>
+
+            {/* Estadísticas para mobile */}
+            <div className="mt-6 md:hidden">
+              <StatsCards
+                variant="stacked"
+                className="w-full"
+              />
+            </div>
           </div>
 
-          {/* Estadísticas para mobile */}
-          <div className="mt-6 md:hidden">
-            <StatsCards
-              variant="stacked"
-              className="w-full"
-            />
+          {/* Estadísticas flotantes para escritorio */}
+          <div className="hidden md:flex md:flex-1 md:justify-end">
+            <StatsCards variant="floating" />
           </div>
-        </div>
-
-        {/* Estadísticas flotantes para escritorio */}
-        <div className="hidden md:flex md:flex-1 md:justify-end">
-          <StatsCards variant="floating" />
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       <HeroWave />
 
