@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { MapPin } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { site } from "@/lib/data";
+import type { ContactSite } from "@/lib/data";
 
 // CAUSA RAÍZ del mapa cayendo siempre al fallback de Google: por defecto
 // MapLibre resuelve la URL de su web worker como `./maplibre-gl-worker.mjs`
@@ -22,40 +24,121 @@ import { site } from "@/lib/data";
 // volver a copiar estos 2 archivos.
 maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
+// Estilo VECTORIAL "liberty" de OpenFreeMap (ver mapa-vectorial-detallado-
+// final.md — se probaron satelital y relieve pálido antes, ninguno convenció).
+const LIBERTY_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+// Rediseño final según `reference/mapa-target.png` (ver mapa-rediseno-
+// referencia-final.md): a diferencia de las rondas anteriores (mapa-
+// contraste-detalle.md), la identidad de marca ya NO vive en recolorear
+// agresivamente las 111 capas del mapa base — vive en el badge, el marcador
+// y la tarjeta de info (ver ContactSection.tsx), todos navy sólido. El mapa
+// de fondo vuelve a ser pálido/minimalista: fondo casi blanco, avenidas
+// principales en beige suave, calles secundarias en líneas grises finas,
+// edificios en beige muy claro, labels en gris oscuro (NO navy).
+const NAVY = "#0B315E"; // badge, marcador, acentos de marca — no se usa para el mapa base
+const INK = "#33322F"; // labels de texto (calles, lugares, POIs): gris oscuro/negro suave
+const ROAD_MAJOR = "#D9C6A0"; // avenidas principales (ej. ruta 2): beige suave
+const ROAD_SECONDARY = "#A8A8A2"; // calles secundarias: línea gris fina
+const ROAD_MINOR = "#C7C7C2"; // calles menores/residenciales: un escalón más claro
+const ROAD_MUTED = "#D6D6D0"; // service/track, superficie peatonal, aeroway: el escalón más discreto
+const PATH_RAIL = "#B8AE9C"; // senderos/peatonal y ferrocarril, casi invisibles a propósito
+const BUILDING = "#EFE3CE"; // edificios: beige muy claro
+const PARK = "#E3ECDD"; // parques: verde pálido, distinto del beige de edificios
+const PARK_LINE = "#C9D9BE";
+const LANDUSE = "#F5F3EE"; // terreno genérico: casi igual al fondo, es el "vacío"
+const WHITE = "#FAFAF8"; // fondo general del lienzo + casing de vías + halo de texto
+const WATER = "#DCE3EC"; // agua: azul-gris pálido
+const WATER_LINE = "#B7C4D4";
+
+// "Falta nivel de detalle" (rondas anteriores) — revisado otra vez: ninguna
+// capa de edificios/POI está apagada por el recoloreado (nunca se toca
+// `visibility` ni `*-opacity`, sólo colores). Los edificios (minzoom 13) y
+// los 3 niveles de POI (poi_r1/r7/r20, minzoom 15/16/17) siguen activos al
+// zoom 17 que usa este mapa.
+//
+// Recolorea una capa del estilo "liberty" de fábrica con la paleta de arriba,
+// por REGLA (id/source-layer), no capa por capa a mano — son 111 capas (58
+// solo de líneas de transporte, separadas por clase de vía y puente/túnel/
+// superficie) y casi todas son variantes de las mismas ~15 categorías
+// visuales. `setPaintProperty` reemplaza por completo cualquier expresión de
+// color de fábrica (ninguna acá depende de zoom, es un color plano) — más
+// simple y predecible que tratar de preservar sus rampas.
+function recolorLibertyLayer(map: maplibregl.Map, layer: { id: string; type: string; "source-layer"?: string }) {
+  const { id, type } = layer;
+  const sourceLayer = layer["source-layer"];
+  // `as never`: setPaintProperty tipa el nombre de propiedad según el type
+  // exacto de CADA capa (union muy estricta) — este helper es deliberadamente
+  // genérico (una sola función para fill/line/fill-extrusion/symbol/
+  // background), así que no hay forma de que TS lo infiera bien acá.
+  const set = (prop: string, value: string) => map.setPaintProperty(id, prop as never, value as never);
+
+  if (id === "background") return set("background-color", WHITE);
+  if (sourceLayer === "water" && type === "fill") return set("fill-color", WATER);
+  if (sourceLayer === "waterway") return set("line-color", WATER_LINE);
+  if (id.startsWith("water_name") || id === "waterway_line_label") {
+    set("text-color", INK);
+    return set("text-halo-color", WHITE);
+  }
+  if (sourceLayer === "park") {
+    return type === "fill" ? set("fill-color", PARK) : set("line-color", PARK_LINE);
+  }
+  if (sourceLayer === "landuse" || sourceLayer === "landcover") return set("fill-color", LANDUSE);
+  if (sourceLayer === "building") {
+    if (type === "fill-extrusion") return set("fill-extrusion-color", BUILDING);
+    set("fill-color", BUILDING);
+    return set("fill-outline-color", "rgba(60,50,35,0.15)");
+  }
+  if (sourceLayer === "aeroway") return type === "fill" ? set("fill-color", ROAD_MUTED) : set("line-color", ROAD_MUTED);
+  if (id === "road_area_pattern") return set("fill-color", ROAD_MUTED);
+  if (sourceLayer === "transportation" && (type === "line" || type === "fill")) {
+    const casing = id.includes("casing");
+    if (id.includes("motorway") || id.includes("trunk_primary")) return set("line-color", casing ? WHITE : ROAD_MAJOR);
+    if (id.includes("secondary_tertiary") || id.includes("_link")) return set("line-color", casing ? WHITE : ROAD_SECONDARY);
+    if (id.includes("minor") || id.includes("street")) return set("line-color", casing ? WHITE : ROAD_MINOR);
+    if (id.includes("service_track")) return set("line-color", ROAD_MUTED);
+    if (id.includes("path_pedestrian")) return set("line-color", PATH_RAIL);
+    if (id.includes("rail")) return set("line-color", PATH_RAIL);
+    return; // road_one_way_arrow(_opposite): símbolo/ícono, sin color de línea que tocar
+  }
+  if (sourceLayer === "transportation_name" || sourceLayer === "poi" || sourceLayer === "aerodrome_label") {
+    set("text-color", INK);
+    return set("text-halo-color", WHITE);
+  }
+  if (sourceLayer === "place") {
+    set("text-color", INK);
+    return set("text-halo-color", WHITE);
+  }
+  if (sourceLayer === "boundary") return set("line-color", "rgba(80,80,75,0.25)");
+}
+
 /**
- * Mapa de fondo para la sección de Contacto: usa OpenFreeMap, estilo
- * "positron" (ver rediseno-exacto-hablemos-de-negocios.md). Historia de
- * este valor, va y viene:
- * - Originalmente "positron" — se descartó por "lavado"/muy monocromático.
- * - Se pasó a "liberty" con paleta institucional (navy/beige, ver
- *   fix-altura-fija-y-mapa-personalizado.md) y después a colores tipo
- *   Google Maps (ver rediseno-contacto-y-mapa.md).
- * - Ahora la referencia exacta que Isaac compartió pide justo lo que antes
- *   se había descartado: un mapa pálido/casi monocromático, estilo "reporte
- *   editorial" — así que se vuelve a "positron" a propósito. Sus valores de
- *   fábrica (fondo rgb(242,243,240), agua/parques/edificios en grises muy
- *   claros, casing de autopista gris claro sin color saturado, labels en
- *   #666 con halo blanco) YA SON exactamente la paleta pedida — no hace
- *   falta repintar nada acá, a diferencia de los estilos anteriores.
+ * Mapa de fondo para la sección de Contacto: vectorial "liberty" recoloreado
+ * en tono pálido/minimalista (ver comentario arriba) — la identidad de marca
+ * (navy sólido) vive en el badge flotante de acá abajo, el marcador y la
+ * tarjeta de info en ContactSection.tsx, no en el mapa base.
  *
- * pitch 0 (antes 45°, ver fix-mapa-relieve.md): ese pitch existía solo para
- * que se notara el relieve de la capa `building-3d` (fill-extrusion) de
- * "liberty" — "positron" no tiene esa capa (edificios son un fill 2D plano,
- * sin altura), así que un pitch inclinado acá no revelaría relieve alguno,
- * solo inclinaría un plano vacío. La referencia además es explícitamente
- * una vista plana de arriba, tipo mapa impreso — pitch 0 es lo correcto acá.
- *
- * El único marcador y su info viven en la card flotante de ContactSection
- * (no hay popup nativo de MapLibre acá): dos tarjetas mostrando lo mismo se
- * sentía saturado y el popup tapaba el propio pin.
+ * Controles: zoom +/-, geolocalización ("centrar en mi ubicación") y
+ * pantalla completa apilados arriba a la derecha; barra de escala abajo a la
+ * izquierda; atribución simplificada a una sola línea abajo a la derecha.
  *
  * Si el servicio de tiles no carga (red restringida, bloqueo de terceros),
- * cae a un iframe simple de Google Maps para que la sección nunca quede vacía.
+ * cae a un iframe simple de Google Maps para que la sección nunca quede
+ * vacía — este mecanismo de fallback NO se toca acá (ver mapa-rediseno-
+ * referencia-final.md, sección "Mantener").
  */
-export default function ContactMap() {
+export default function ContactMap({ site }: { site: ContactSite }) {
   const t = useTranslations("ContactMap");
+  const reduceMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  // Última sede recibida, leída dentro de closures que no pueden depender de
+  // `site` sin recrear el mapa entero (ver comentario del useEffect de abajo)
+  // — se mantiene actualizada en cada render, sin efecto propio.
+  const siteRef = useRef(site);
+  siteRef.current = site;
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -78,9 +161,9 @@ export default function ContactMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://tiles.openfreemap.org/styles/positron",
+      style: LIBERTY_STYLE_URL,
       center: [site.address.lng, site.address.lat],
-      // zoom 17 deja el CEDI como protagonista, con la vía de acceso y las
+      // zoom 17 deja la sede como protagonista, con la vía de acceso y las
       // cuadras inmediatas a su alrededor, sin el ruido de calles lejanas que
       // aparecía a zoom 15. pitch/bearing en 0 (ver comentario arriba): vista
       // plana de arriba, orientada al norte, tipo mapa impreso.
@@ -90,6 +173,7 @@ export default function ContactMap() {
       attributionControl: false,
       interactive: true,
     });
+    mapRef.current = map;
 
     map.scrollZoom.disable();
     map.doubleClickZoom.disable();
@@ -99,50 +183,90 @@ export default function ContactMap() {
     map.touchZoomRotate.enable();
     map.touchZoomRotate.disableRotation();
 
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+    // Atribución simplificada a una sola línea corta (ver mapa-rediseno-
+    // referencia-final.md, punto 6) — reemplaza el texto largo por defecto
+    // de OpenFreeMap/OpenMapTiles.
+    map.addControl(
+      new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: "© OpenMapTiles OpenStreetMap contributors",
+      }),
+      "bottom-right"
+    );
+    // Columna vertical arriba a la derecha: zoom, geolocalización y
+    // pantalla completa, en ese orden (ver referencia).
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-
-    // Sin repintar nada acá a propósito (ver rediseno-exacto-hablemos-de-
-    // negocios.md): la paleta de fábrica de "positron" (fondo gris muy claro,
-    // agua/parques/edificios en grises pálidos, casing de autopista gris
-    // claro, labels chicos en #666) YA ES la paleta pálida/editorial pedida.
-    // Los fixes anteriores necesitaban repintar porque el estilo base
-    // ("liberty") traía colores vivos — acá sería trabajo de más, y el
-    // riesgo de no matchear "exacto" es mayor que dejarlo tal cual viene.
-    // Layer IDs confirmados vía GET
-    // https://tiles.openfreemap.org/styles/positron (55 layers — nombres de
-    // casing "highway_major_casing"/"highway_motorway_casing", distintos de
-    // los "road_..._casing" de "liberty").
+    map.addControl(
+      new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }),
+      "top-right"
+    );
+    map.addControl(new maplibregl.FullscreenControl(), "top-right");
+    // Barra de escala abajo a la izquierda (ej. "200 m").
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
 
     map.on("load", () => {
       loaded = true;
       window.clearTimeout(failSafeTimer);
 
-      // Marcador del CEDI: círculo navy sólido con ícono de ubicación blanco
-      // y una colita triangular abajo apuntando al punto exacto (ver
-      // rediseno-exacto-hablemos-de-negocios.md — reemplaza la gota/pin
-      // clásico anterior, ver globals.css .mercasa-map-pin__circle/__tail
-      // para las medidas). Halo pulsante detrás, anclado en la punta de la
-      // colita. Sin popup propio: la card flotante de ContactSection ya
-      // muestra el nombre y el link "Abrir en Google Maps" — un popup nativo
-      // acá encima duplicaba esa info y tapaba el marcador.
+      // Recoloreado acá adentro de "load" (no en "style.load"): "style.load"
+      // dispara mientras MapLibre todavía está construyendo los contenedores
+      // internos de paint properties de cada capa — llamar setPaintProperty
+      // ahí adentro tira "Cannot read properties of undefined (reading
+      // 'value')" apenas toca la primera capa (confirmado con el stack trace
+      // real en consola), la excepción queda sin capturar dentro del propio
+      // dispatcher del evento de MapLibre, y el mapa nunca termina de
+      // inicializar. "load" sí garantiza que esos contenedores ya existen
+      // para la gran mayoría — pero no para TODAS las combinaciones capa/
+      // propiedad: alguna capa puntual puede tirar ese mismo error si nunca
+      // tuvo esa paint property en el JSON original de "liberty". Try/catch
+      // POR CAPA (no uno solo alrededor de todo el for): si una sola capa
+      // falla, no puede cortar el resto del recoloreado NI el código que
+      // sigue (crear el marcador).
+      for (const layer of map.getStyle().layers) {
+        try {
+          recolorLibertyLayer(map, layer);
+        } catch (e) {
+          console.warn(`[ContactMap] no se pudo recolorear la capa "${layer.id}"`, e);
+        }
+      }
+
+      // Marcador del CEDI: círculo navy con ícono de bodega/edificio
+      // industrial (lucide "Warehouse", como SVG crudo — este marcador se
+      // arma con innerHTML, no con JSX, así que no se puede importar el
+      // componente de lucide-react directamente; el path de abajo es el
+      // mismo que exporta esa librería) — reemplaza el ícono de pin
+      // genérico de antes (ver reference/mapa-target.png). Sigue con forma
+      // de pin con colita triangular abajo, más grande que la versión
+      // anterior (52px de círculo en vez de 44px, ver globals.css
+      // .mercasa-map-pin__circle/__tail para las medidas). Halo pulsante
+      // detrás, anclado en la punta de la colita.
       const el = document.createElement("div");
       el.className = "mercasa-map-pin";
       el.innerHTML = `
         <span class="mercasa-map-pin__pulse"></span>
         <span class="mercasa-map-pin__circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-            <circle cx="12" cy="10" r="3" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" aria-hidden="true">
+            <path d="M18 21V10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v11" />
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 1.132-1.803l7.95-3.974a2 2 0 0 1 1.837 0l7.948 3.974A2 2 0 0 1 22 8z" />
+            <path d="M6 13h12" />
+            <path d="M6 17h12" />
           </svg>
         </span>
         <span class="mercasa-map-pin__tail"></span>
       `;
       // anchor "bottom": la punta de la colita (no el centro del círculo) es
-      // la que debe caer exactamente sobre la coordenada del CEDI.
-      new maplibregl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([site.address.lng, site.address.lat])
-        .addTo(map);
+      // la que debe caer exactamente sobre la coordenada de la sede.
+      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" }).addTo(map);
+      markerRef.current = marker;
+
+      // Se posiciona con `siteRef.current` (no el `site` capturado al crear
+      // el mapa/efecto): corrige el caso borde en que la sede activa cambió
+      // MIENTRAS el mapa todavía estaba cargando (el efecto de abajo, que
+      // reacciona a cambios de sede, no puede animar hacia una sede nueva
+      // hasta que `markerRef.current` exista).
+      const initial = siteRef.current;
+      marker.setLngLat([initial.address.lng, initial.address.lat]);
+      map.jumpTo({ center: [initial.address.lng, initial.address.lat] });
     });
 
     map.on("error", () => {
@@ -151,19 +275,41 @@ export default function ContactMap() {
 
     return () => {
       window.clearTimeout(failSafeTimer);
+      mapRef.current = null;
+      markerRef.current = null;
       map.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- el mapa se crea
+    // una sola vez; los cambios de sede posteriores los maneja el efecto de
+    // abajo (flyTo + mover el marcador), no una recreación del mapa entero.
   }, []);
 
+  // Sede activa cambia (tabs, ver contacto-selector-sedes.md): recentra el
+  // mapa y mueve el marcador con una transición suave (flyTo), sin recrear
+  // el mapa ni recargar tiles. Respeta prefers-reduced-motion con un salto
+  // directo (jumpTo) en vez de la animación.
+  useEffect(() => {
+    const map = mapRef.current;
+    const marker = markerRef.current;
+    if (!map || !marker) return;
+    const center: [number, number] = [site.address.lng, site.address.lat];
+    if (reduceMotion) {
+      map.jumpTo({ center });
+    } else {
+      map.flyTo({ center, duration: 1400, essential: true });
+    }
+    marker.setLngLat(center);
+  }, [site.address.lat, site.address.lng, reduceMotion]);
+
   if (failed) {
-    // Fallback: pin en las coordenadas EXACTAS del CEDI (no una búsqueda por
-    // nombre de pueblo, que caería en el centro del poblado). `q=lat,lng` deja
-    // el marcador rojo justo sobre el punto de Mercasa.
+    // Fallback: pin en las coordenadas EXACTAS de la sede activa (no una
+    // búsqueda por nombre de pueblo, que caería en el centro del poblado).
+    // `q=lat,lng` deja el marcador rojo justo sobre el punto correcto.
     const mapSrc = `https://www.google.com/maps?q=${site.address.lat},${site.address.lng}&z=17&output=embed`;
     return (
       <div className="absolute inset-0 h-full w-full overflow-hidden">
         <iframe
-          title={t("iframeTitle")}
+          title={t(`sites.${site.key}.iframeTitle`)}
           src={mapSrc}
           className="h-full w-full opacity-90 grayscale-[20%]"
           loading="lazy"
@@ -176,6 +322,29 @@ export default function ContactMap() {
   return (
     <div className="absolute inset-0 h-full w-full overflow-hidden">
       <div ref={containerRef} className="mercasa-map h-full w-full" />
+      {/* Badge flotante con el nombre del lugar (ver reference/mapa-target.png,
+          punto 1) — encima del mapa, no parte de la tarjeta de info de abajo.
+          pointer-events-none: es sólo un rótulo, no debe robarle clicks/drag
+          al mapa debajo. Texto cambia con la sede activa (ver contacto-
+          selector-sedes.md), con el mismo crossfade breve del resto de los
+          textos que dependen de la sede. */}
+      <div
+        className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 overflow-hidden rounded-full py-2 pl-3 pr-3.5 text-[12.5px] font-semibold text-white"
+        style={{ background: NAVY, boxShadow: "0 10px 24px -6px rgba(11,49,94,0.45)" }}
+      >
+        <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={reduceMotion ? "static-badge" : site.key}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {t(`sites.${site.key}.badgeLabel`)}
+          </motion.span>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

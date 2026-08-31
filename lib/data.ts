@@ -26,8 +26,8 @@ export const site = {
     // nombre "Mercasa" como búsqueda), porque existe una ferretería no
     // relacionada con el mismo nombre en Agua Caliente que Google Maps
     // prioriza por reseñas si se busca por texto.
-    lat: 9.84671923526572,
-    lng: -83.9500356896771,
+    lat: 9.84621808615973,
+    lng: -83.9501585951962,
   },
   whatsappHref: "https://wa.me/50670713042",
   facebook: "https://www.facebook.com/mercasacr/",
@@ -37,6 +37,44 @@ export const site = {
   linkedin: "https://www.linkedin.com/company/grupo-inteca/posts/?feedView=all",
   instagram: "#",
 };
+
+export type ContactSite = {
+  key: string;
+  address: {
+    line1: string;
+    line2?: string;
+    postalCode?: string;
+    lat: number;
+    lng: number;
+  };
+};
+
+// Sedes del selector de Contacto (ver contacto-selector-sedes.md): datos NO
+// traducibles por sede — dirección y coordenadas. Teléfono, correos y
+// horario son compartidos entre ambas y siguen viviendo arriba en `site`, sin
+// duplicarse acá. "cedi-central" reusa las mismas coordenadas/dirección de
+// `site.address` en vez de repetirlas a mano, para que nunca queden
+// desincronizadas.
+export const contactSites: ContactSite[] = [
+  {
+    key: "cedi-central",
+    address: {
+      line1: site.address.line1,
+      line2: site.address.line2,
+      postalCode: site.address.postalCode,
+      lat: site.address.lat,
+      lng: site.address.lng,
+    },
+  },
+  {
+    key: "san-antonio",
+    address: {
+      line1: "San Antonio de Desamparados, Ahogados, San José, Costa Rica",
+      lat: 9.90559659110233,
+      lng: -84.04839124935019,
+    },
+  },
+];
 
 // href + key (el label sale de Nav.<key> en los mensajes).
 // "Contacto" apunta a id="hablemos-de-negocios" (el formulario en

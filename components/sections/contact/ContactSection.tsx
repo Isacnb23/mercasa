@@ -2,20 +2,35 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
 import CustomerClassSection, { resolveChipTarget } from "../customer-class/CustomerClassSection";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
-import { businessSegments, site } from "@/lib/data";
+import { businessSegments, contactSites, site } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import type { HierarchyNode } from "@/lib/product-types";
+import type { ContactSite } from "@/lib/data";
 
 function buildWhatsappHref(baseHref: string, message: string) {
   return `${baseHref}?text=${encodeURIComponent(message)}`;
+}
+
+// Busca el nodo real de categoría (sub-familia -> categoría) dentro de una
+// Familia, a partir del id resuelto por `resolveChipTarget` — necesario para
+// el modo filtrado de "Explorar productos" (ver
+// customer-class-animacion-filtro.md, punto 2), que necesita el nodo
+// HierarchyNode completo (con `.products`), no solo el id.
+function findCategoryById(family: HierarchyNode, categoryId: string): HierarchyNode | null {
+  for (const subFamily of family.children) {
+    for (const category of subFamily.children) {
+      if (category.id === categoryId) return category;
+    }
+  }
+  return null;
 }
 
 // Réplica exacta de la referencia (ver rediseno-exacto-hablemos-de-
@@ -23,6 +38,19 @@ function buildWhatsappHref(baseHref: string, message: string) {
 // (rediseno-contacto-y-mapa.md): tarjeta única clara (crema), NO navy.
 const NAVY = "#0B2F63";
 const CARD_BG = "#F6F2E9";
+// Navy específico del badge/marcador/popup del mapa (ver reference/mapa-
+// target.png y ContactMap.tsx) — un tono levemente distinto del NAVY de
+// arriba (que ya se usa en el resto de la sección: WhatsApp, botones,
+// títulos), a propósito no lo tocamos para no alterar nada fuera del
+// alcance de este cambio.
+const MAP_NAVY = "#0B315E";
+// Separación visual mapa/tarjeta (ver mapa-borde-separacion.md): el mapa
+// "liberty" recoloreado quedó con fondo casi blanco, muy parecido al beige
+// CARD_BG de al lado — sin nada entre medio, ambos bloques se sentían
+// fundidos. Mismo tono de borde que ya usa el panel de Customer Class
+// (CustomerClassSection.tsx, su propia constante BORDER) para no inventar
+// un valor nuevo.
+const MAP_BORDER = "#DDE3E8";
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
@@ -33,7 +61,7 @@ const ContactMap = dynamic(() => import("./ContactMap"), {
  * Productos, Contacto y Footer comparten el mismo lienzo navy oscuro (el fondo
  * fijo de AmbientBackdrop) — el "cambio de capítulo" se logra con tarjetas
  * claras flotando encima, no con un cambio de color de página. El mapa
- * (estilo "positron" claro) vive enmarcado dentro de una tarjeta tipo mapa
+ * (vista satelital híbrida, ver mapa-satelital.md) vive enmarcado dentro de una tarjeta tipo mapa
  * impreso, a juego con el resto de la sección en vez de ser el único
  * contraste oscuro.
  */
@@ -52,6 +80,14 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
     t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
   );
 
+  // Selector de sedes (ver contacto-selector-sedes.md): teléfono, correos y
+  // horario NO dependen de la sede — solo el bloque "Sede central (CEDI)",
+  // el mapa (centro/marcador/badge) y la tarjeta flotante del mapa (popup)
+  // cambian según la sede activa.
+  const [activeSiteKey, setActiveSiteKey] = useState(contactSites[0].key);
+  const activeSite = contactSites.find((s) => s.key === activeSiteKey) ?? contactSites[0];
+  const reduceMotion = useReducedMotion();
+
   // Catálogo abierto desde un chip de "categorías" o el botón "Explorar
   // productos" de Customer Class (ver customer-class-chips-reales.md y
   // rediseno-customer-class-spec-completo.md) — mismo patrón de
@@ -61,10 +97,27 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
   // ocultarse.
   const [catalogFamilyId, setCatalogFamilyId] = useState<string | null>(null);
   const [catalogCategoryId, setCatalogCategoryId] = useState<string | undefined>(undefined);
+  // Modo filtrado de "Explorar productos" (ver
+  // customer-class-animacion-filtro.md, punto 2) — lista de categorías
+  // reales (con su propia Familia, que puede ser distinta por entrada) a
+  // mostrar TODAS juntas en el catálogo, además del modo de una sola
+  // categoría de arriba que ya usan los chips individuales (sin tocar ese
+  // camino). Vacío/null = no está en modo filtrado.
+  const [catalogFilter, setCatalogFilter] = useState<{ category: HierarchyNode }[] | null>(null);
+  const [catalogFilterTitle, setCatalogFilterTitle] = useState<string | undefined>(undefined);
+  // `key` del segmento activo cuando el catálogo se abrió desde "Explorar
+  // productos" (ver catalogo-portada-por-segmento.md) — decide la portada
+  // del flipbook (ver SEGMENT_COVER_PHOTOS en ProductCatalogModal). null en
+  // cualquier otro camino de apertura (chips individuales, ProductExplorer)
+  // para que esos sigan mostrando la portada genérica de siempre.
+  const [catalogSegmentId, setCatalogSegmentId] = useState<string | null>(null);
   const catalogFamily = families.find((f) => f.id === catalogFamilyId) ?? null;
   const closeCatalog = () => {
     setCatalogFamilyId(null);
     setCatalogCategoryId(undefined);
+    setCatalogFilter(null);
+    setCatalogFilterTitle(undefined);
+    setCatalogSegmentId(null);
   };
 
   // Resuelve el chip/categoría clickeado (ver resolveChipTarget en
@@ -72,19 +125,48 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
   // el catálogo posicionado ahí. Si `families` todavía no llegó (fetch en
   // curso o falló) o el slug no matchea nada real, no hace nada — el chip
   // queda igual de clickeable, solo que esta vez no encuentra destino (no
-  // vale la pena un estado de error visible para un caso tan puntual).
+  // vale la pena un estado de error visible para un caso tan puntual). Modo
+  // de una sola categoría — SIN cambios (ver customer-class-animacion-
+  // filtro.md: el filtro multi-Familia de abajo es exclusivo de "Explorar
+  // productos", este camino se queda intacto).
   const handleSelectCategory = (categoryKey: string) => {
     const resolved = resolveChipTarget(families, categoryKey);
     if (!resolved) return;
+    setCatalogFilter(null);
+    setCatalogFilterTitle(undefined);
+    setCatalogSegmentId(null);
     setCatalogFamilyId(resolved.familyId);
     setCatalogCategoryId(resolved.categoryId);
   };
 
-  // Botón "Explorar productos" del panel de Customer Class: mismo
-  // comportamiento que ya tenían los chips, aplicado a la primera categoría
-  // del segmento activo — no es un botón nuevo sin función (ver spec).
+  // Botón "Explorar productos" del panel de Customer Class (ver
+  // customer-class-animacion-filtro.md, punto 2): antes abría solo la
+  // PRIMERA categoría del segmento (vía handleSelectCategory) — ahora abre
+  // el catálogo ya filtrado a TODAS las categorías disponibles de ese
+  // segmento, que en la práctica cruzan varias Familias distintas (ej. las
+  // 5 de "Supermercados y cadenas" viven en 4 Familias). Usa el nuevo modo
+  // filtrado de ProductCatalogModal (aditivo — no toca el modo de una sola
+  // categoría que siguen usando los chips y ProductExplorer).
   const handleExploreProducts = () => {
-    handleSelectCategory(activeSegment.categories[0]);
+    const resolved = activeSegment.categories
+      .map((categoryKey) => {
+        const target = resolveChipTarget(families, categoryKey);
+        if (!target || !target.categoryId) return null;
+        const family = families.find((f) => f.id === target.familyId);
+        if (!family) return null;
+        const category = findCategoryById(family, target.categoryId);
+        if (!category) return null;
+        return { family, category };
+      })
+      .filter((entry): entry is { family: HierarchyNode; category: HierarchyNode } => entry !== null);
+
+    if (resolved.length === 0) return;
+
+    setCatalogCategoryId(undefined);
+    setCatalogFamilyId(resolved[0].family.id);
+    setCatalogFilter(resolved.map(({ category }) => ({ category })));
+    setCatalogFilterTitle(t(`segments.${activeSegment.key}.label`));
+    setCatalogSegmentId(activeSegment.key);
   };
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
@@ -134,6 +216,9 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
           family={catalogFamily}
           allFamilies={families}
           initialCategoryId={catalogCategoryId}
+          filterCategories={catalogFilter ?? undefined}
+          filterTitle={catalogFilterTitle}
+          segmentId={catalogSegmentId ?? undefined}
           onClose={closeCatalog}
         />
       )}
@@ -224,11 +309,53 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                 </div>
 
                 <div>
-                  <InfoRow icon={MapPin} title={t("sedeTitle")}>
-                    {site.address.line1}
-                    <br />
-                    {site.address.line2} · CP {site.address.postalCode}
-                  </InfoRow>
+                  {/* Selector de sedes: dos pills, mismo criterio visual que
+                      el toggle ES/EN (LocaleSwitcher.tsx) pero en la paleta
+                      navy de esta sección. */}
+                  <div
+                    role="tablist"
+                    aria-label={t("sitesSelectorLabel")}
+                    className="mb-4 inline-flex w-fit items-center gap-1 rounded-full border p-1"
+                    style={{ borderColor: "rgba(11,47,99,0.14)", background: "rgba(11,47,99,0.04)" }}
+                  >
+                    {contactSites.map((s) => {
+                      const isActive = s.key === activeSiteKey;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setActiveSiteKey(s.key)}
+                          className="rounded-full px-4 py-2 text-[13px] font-semibold transition"
+                          style={{ color: isActive ? "#ffffff" : NAVY, background: isActive ? NAVY : "transparent" }}
+                        >
+                          {t(`sites.${s.key}.tabLabel`)}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={reduceMotion ? "static-sede" : activeSite.key}
+                      initial={reduceMotion ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={reduceMotion ? undefined : { opacity: 0 }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <InfoRow icon={MapPin} title={t(`sites.${activeSite.key}.sedeTitle`)}>
+                        {activeSite.address.line1}
+                        {activeSite.address.line2 && (
+                          <>
+                            <br />
+                            {activeSite.address.line2}
+                            {activeSite.address.postalCode ? ` · CP ${activeSite.address.postalCode}` : ""}
+                          </>
+                        )}
+                      </InfoRow>
+                    </motion.div>
+                  </AnimatePresence>
                   <InfoRow icon={Phone} title={t("telefonoTitle")}>
                     <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
                       {site.phone}
@@ -277,44 +404,33 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                 </div>
               </div>
 
-              {/* Columna derecha (~60%): mapa a pantalla completa, sin marco
-                  propio — el corte lo da el rounded-[30px] del contenedor
-                  único que lo envuelve. */}
-              <div className="relative min-h-[360px] lg:min-h-0">
+              {/* Columna derecha (~60%): mapa a pantalla completa — border
+                  sutil ALREDEDOR de todo el contenedor (no solo el borde
+                  compartido con la columna de info a la izquierda) — ver
+                  mapa-borde-separacion.md: el mapa "liberty" recoloreado
+                  (fondo casi blanco) y el CARD_BG beige de al lado se
+                  sentían fundidos, sin ninguna separación más que el cambio
+                  de color. Esta capa no tiene su propio border-radius, así
+                  que en las esquinas que coinciden con las del contenedor
+                  único (rounded-[30px] + overflow-hidden un poco más abajo)
+                  el corte redondeado de afuera sigue mandando — el border
+                  recto queda recortado junto con el resto, sin verse
+                  cuadrado en esas esquinas. */}
+              <div className="relative min-h-[360px] border lg:min-h-0" style={{ borderColor: MAP_BORDER }}>
                 <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
-                  {mapInView ? <ContactMap /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
+                  {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
                   {/* Viñeta sutil para que el marco se sienta intencional aun si
                       el mapa todavía está cargando teselas. */}
                   <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
 
-                  {/* Tarjeta flotante compacta (ver
-                      rediseno-exacto-hablemos-de-negocios.md, punto 6): en
-                      vez del botón "Cómo llegar" con menú Google Maps/Waze,
-                      ahora un link de texto directo a Google Maps. */}
-                  <div
-                    className="absolute bottom-4 left-4 max-w-[240px] bg-white p-3.5"
-                    style={{ borderRadius: "14px", boxShadow: "0 10px 24px -6px rgba(0,0,0,0.2)" }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: NAVY }} />
-                      <p className="text-[12.5px] font-bold" style={{ color: NAVY, letterSpacing: "0.01em" }}>
-                        {t("mapCardTitle")}
-                      </p>
-                    </div>
-                    <p className="mt-1 text-[11.5px] leading-snug" style={{ color: "#5C6B7D" }}>
-                      {site.address.line1}
-                    </p>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${site.address.lat},${site.address.lng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold transition hover:gap-1.5"
-                      style={{ color: NAVY }}
-                    >
-                      {t("openInGoogleMaps")}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
+                  {/* Tarjeta flotante navy (ver reference/mapa-target.png,
+                      punto 3 — reemplaza la tarjeta blanca de la ronda
+                      anterior): título + dirección en navy, dos botones
+                      píldora del mismo tamaño (Google Maps / Waze) y un
+                      link secundario "Copiar ubicación". Recibe la sede
+                      activa (ver contacto-selector-sedes.md) para mostrar
+                      sus propios datos/coordenadas. */}
+                  <MapInfoCard t={t} site={activeSite} />
                 </div>
               </div>
             </div>
@@ -355,6 +471,87 @@ function InfoRow({
           {children}
         </p>
       </div>
+    </div>
+  );
+}
+
+// Tarjeta flotante navy sobre el mapa (ver reference/mapa-target.png, punto
+// 3): título + dirección en navy, dos botones píldora del mismo ancho
+// (Google Maps / Waze) y un link secundario "Copiar ubicación" que copia
+// las coordenadas EXACTAS del CEDI (mismas que usa el marcador — nunca el
+// nombre "Mercasa" como búsqueda, ver comentario en site.address) al
+// portapapeles, con feedback visual breve ("¡Copiado!") en vez del label
+// normal. Componente aparte (no inline en ContactSection) porque necesita
+// su propio estado de "copiado" — subirlo al padre no aportaba nada.
+function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslations>; site: ContactSite }) {
+  const [copied, setCopied] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  const handleCopyLocation = async () => {
+    await navigator.clipboard.writeText(`${activeSite.address.lat}, ${activeSite.address.lng}`);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <div
+      className="absolute bottom-4 left-4 z-10 w-[260px] p-4"
+      style={{ background: MAP_NAVY, borderRadius: "16px", boxShadow: "0 14px 32px -8px rgba(11,49,94,0.45)" }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={reduceMotion ? "static-popup" : activeSite.key}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-white" />
+            <p className="text-[13px] font-bold text-white" style={{ letterSpacing: "0.01em" }}>
+              {t(`sites.${activeSite.key}.mapCardTitle`)}
+            </p>
+          </div>
+          <p className="mt-1 text-[11.5px] leading-snug" style={{ color: "#B8C2D0" }}>
+            {activeSite.address.line1}
+          </p>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Dos píldoras del MISMO tamaño (flex-1 cada una) — a diferencia del
+          link de texto simple de la ronda anterior. */}
+      <div className="mt-3 flex gap-2">
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${activeSite.address.lat},${activeSite.address.lng}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[11.5px] font-semibold transition hover:brightness-95"
+          style={{ color: MAP_NAVY }}
+        >
+          {t("openInGoogleMaps")}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        <a
+          href={`https://waze.com/ul?ll=${activeSite.address.lat},${activeSite.address.lng}&navigate=yes`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[11.5px] font-semibold transition hover:brightness-95"
+          style={{ color: MAP_NAVY }}
+        >
+          {t("openInWaze")}
+          <Navigation className="h-3 w-3" />
+        </a>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleCopyLocation}
+        className="mt-2.5 inline-flex items-center gap-1.5 text-[11.5px] font-medium transition hover:opacity-80"
+        style={{ color: "#B8C2D0" }}
+      >
+        <Copy className="h-3 w-3" />
+        {copied ? t("copiedFeedback") : t("copyLocation")}
+      </button>
     </div>
   );
 }

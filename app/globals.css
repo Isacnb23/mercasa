@@ -241,20 +241,23 @@ body {
    contenedor apila círculo (arriba) + colita (abajo); anchor:"bottom" en el
    JS ancla la PUNTA de la colita (no el centro del círculo) sobre la
    coordenada real. El halo pulsante queda detrás, centrado en esa misma
-   punta. */
+   punta. Círculo subido de 44px a 52px (ver mapa-rediseno-referencia-
+   final.md, punto 2 — "más grande que el actual") junto con el ícono de
+   bodega (lucide Warehouse, como SVG crudo en ContactMap.tsx) que reemplaza
+   al ícono de pin genérico de adentro. */
 .mercasa-map-pin {
   position: relative;
-  width: 44px;
-  height: 54px; /* 44px círculo + 10px colita */
+  width: 52px;
+  height: 64px; /* 52px círculo + 12px colita */
 }
 .mercasa-map-pin__pulse {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 14px;
-  height: 14px;
-  margin-left: -7px;
-  margin-bottom: -7px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-bottom: -8px;
   border-radius: 50%;
   background: rgba(12, 68, 124, 0.35);
   animation: mercasa-pin-pulse 2.2s ease-out infinite;
@@ -263,8 +266,8 @@ body {
   position: absolute;
   left: 50%;
   top: 0;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   transform: translateX(-50%);
   border-radius: 50%;
   background: #0b2f63;
@@ -284,9 +287,9 @@ body {
   width: 0;
   height: 0;
   transform: translateX(-50%);
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 10px solid #0b2f63;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid #0b2f63;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.15));
 }
 @keyframes mercasa-pin-pulse {
