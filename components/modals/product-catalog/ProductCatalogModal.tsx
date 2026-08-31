@@ -21,6 +21,7 @@ import type { HierarchyNode, ProductSummary } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
 import ProductImage from "./ProductImage";
+import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
 import heroWarehouse from "@/public/brand/Hero/hero-warehouse.png";
 import heroWarehouse2 from "@/public/brand/Hero/hero-warehouse2.png";
@@ -33,6 +34,21 @@ import logisticaPuntoDeVenta from "@/public/brand/Logistica/punto-de-venta.png";
 // rota por familia solo en los divisores de sub-familia.
 import portadaPhoto from "@/public/Catalogo/portada.png";
 import indicePhoto from "@/public/Catalogo/indice.png";
+// Portadas por segmento de Customer Class (ver catalogo-portada-por-
+// segmento.md) — rutas públicas (no import estático) porque cuál se usa se
+// decide en runtime según el segmentId recibido. OJO: la carpeta real en
+// disco es "CustumerClass" (sin la "o" de "Customer"), no "CustomerClass".
+// Keys = los mismos `key` que ya usa businessSegments en lib/data.ts, no
+// slugs nuevos inventados a partir del label.
+const SEGMENT_COVER_PHOTOS: Record<string, string> = {
+  supermercados: "/Catalogo/CustumerClass/catalogo-portada-supermercados-cadenas.png",
+  hoteleria: "/Catalogo/CustumerClass/catalogo-portada-hoteleria-turismo.png",
+  restaurantes: "/Catalogo/CustumerClass/catalogo-portada-restaurantes-food-service.png",
+  "comercio-local": "/Catalogo/CustumerClass/catalogo-portada-comercio-local-pulperias.png",
+  panaderias: "/Catalogo/CustumerClass/catalogo-portada-panaderias.png",
+  instituciones: "/Catalogo/CustumerClass/catalogo-portada-sector-publico.png",
+  retail: "/Catalogo/CustumerClass/catalogo-portada-retail-conveniencia.png",
+};
 // Fotos propias por sub-familia (ver conectar-imagenes-subfamilias-
 // alimentos.md y conectar-imagenes-subfamilias-bebidas.md) — Cuidado del
 // Hogar, Cuidado Personal y Electrónica todavía no tienen las suyas, esas
@@ -276,6 +292,50 @@ function buildPrintPages(family: HierarchyNode): PrintPage[] {
   return pages;
 }
 
+// Modo "filtrado" (ver customer-class-animacion-filtro.md, punto 2): a
+// diferencia de buildBookPages/buildPrintPages (que recorren TODAS las
+// sub-familias/categorías de UNA Familia), estas dos arman el libro/PDF a
+// partir de una lista puntual de categorías ya resueltas — puede cruzar
+// varias Familias distintas a la vez (ej. las 5 categorías de "Supermercados
+// y cadenas" en Customer Class viven en 4 Familias distintas). Sin
+// divisores de sub-familia: son categorías sueltas elegidas a mano, no un
+// recorrido completo de una sub-familia. Reusa el resto del componente
+// (portada, header, pie, impresión) sin tocarlo — ver `displayFamily` más
+// abajo, que es lo único que cambia para reflejar el segmento en vez de una
+// Familia real.
+function buildFilteredBookPages(
+  filterCategories: { category: HierarchyNode }[]
+): BookPage[] {
+  const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
+  for (const { category } of filterCategories) {
+    const products = category.products ?? [];
+    if (products.length === 0) continue;
+    const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
+    for (let part = 0; part < totalParts; part++) {
+      pages.push({
+        kind: "category",
+        category,
+        products: products.slice(part * PRODUCTS_PER_GRID_PAGE, (part + 1) * PRODUCTS_PER_GRID_PAGE),
+        part: part + 1,
+        totalParts,
+      });
+    }
+  }
+  return pages;
+}
+
+function buildFilteredPrintPages(filterCategories: { category: HierarchyNode }[]): PrintPage[] {
+  const pages: PrintPage[] = [];
+  for (const { category } of filterCategories) {
+    const products = category.products ?? [];
+    if (products.length === 0) continue;
+    for (let i = 0; i < products.length; i += PRINT_PAGE_SIZE) {
+      pages.push({ categoryName: category.name, products: products.slice(i, i + PRINT_PAGE_SIZE) });
+    }
+  }
+  return pages;
+}
+
 // El motor de react-pageflip clona cada hijo directo agregándole un `ref`
 // para tomar el nodo DOM real — tiene que ser forwardRef, si no el libro no
 // puede medir/posicionar la página.
@@ -309,6 +369,10 @@ export default function ProductCatalogModal({
   family,
   allFamilies,
   initialCategoryId,
+  filterCategories,
+  filterTitle,
+  filterIcon,
+  segmentId,
   onClose,
 }: {
   family: HierarchyNode;
@@ -317,8 +381,35 @@ export default function ProductCatalogModal({
    * catálogo" por categoría) — reusa el mismo `categoryPageIndex` que
    * alimenta el <select> "Ir a categoría" interno, así que si un id no
    * matchea ninguna página (categoría sin productos) simplemente abre en
-   * la portada como siempre. */
+   * la portada como siempre. Se ignora si `filterCategories` viene con al
+   * menos una entrada (el modo filtrado abre siempre en la portada). */
   initialCategoryId?: string;
+  /** Modo filtrado (ver customer-class-animacion-filtro.md, punto 2) —
+   * ADITIVO: cuando viene con al menos una entrada, el libro/PDF se arma
+   * SOLO con estas categorías puntuales (pueden cruzar varias Familias
+   * distintas), en vez de recorrer `family.children` completo. `family` y
+   * `initialCategoryId` se siguen recibiendo pero se ignoran para armar
+   * contenido en este modo (family solo importa como fallback de
+   * `filterTitle`/`filterIcon` si no se pasan). El modo de una sola
+   * Familia (sin este prop, como ya usaban los chips individuales y
+   * ProductExplorer) sigue exactamente igual que antes. */
+  filterCategories?: { category: HierarchyNode }[];
+  /** Nombre a mostrar (header, portada, pie de impresión) en modo filtrado
+   * — normalmente el label del segmento de Customer Class ("Supermercados
+   * y cadenas"), no el nombre de ninguna Familia real puntual. */
+  filterTitle?: string;
+  /** Ícono a mostrar en modo filtrado — normalmente el ícono del segmento
+   * de Customer Class. Si no se pasa, cae al ícono de `family`. */
+  filterIcon?: LucideIcon;
+  /** `key` del segmento de Customer Class (ver businessSegments en
+   * lib/data.ts) cuando el catálogo se abrió desde "Explorar productos" de
+   * ese segmento (ver catalogo-portada-por-segmento.md) — decide qué
+   * portada mostrar (SEGMENT_COVER_PHOTOS de arriba). Si no matchea ninguna
+   * key del mapeo (o no se pasa, ej. chips individuales/ProductExplorer),
+   * cae a la portada genérica `portada.png` sin romper nada — no hay forma
+   * correcta de adivinar un segmento a partir de una categoría suelta, así
+   * que ni se intenta. */
+  segmentId?: string;
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
@@ -334,7 +425,25 @@ export default function ProductCatalogModal({
     title: string;
     entries: { abbr: string; meaning: string }[];
   }[];
-  const Icon = FAMILY_ICONS[family.id] ?? Package;
+  const isFiltered = !!filterCategories && filterCategories.length > 0;
+  // Portada por segmento (ver catalogo-portada-por-segmento.md) — solo
+  // cuando `segmentId` matchea una key real del mapeo; cualquier otro caso
+  // (sin segmentId, o uno que no matchea) cae a la portada genérica de
+  // siempre, sin romper el comportamiento existente.
+  const coverPhoto: string | StaticImageData = (segmentId && SEGMENT_COVER_PHOTOS[segmentId]) || portadaPhoto;
+  // Identidad a mostrar (header/portada/pie de impresión): la Familia real
+  // en modo normal, o un nodo sintético con el nombre del segmento en modo
+  // filtrado — así el resto del componente (BookPageContent, portada de
+  // impresión) no necesita saber que existe un modo filtrado, ver arriba.
+  const displayFamily: HierarchyNode = useMemo(() => {
+    if (!isFiltered || !filterTitle) return family;
+    return {
+      ...family,
+      name: filterTitle,
+      itemCount: filterCategories!.reduce((sum, { category }) => sum + (category.products?.length ?? 0), 0),
+    };
+  }, [isFiltered, filterTitle, filterCategories, family]);
+  const Icon = filterIcon ?? FAMILY_ICONS[displayFamily.id] ?? Package;
   const bookRef = useRef<{ pageFlip: () => PageFlipController } | null>(null);
 
   // react-pageflip tarda un momento en terminar de montar TODAS las páginas
@@ -362,24 +471,35 @@ export default function ProductCatalogModal({
   // `onInit` es el evento real de la librería que marca cuándo terminó.
   const [isBookReady, setIsBookReady] = useState(false);
 
-  const photoOffset = useMemo(() => photoOffsetFor(family.id), [family.id]);
-  const bookPages = useMemo(() => buildBookPages(family, photoOffset), [family, photoOffset]);
+  const photoOffset = useMemo(() => photoOffsetFor(displayFamily.id), [displayFamily.id]);
+  const bookPages = useMemo(
+    () => (isFiltered ? buildFilteredBookPages(filterCategories!) : buildBookPages(family, photoOffset)),
+    [isFiltered, filterCategories, family, photoOffset]
+  );
   const totalPages = bookPages.length;
 
   // Agrupado por sub-familia para el <select> "Ir a categoría" (ver
   // fix-dropdown-agrupado-y-apertura-pagina.md) — mismo criterio que
   // buildBookPages/ProductExplorer.CategoryPanel: solo sub-familias con al
-  // menos una categoría con productos.
-  const categorySections = useMemo(
-    () =>
-      family.children
-        .map((subFamily) => ({
-          subFamily,
-          categories: subFamily.children.filter((category) => (category.products?.length ?? 0) > 0),
-        }))
-        .filter(({ categories }) => categories.length > 0),
-    [family]
-  );
+  // menos una categoría con productos. En modo filtrado no hay sub-familia
+  // real que agrupe (las categorías cruzan Familias distintas a propósito)
+  // — se listan sueltas, sin optgroup.
+  const categorySections = useMemo(() => {
+    if (isFiltered) {
+      return [
+        {
+          subFamily: displayFamily,
+          categories: filterCategories!.map(({ category }) => category).filter((c) => (c.products?.length ?? 0) > 0),
+        },
+      ];
+    }
+    return family.children
+      .map((subFamily) => ({
+        subFamily,
+        categories: subFamily.children.filter((category) => (category.products?.length ?? 0) > 0),
+      }))
+      .filter(({ categories }) => categories.length > 0);
+  }, [isFiltered, filterCategories, displayFamily, family]);
 
   // Página donde empieza cada categoría (su primera parte), para el salto
   // directo del <select> — un índice llano, sin ajustes de paridad.
@@ -393,7 +513,7 @@ export default function ProductCatalogModal({
     return map;
   }, [bookPages]);
 
-  const initialPageIndex = initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
+  const initialPageIndex = !isFiltered && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
   const [currentPage, setCurrentPage] = useState(initialPageIndex);
 
   // Canto de páginas apiladas a los costados del panel (ver
@@ -537,7 +657,10 @@ export default function ProductCatalogModal({
     return found;
   }, [categoryPageIndex, currentPage]);
 
-  const printPages = useMemo(() => buildPrintPages(family), [family]);
+  const printPages = useMemo(
+    () => (isFiltered ? buildFilteredPrintPages(filterCategories!) : buildPrintPages(family)),
+    [isFiltered, filterCategories, family]
+  );
 
   // Cierre con fade-out simétrico al de apertura (ver `.is-closing` en
   // product-catalog-overlay.css) — el desmontaje real (onClose) se retrasa
@@ -590,27 +713,39 @@ export default function ProductCatalogModal({
   // desde la portada.
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
 
-  // ESC cierra el glosario si está abierto (sin cerrar TODO el catálogo
-  // detrás); si no, cierra el catálogo. Flechas del teclado hojean el
-  // libro de verdad.
+  // Detalle ampliado de un producto (ver catalogo-detalle-producto.md) —
+  // feature nuevo, independiente del flipbook: no toca `currentPage` al
+  // abrir/cerrar, así que cerrar el detalle deja al usuario exactamente en
+  // la misma página/categoría de antes. `selectedProduct` null = cerrado.
+  const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+
+  // ESC cierra el detalle de producto si está abierto (máxima prioridad —
+  // está ENCIMA de todo lo demás); si no, el glosario si está abierto; si
+  // no, cierra el catálogo. Flechas del teclado hojean el libro de verdad
+  // (solo cuando no hay detalle de producto abierto encima, para no hojear
+  // "a ciegas" detrás del lightbox).
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         if (isPrintingRef.current) return;
+        if (selectedProduct) {
+          setSelectedProduct(null);
+          return;
+        }
         if (isGlossaryOpen) {
           setIsGlossaryOpen(false);
           return;
         }
         handleClose();
       } else if (e.key === "ArrowRight") {
-        if (isBookReady) bookRef.current?.pageFlip()?.flipNext();
+        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipNext();
       } else if (e.key === "ArrowLeft") {
-        if (isBookReady) bookRef.current?.pageFlip()?.flipPrev();
+        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipPrev();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, isBookReady, isGlossaryOpen]);
+  }, [handleClose, isBookReady, isGlossaryOpen, selectedProduct]);
 
   return createPortal(
     <>
@@ -635,7 +770,7 @@ export default function ProductCatalogModal({
                   {t("catalog.eyebrow")}
                 </p>
                 <p className="font-display" style={{ color: INK, fontSize: "19px", fontWeight: 600, lineHeight: 1.1 }}>
-                  {family.name}
+                  {displayFamily.name}
                 </p>
               </div>
             </div>
@@ -847,7 +982,14 @@ export default function ProductCatalogModal({
               >
                 {bookPages.map((page, index) => (
                   <Page key={index}>
-                    <BookPageContent page={page} family={family} allFamilies={allFamilies} icon={Icon} />
+                    <BookPageContent
+                      page={page}
+                      family={displayFamily}
+                      allFamilies={allFamilies}
+                      icon={Icon}
+                      coverPhoto={coverPhoto}
+                      onProductClick={setSelectedProduct}
+                    />
                   </Page>
                 ))}
               </HTMLFlipBook>
@@ -929,14 +1071,14 @@ export default function ProductCatalogModal({
             <h1>
               {t("catalog.printCoverTitle")}
               <br />
-              {family.name}
+              {displayFamily.name}
             </h1>
             <span aria-hidden className="cp-cover-rule" />
             <p className="cp-cover-description">{t("catalog.sectionDescription")}</p>
           </div>
           <div className="cp-cover-footer">
             <span>MERCASA · 2026</span>
-            <span>{t("productsCountApprox", { count: formatProductCount(family.itemCount) })}</span>
+            <span>{t("productsCountApprox", { count: formatProductCount(displayFamily.itemCount) })}</span>
           </div>
         </section>
 
@@ -948,7 +1090,7 @@ export default function ProductCatalogModal({
             </header>
 
             <div className="cp-category-header">
-              <span className="cp-category-label">{family.name}</span>
+              <span className="cp-category-label">{displayFamily.name}</span>
               <h2>{page.categoryName}</h2>
               <span className="cp-rule" />
             </div>
@@ -973,6 +1115,20 @@ export default function ProductCatalogModal({
           </section>
         ))}
       </div>
+
+      {/* Detalle ampliado de producto (ver catalogo-detalle-producto.md) —
+          ENCIMA del catálogo, no lo reemplaza. z-[70] queda por encima del
+          panel del catálogo y del popover del glosario (ambos con z más
+          bajo dentro de este mismo portal), así siempre se ve al frente sin
+          importar desde qué página del libro se haya abierto. */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          icon={Icon}
+          glossaryGroups={glossaryGroups}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </>,
     document.body
   );
@@ -1014,17 +1170,23 @@ function BookPageContent({
   family,
   allFamilies,
   icon: Icon,
+  coverPhoto,
+  onProductClick,
 }: {
   page: BookPage;
   family: HierarchyNode;
   allFamilies: HierarchyNode[];
   icon: LucideIcon;
+  /** Portada genérica o por segmento (ver catalogo-portada-por-segmento.md
+   * y SEGMENT_COVER_PHOTOS arriba) — decidida en ProductCatalogModal, este
+   * componente solo la pinta. */
+  coverPhoto: string | StaticImageData;
+  onProductClick: (product: ProductSummary) => void;
 }) {
   const t = useTranslations("Products");
-  // Fijas para todas las familias (ver reemplazar-imagenes-portada-indice.md)
-  // — a diferencia de los divisores de sub-familia, portada/portafolio no
-  // rotan.
-  const coverPhoto = portadaPhoto;
+  // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
+  // las familias (ver reemplazar-imagenes-portada-indice.md) — no rota ni
+  // depende del segmento.
   const portfolioPhoto = indicePhoto;
 
   if (page.kind === "cover") {
@@ -1215,17 +1377,47 @@ function BookPageContent({
           Cada tarjeta conserva su alto natural en vez de estirarse. */}
       <div className="mt-5 grid flex-1 grid-cols-3 content-start items-start gap-3">
         {page.products.map((product) => (
-          <ProductCard key={product.id} product={product} icon={Icon} />
+          <ProductCard key={product.id} product={product} icon={Icon} onClick={() => onProductClick(product)} />
         ))}
       </div>
     </div>
   );
 }
 
-function ProductCard({ product, icon }: { product: ProductSummary; icon: LucideIcon }) {
+function ProductCard({
+  product,
+  icon,
+  onClick,
+}: {
+  product: ProductSummary;
+  icon: LucideIcon;
+  onClick: () => void;
+}) {
+  const t = useTranslations("Products");
+  // Cortar la propagación en fase de CAPTURA, no alcanza con
+  // stopPropagation en el onClick normal (ver catalogo-detalle-fix-imagen-
+  // click.md, punto 2): react-pageflip (la librería `page-flip`) engancha
+  // su propio `mousedown`/`touchstart` con `addEventListener` NATIVO
+  // directo sobre su propio contenedor (`distElement`, un ancestro real de
+  // este botón), no a través del sistema de eventos sintéticos de React —
+  // confirmado leyendo page-flip.module.js (`setHandlers()`). Ese listener
+  // corre en fase de bubbling ANTES de que React llegue a despachar
+  // `onClick` (React delega en la raíz de la app), así que para cuando el
+  // click "normal" intentaría cortar la propagación ya es tarde: page-flip
+  // ya decidió el cambio de página en su propio mousedown. Frenarlo en
+  // captura (que corre primero, de la raíz hacia el botón, antes de que
+  // bubbling le dé la vuelta a page-flip) sí lo evita — sin esto, page-flip
+  // nunca se entera del mousedown/touchstart. El click del propio botón
+  // (mismo nodo) sigue disparando normal, stopPropagation en captura solo
+  // bloquea que el evento SIGA hacia otros nodos.
   return (
-    <div
-      className="flex flex-col items-center gap-1.5 rounded-xl border bg-white p-2 text-center transition hover:-translate-y-0.5"
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseDownCapture={(e) => e.stopPropagation()}
+      onTouchStartCapture={(e) => e.stopPropagation()}
+      aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
+      className="flex w-full flex-col items-center gap-1.5 rounded-xl border bg-white p-2 text-center transition hover:-translate-y-0.5"
       style={{ borderColor: RULE, boxShadow: "0 2px 8px rgba(8,43,92,0.06)" }}
     >
       <div
@@ -1253,6 +1445,6 @@ function ProductCard({ product, icon }: { product: ProductSummary; icon: LucideI
           {product.packSize}
         </p>
       )}
-    </div>
+    </button>
   );
 }

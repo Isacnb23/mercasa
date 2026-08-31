@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Package, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Foto real de producto vía /api/product-images/[itemId] (ver route.ts —
 // resuelve el ITEMID contra la tabla Arte real de Mercasa y trae el archivo
@@ -21,19 +22,35 @@ export default function ProductImage({
   familyIcon: FamilyIcon = Package,
   size = "m",
   className,
+  errorIconClassName,
+  onStatusChange,
 }: {
   itemId: string;
   name: string;
   familyIcon?: LucideIcon;
   size?: "s" | "m" | "l";
   className?: string;
+  /** Tamaño del ícono de fallback cuando NO hay foto real (ver
+   * catalogo-detalle-producto.md) — por defecto llena el 100% de
+   * `className` (miniaturas chicas del flipbook, donde eso se ve bien),
+   * pero el detalle ampliado de producto usa una caja mucho más grande y
+   * necesita un ícono moderado ahí adentro, no gigante/pixelado. */
+  errorIconClassName?: string;
+  /** Notifica al padre el estado real de la carga (ver
+   * catalogo-detalle-producto.md) — el detalle ampliado lo usa para
+   * mostrar un texto "Foto no disponible" además del ícono cuando falla. */
+  onStatusChange?: (status: "loading" | "loaded" | "error") => void;
 }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const updateStatus = (next: "loading" | "loaded" | "error") => {
+    setStatus(next);
+    onStatusChange?.(next);
+  };
 
   if (status === "error") {
     return (
-      <span className={className} role="img" aria-label={name}>
-        <FamilyIcon className="h-full w-full" strokeWidth={1.5} aria-hidden />
+      <span className={cn("flex items-center justify-center", className)} role="img" aria-label={name}>
+        <FamilyIcon className={errorIconClassName ?? "h-full w-full"} strokeWidth={1.5} aria-hidden />
       </span>
     );
   }
@@ -51,8 +68,8 @@ export default function ProductImage({
       <img
         src={`/api/product-images/${encodeURIComponent(itemId)}?size=${size}`}
         alt={name}
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
+        onLoad={() => updateStatus("loaded")}
+        onError={() => updateStatus("error")}
         className={className}
         style={{
           position: "absolute",
