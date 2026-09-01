@@ -427,6 +427,107 @@
     "socialFacebook": "Mercasa on Facebook",
     "socialLinkedin": "Mercasa on LinkedIn",
     "socialInstagram": "Mercasa on Instagram",
-    "socialPending": "{label} (link coming soon)"
+    "socialPending": "{label} (link coming soon)",
+    "termsLink": "Terms and Conditions",
+    "privacyLink": "Privacy Policy"
+  },
+  "Legal": {
+    "eyebrow": "Legal",
+    "logoAria": "Mercasa — Home",
+    "backToSite": "Back to site",
+    "lastUpdated": "Last updated: {date}",
+    "publishDate": "September 1, 2026",
+    "terms": {
+      "metaTitle": "Terms and Conditions",
+      "title": "Terms and Conditions of Use",
+      "sections": [
+        {
+          "title": "1. Acceptance of terms",
+          "body": "By accessing and using the Mercasa website (a Grupo Inteca company), you agree to comply with these Terms and Conditions. If you do not agree with any part of these terms, please refrain from using this site."
+        },
+        {
+          "title": "2. Purpose of the site",
+          "body": "This website is for informational and commercial contact purposes. It presents Mercasa's product catalog, institutional information, and contact channels. This site is NOT an e-commerce platform — no purchases, payments, or transactions are processed through it. All commercial dealings are carried out through the contact channels listed (phone, email, WhatsApp)."
+        },
+        {
+          "title": "3. Catalog information",
+          "body": "Product information, reference prices, availability, and images shown in the catalog are for informational purposes and may be subject to change without notice. Mercasa reserves the right to update, correct, or modify this information at any time. To confirm current availability and commercial terms, please contact our team directly."
+        },
+        {
+          "title": "4. Intellectual property",
+          "body": "All content on this site (text, images, logos, design, and structure) is the property of Mercasa/Grupo Inteca or is used under corresponding license, and is protected by the intellectual property laws of Costa Rica. Its total or partial reproduction without express authorization is prohibited."
+        },
+        {
+          "title": "5. Acceptable use",
+          "body": "Users agree to use this site lawfully, without engaging in activities that could damage, overload, or affect the site's operation, or attempting unauthorized access to Mercasa/Grupo Inteca systems or data."
+        },
+        {
+          "title": "6. Third-party links",
+          "body": "This site may contain links to external platforms (such as WhatsApp, Google Maps, or Waze) to facilitate contact and location. Mercasa is not responsible for the content or policies of such external sites."
+        },
+        {
+          "title": "7. Limitation of liability",
+          "body": "Mercasa does not guarantee that the site will be free of errors or interruptions. Use of the site is at the user's own responsibility."
+        },
+        {
+          "title": "8. Modifications",
+          "body": "Mercasa may modify these Terms and Conditions at any time. Changes will take effect upon publication on this site."
+        },
+        {
+          "title": "9. Governing law",
+          "body": "These Terms and Conditions are governed by the laws of the Republic of Costa Rica. Any dispute will be submitted to the competent courts of Costa Rica."
+        },
+        {
+          "title": "10. Contact",
+          "body": "For questions about these Terms and Conditions, you may write to servicio_al_cliente@grupointeca.com."
+        }
+      ]
+    },
+    "privacy": {
+      "metaTitle": "Privacy Policy",
+      "title": "Privacy Policy",
+      "sections": [
+        {
+          "title": "1. Data controller",
+          "body": "Mercasa, a Grupo Inteca company, domiciled in Tejar de El Guarco, Cartago, Costa Rica, is responsible for the processing of personal data collected through this website."
+        },
+        {
+          "title": "2. Data we collect",
+          "body": "Through this site's forms (contact and recruitment) we may collect: name, email address, phone number, and any additional information the user chooses to include in their message or application."
+        },
+        {
+          "title": "3. Purpose of processing",
+          "body": "The data collected is used exclusively to:\n- Respond to commercial or customer service inquiries.\n- Manage recruitment and personnel selection processes.\n- Follow up on contact requests.\n\nData is not used for purposes other than those indicated here, nor shared with unauthorized third parties."
+        },
+        {
+          "title": "4. Legal basis",
+          "body": "Personal data is processed in accordance with Law No. 8968 on the Protection of Individuals with Regard to the Processing of Their Personal Data of Costa Rica, and its regulations."
+        },
+        {
+          "title": "5. Data subject rights (ARCO Rights)",
+          "body": "You have the right to Access, Rectify, Cancel, and Object to the processing of your personal data. To exercise these rights, you may write to servicio_al_cliente@grupointeca.com stating your request."
+        },
+        {
+          "title": "6. Data retention",
+          "body": "Personal data will be retained only for as long as necessary to fulfill the purpose for which it was collected, or as required by applicable law."
+        },
+        {
+          "title": "7. Information security",
+          "body": "Mercasa implements reasonable measures to protect personal data against unauthorized access, loss, or misuse."
+        },
+        {
+          "title": "8. Cookies and similar technologies",
+          "body": "This site may use technical cookies necessary for its operation. No third-party advertising tracking cookies are used."
+        },
+        {
+          "title": "9. Changes to this policy",
+          "body": "This Privacy Policy may be updated periodically. We recommend reviewing it occasionally. The \"last updated\" date indicates the version in effect."
+        },
+        {
+          "title": "10. Contact",
+          "body": "For questions about this Privacy Policy or the processing of your personal data, you may write to servicio_al_cliente@grupointeca.com."
+        }
+      ]
+    }
   }
 }

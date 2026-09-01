@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { MapPin, Mail, Phone } from "lucide-react";
 import { site } from "@/lib/data";
+import { Link } from "@/i18n/navigation";
 import logo from "@/public/models/mercasa-logo-transparent.png";
 import Container from "../ui/Container";
 import FooterNav from "./FooterNav";
@@ -174,9 +175,22 @@ export default async function Footer() {
 
         <div className="mt-[35px] border-t pt-6" style={{ borderColor: "#E2E8F0" }}>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12px] md:text-[13px] text-slate-500">
-              {t("copyright", { year, name: site.name, parent: site.parentCompany })}
-            </p>
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] md:text-[13px] text-slate-500">
+                {t("copyright", { year, name: site.name, parent: site.parentCompany })}
+              </p>
+              {/* Links a las páginas legales (ver
+                  paginas-legales-terminos-privacidad.md) — chicos, debajo del
+                  copyright, sin competir visualmente con el resto del footer. */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] md:text-[13px]">
+                <Link href="/legal/terminos-y-condiciones" className="text-slate-500 underline-offset-2 transition hover:text-[#075FD8] hover:underline">
+                  {t("termsLink")}
+                </Link>
+                <Link href="/legal/politica-de-privacidad" className="text-slate-500 underline-offset-2 transition hover:text-[#075FD8] hover:underline">
+                  {t("privacyLink")}
+                </Link>
+              </div>
+            </div>
             <div className="flex items-center gap-[14px]">
               <SocialIcon
                 href={site.facebook}

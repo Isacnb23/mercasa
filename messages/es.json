@@ -428,6 +428,107 @@
     "socialFacebook": "Mercasa en Facebook",
     "socialLinkedin": "Mercasa en LinkedIn",
     "socialInstagram": "Mercasa en Instagram",
-    "socialPending": "{label} (pendiente de link)"
+    "socialPending": "{label} (pendiente de link)",
+    "termsLink": "Términos y Condiciones",
+    "privacyLink": "Política de Privacidad"
+  },
+  "Legal": {
+    "eyebrow": "Legal",
+    "logoAria": "Mercasa — Inicio",
+    "backToSite": "Volver al sitio",
+    "lastUpdated": "Última actualización: {date}",
+    "publishDate": "1 de setiembre de 2026",
+    "terms": {
+      "metaTitle": "Términos y Condiciones",
+      "title": "Términos y Condiciones de Uso",
+      "sections": [
+        {
+          "title": "1. Aceptación de los términos",
+          "body": "Al acceder y utilizar el sitio web de Mercasa (una empresa de Grupo Inteca), usted acepta cumplir con estos Términos y Condiciones. Si no está de acuerdo con alguna parte de estos términos, le solicitamos no utilizar este sitio."
+        },
+        {
+          "title": "2. Objeto del sitio",
+          "body": "Este sitio web tiene fines informativos y de contacto comercial. Presenta el catálogo de productos, información institucional, y canales de contacto de Mercasa. Este sitio NO constituye una plataforma de comercio electrónico — no se procesan compras, pagos ni transacciones a través de este sitio. Toda gestión comercial se realiza mediante los canales de contacto indicados (teléfono, correo electrónico, WhatsApp)."
+        },
+        {
+          "title": "3. Información del catálogo",
+          "body": "La información de productos, precios de referencia, disponibilidad e imágenes mostradas en el catálogo tiene fines informativos y puede estar sujeta a cambios sin previo aviso. Mercasa se reserva el derecho de actualizar, corregir o modificar dicha información en cualquier momento. Para confirmar disponibilidad y condiciones comerciales vigentes, contacte directamente a nuestro equipo."
+        },
+        {
+          "title": "4. Propiedad intelectual",
+          "body": "Todo el contenido de este sitio (textos, imágenes, logotipos, diseño, y estructura) es propiedad de Mercasa/Grupo Inteca o se utiliza bajo licencia correspondiente, y está protegido por las leyes de propiedad intelectual de Costa Rica. Queda prohibida su reproducción total o parcial sin autorización expresa."
+        },
+        {
+          "title": "5. Uso aceptable",
+          "body": "El usuario se compromete a utilizar este sitio de forma lícita, sin realizar actividades que puedan dañar, sobrecargar o afectar el funcionamiento del sitio, ni intentar acceder sin autorización a sistemas o datos de Mercasa/Grupo Inteca."
+        },
+        {
+          "title": "6. Enlaces a terceros",
+          "body": "Este sitio puede contener enlaces a plataformas externas (como WhatsApp, Google Maps o Waze) para facilitar el contacto y la ubicación. Mercasa no se responsabiliza por el contenido o las políticas de dichos sitios externos."
+        },
+        {
+          "title": "7. Limitación de responsabilidad",
+          "body": "Mercasa no garantiza que el sitio esté libre de errores o interrupciones. El uso del sitio es bajo responsabilidad del usuario."
+        },
+        {
+          "title": "8. Modificaciones",
+          "body": "Mercasa podrá modificar estos Términos y Condiciones en cualquier momento. Los cambios entrarán en vigencia desde su publicación en este sitio."
+        },
+        {
+          "title": "9. Legislación aplicable",
+          "body": "Estos Términos y Condiciones se rigen por las leyes de la República de Costa Rica. Cualquier controversia se someterá a los tribunales competentes de Costa Rica."
+        },
+        {
+          "title": "10. Contacto",
+          "body": "Para consultas sobre estos Términos y Condiciones, puede escribir a servicio_al_cliente@grupointeca.com."
+        }
+      ]
+    },
+    "privacy": {
+      "metaTitle": "Política de Privacidad",
+      "title": "Política de Privacidad",
+      "sections": [
+        {
+          "title": "1. Responsable del tratamiento",
+          "body": "Mercasa, empresa de Grupo Inteca, con domicilio en Tejar de El Guarco, Cartago, Costa Rica, es responsable del tratamiento de los datos personales recolectados a través de este sitio web."
+        },
+        {
+          "title": "2. Datos que recolectamos",
+          "body": "A través de los formularios de este sitio (contacto y reclutamiento) podemos recolectar: nombre, correo electrónico, número de teléfono, y cualquier información adicional que el usuario decida incluir en su mensaje o postulación."
+        },
+        {
+          "title": "3. Finalidad del tratamiento",
+          "body": "Los datos recolectados se utilizan exclusivamente para:\n- Responder consultas comerciales o de servicio al cliente.\n- Gestionar procesos de reclutamiento y selección de personal.\n- Dar seguimiento a solicitudes de contacto.\n\nNo se utilizan los datos para fines distintos a los aquí indicados, ni se comparten con terceros no autorizados."
+        },
+        {
+          "title": "4. Base legal",
+          "body": "El tratamiento de datos personales se realiza de conformidad con la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales de Costa Rica, y su reglamento."
+        },
+        {
+          "title": "5. Derechos del titular de los datos (Derechos ARCO)",
+          "body": "Usted tiene derecho a Acceder, Rectificar, Cancelar y Oponerse al tratamiento de sus datos personales. Para ejercer estos derechos, puede escribir a servicio_al_cliente@grupointeca.com indicando su solicitud."
+        },
+        {
+          "title": "6. Conservación de datos",
+          "body": "Los datos personales se conservarán únicamente durante el tiempo necesario para cumplir con la finalidad para la que fueron recolectados, o según lo requiera la legislación aplicable."
+        },
+        {
+          "title": "7. Seguridad de la información",
+          "body": "Mercasa implementa medidas razonables para proteger los datos personales contra acceso no autorizado, pérdida o uso indebido."
+        },
+        {
+          "title": "8. Cookies y tecnologías similares",
+          "body": "Este sitio puede utilizar cookies técnicas necesarias para su funcionamiento. No se utilizan cookies de rastreo publicitario de terceros."
+        },
+        {
+          "title": "9. Cambios a esta política",
+          "body": "Esta Política de Privacidad puede actualizarse periódicamente. Le recomendamos revisarla ocasionalmente. La fecha de \"última actualización\" indica la versión vigente."
+        },
+        {
+          "title": "10. Contacto",
+          "body": "Para consultas sobre esta Política de Privacidad o el tratamiento de sus datos personales, puede escribir a servicio_al_cliente@grupointeca.com."
+        }
+      ]
+    }
   }
 }
