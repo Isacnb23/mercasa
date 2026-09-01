@@ -327,7 +327,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                           role="tab"
                           aria-selected={isActive}
                           onClick={() => setActiveSiteKey(s.key)}
-                          className="rounded-full px-4 py-2 text-[13px] font-semibold transition"
+                          className="rounded-full px-4 py-2 text-[14px] font-semibold transition"
                           style={{ color: isActive ? "#ffffff" : NAVY, background: isActive ? NAVY : "transparent" }}
                         >
                           {t(`sites.${s.key}.tabLabel`)}
@@ -344,7 +344,18 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                       exit={reduceMotion ? undefined : { opacity: 0 }}
                       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <InfoRow icon={MapPin} title={t(`sites.${activeSite.key}.sedeTitle`)}>
+                      {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
+                          inconsistente.md): reserva altura para el caso más
+                          largo (CEDI Central, 3 líneas físicas — dirección +
+                          línea 2 + código postal) para que la tarjeta no
+                          cambie de tamaño cuando San Antonio, con menos
+                          datos, deja el resto del espacio vacío en vez de
+                          inventar un line2/CP falso solo para rellenar. */}
+                      <InfoRow
+                        icon={MapPin}
+                        title={t(`sites.${activeSite.key}.sedeTitle`)}
+                        contentClassName="min-h-[3lh]"
+                      >
                         {activeSite.address.line1}
                         {activeSite.address.line2 && (
                           <>
@@ -386,7 +397,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                     target="_blank"
                     rel="noreferrer"
                     whileTap={{ scale: 0.97 }}
-                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
+                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full px-6 text-base font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
                     style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
                   >
                     <WhatsAppIcon className="h-[18px] w-[18px]" />
@@ -395,7 +406,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                   <motion.a
                     href={site.phoneHref}
                     whileTap={{ scale: 0.97 }}
-                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white px-6 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)]"
+                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white px-6 text-base font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)]"
                     style={{ border: `1.5px solid ${NAVY}`, color: NAVY }}
                   >
                     <Phone className="h-4 w-4" />
@@ -446,11 +457,17 @@ function InfoRow({
   title,
   children,
   last = false,
+  contentClassName,
 }: {
   icon: React.ElementType;
   title: string;
   children: React.ReactNode;
   last?: boolean;
+  /** Clase extra para el <p> de contenido — usada por el bloque de sede
+   * (ver fix-mapa-roto-y-tarjeta-inconsistente.md) para reservar una altura
+   * mínima fija y que la tarjeta no cambie de tamaño según cuántas líneas
+   * de dirección tenga la sede activa. */
+  contentClassName?: string;
 }) {
   return (
     <div className="flex gap-4">
@@ -464,10 +481,10 @@ function InfoRow({
         className={cn("min-w-0 flex-1 py-3.5", !last && "border-b")}
         style={!last ? { borderColor: "rgba(11,47,99,0.14)" } : undefined}
       >
-        <p className="text-[11.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
+        <p className="text-[12.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
           {title}
         </p>
-        <p className="mt-1 break-words text-[14px] leading-[1.55]" style={{ color: "#3A4A5F" }}>
+        <p className={cn("mt-1 break-words text-[15px] leading-[1.55]", contentClassName)} style={{ color: "#3A4A5F" }}>
           {children}
         </p>
       </div>
