@@ -163,11 +163,16 @@ export default function ContactMap({ site }: { site: ContactSite }) {
       container: containerRef.current,
       style: LIBERTY_STYLE_URL,
       center: [site.address.lng, site.address.lat],
-      // zoom 17 deja la sede como protagonista, con la vía de acceso y las
-      // cuadras inmediatas a su alrededor, sin el ruido de calles lejanas que
-      // aparecía a zoom 15. pitch/bearing en 0 (ver comentario arriba): vista
-      // plana de arriba, orientada al norte, tipo mapa impreso.
-      zoom: 17,
+      // zoom 16 (antes 17, ver mapa-zoom-inicial.md): a zoom 17 el pin
+      // quedaba muy pegado/cerca, sin aire alrededor — un nivel menos deja
+      // el marcador bien centrado con contexto real (calles y cuadras
+      // cercanas) sin perder la referencia inmediata de la zona. Un único
+      // valor de zoom vive en el mapa (no se resetea por sede): el efecto
+      // de abajo que mueve el mapa al cambiar de sede solo cambia `center`
+      // vía flyTo/jumpTo, así que este mismo valor aplica igual a las dos.
+      // pitch/bearing en 0 (ver comentario arriba): vista plana de arriba,
+      // orientada al norte, tipo mapa impreso.
+      zoom: 16,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -256,16 +261,30 @@ export default function ContactMap({ site }: { site: ContactSite }) {
       `;
       // anchor "bottom": la punta de la colita (no el centro del círculo) es
       // la que debe caer exactamente sobre la coordenada de la sede.
-      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" }).addTo(map);
-      markerRef.current = marker;
-
+      //
+      // CAUSA RAÍZ del mapa roto tras el selector de sedes (ver fix-mapa-
+      // roto-y-tarjeta-inconsistente.md): acá se llamaba `.addTo(map)` ANTES
+      // de `.setLngLat(...)` — Marker.addTo() dispara internamente un
+      // `_update()` síncrono que proyecta `this._lngLat`, y con el marcador
+      // recién creado esa coordenada todavía es `undefined` (confirmado con
+      // el stack trace real: "Cannot read properties of undefined (reading
+      // 'lng')" dentro de `Marker._update`). Esa excepción queda sin
+      // capturar (se dispara desde el loop de render de MapLibre, no desde
+      // este código), así que el resto del handler de "load" —incluyendo la
+      // asignación a `markerRef.current`— nunca llegaba a ejecutarse:
+      // `markerRef` se quedaba en null para siempre, y el efecto de abajo
+      // (flyTo al cambiar de sede) bailaba en cada cambio de tab sin mover
+      // nunca el mapa. Fix: `setLngLat` SIEMPRE antes de `addTo`.
       // Se posiciona con `siteRef.current` (no el `site` capturado al crear
       // el mapa/efecto): corrige el caso borde en que la sede activa cambió
       // MIENTRAS el mapa todavía estaba cargando (el efecto de abajo, que
       // reacciona a cambios de sede, no puede animar hacia una sede nueva
       // hasta que `markerRef.current` exista).
       const initial = siteRef.current;
-      marker.setLngLat([initial.address.lng, initial.address.lat]);
+      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([initial.address.lng, initial.address.lat])
+        .addTo(map);
+      markerRef.current = marker;
       map.jumpTo({ center: [initial.address.lng, initial.address.lat] });
     });
 
