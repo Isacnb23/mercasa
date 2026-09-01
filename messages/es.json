@@ -135,7 +135,7 @@
         "statLabel": "entregas comerciales por semana",
         "features": {
           "f1": {
-            "title": "Flota propia con rutas optimizadas",
+            "title": "Flota propia y aliada con rutas optimizadas",
             "description": "Cobertura eficiente en las 7 provincias del país."
           },
           "f2": {
@@ -143,8 +143,8 @@
             "description": "Coordinación con supermercados, retail y comercio local según su ciclo de reposición."
           },
           "f3": {
-            "title": "Monitoreo de flota en tiempo real",
-            "description": "Visibilidad total de cada entrega en ruta."
+            "title": "Monitoreo de flota",
+            "description": "Visibilidad de cada entrega en ruta."
           },
           "f4": {
             "title": "Puntualidad como estándar",

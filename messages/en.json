@@ -135,7 +135,7 @@
         "statLabel": "weekly deliveries",
         "features": {
           "f1": {
-            "title": "Own fleet with optimized routes",
+            "title": "Own and partner fleet with optimized routes",
             "description": "Efficient coverage across the country's 7 provinces."
           },
           "f2": {
@@ -143,8 +143,8 @@
             "description": "Coordinated with supermarkets, retail, and local trade according to their restocking cycle."
           },
           "f3": {
-            "title": "Real-time fleet monitoring",
-            "description": "Full visibility of every delivery en route."
+            "title": "Fleet monitoring",
+            "description": "Visibility of every delivery en route."
           },
           "f4": {
             "title": "Punctuality as a standard",
