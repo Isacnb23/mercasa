@@ -187,9 +187,11 @@
     "photoAlt": "Mercasa collaborators"
   },
   "Products": {
+    "eyebrow": "Our products",
     "titleLead": "Everything your business",
     "titleAccent": "needs",
     "paragraph": "A complete catalog organized by family, with hundreds of products available for your business.",
+    "viewCatalogCta": "View catalog",
     "pillars": {
       "catalogo": {
         "title": "Complete catalog",

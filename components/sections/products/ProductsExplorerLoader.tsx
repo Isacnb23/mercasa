@@ -23,14 +23,14 @@ export default async function ProductsExplorerLoader() {
         <h3 className="font-display text-corp-ink" style={{ fontSize: "20px", fontWeight: 600 }}>
           {t("errorTitle")}
         </h3>
-        <p className="mx-auto mt-2 max-w-[420px] text-[14px] leading-[1.6]" style={{ color: "#3A4A5F" }}>
+        <p className="mx-auto mt-2 max-w-[420px] text-[15px] leading-[1.6]" style={{ color: "#3A4A5F" }}>
           {t("errorDescription")}
         </p>
         <a
           href={site.whatsappHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-corp-blue px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:opacity-90"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-corp-blue px-5 py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90"
         >
           <MessageCircle className="h-4 w-4" aria-hidden />
           {t("errorCta")}

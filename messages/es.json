@@ -187,9 +187,11 @@
     "photoAlt": "Colaboradores de Mercasa"
   },
   "Products": {
+    "eyebrow": "Nuestros productos",
     "titleLead": "Todo lo que tu negocio",
     "titleAccent": "necesita",
     "paragraph": "Un catálogo completo organizado por familia, con cientos de productos disponibles para tu negocio.",
+    "viewCatalogCta": "Ver catálogo",
     "pillars": {
       "catalogo": {
         "title": "Catálogo completo",

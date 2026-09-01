@@ -25,6 +25,20 @@ export default function ProductsHeader() {
       {/* y={0}: título de la sección navegable (#productos), ver
           fix-padding-secciones-raiz.md — mismo motivo que en LogisticsTimeline. */}
       <Reveal y={0} className="mx-auto max-w-[640px] text-center">
+        {/* Eyebrow "NUESTROS PRODUCTOS" (ver productos-rediseno-referencia.md
+            y reference/productos-target.png) — mismo patrón de dos líneas
+            sin ícono en el medio que ya usa el encabezado de Customer Class
+            (CustomerClassSection.tsx): la referencia trae un engranaje
+            decorativo entre las líneas, pero el doc pide explícitamente NO
+            incluirlo acá. */}
+        <span
+          className="mb-5 flex items-center justify-center gap-3 text-[13px] font-bold uppercase sm:text-[15px]"
+          style={{ letterSpacing: "0.2em", color: "#082b5c" }}
+        >
+          <span className="h-px w-10 shrink-0 sm:w-14" style={{ background: "#DDE3E8" }} />
+          {t("eyebrow")}
+          <span className="h-px w-10 shrink-0 sm:w-14" style={{ background: "#DDE3E8" }} />
+        </span>
         <h2
           className="font-display text-corp-ink"
           style={{
@@ -71,7 +85,7 @@ export default function ProductsHeader() {
               <h3 className="mt-2 text-[13px] font-bold uppercase text-corp-ink" style={{ letterSpacing: "0.06em" }}>
                 {t(`pillars.${key}.title`)}
               </h3>
-              <p className="mt-1 max-w-[240px] text-[13.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
+              <p className="mt-1 max-w-[240px] text-[14.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
                 {t(`pillars.${key}.description`)}
               </p>
             </motion.li>
