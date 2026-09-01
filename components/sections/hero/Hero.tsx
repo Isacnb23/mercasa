@@ -60,7 +60,7 @@ export default function Hero() {
       // puesto padding-top al contenido con items-center en la sección, el
       // centrado flex lo habría compensado shifteando solo la mitad del pt,
       // sin garantizar el aire real bajo el header.
-      className="relative flex min-h-[min(880px,100dvh)] flex-col overflow-hidden bg-white pt-[130px] md:pt-[150px]"
+      className="relative flex min-h-[min(880px,100dvh)] flex-col overflow-hidden bg-white pt-[100px] md:pt-[120px]"
     >
       {/* Imagen de escritorio con máscara simétrica */}
       <div className="absolute inset-y-0 left-[34%] right-[-2px] z-0 hidden md:block">
