@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import LegalPage from "@/components/sections/legal/LegalPage";
 
+// SITE_URL/slug repetidos acá (no importados desde layout.tsx) — mismo
+// criterio que el resto del proyecto: son constantes chicas, no vale la
+// pena una capa de indirección extra. Si cambia el dominio o el slug,
+// actualizar layout.tsx, sitemap.ts y esta página juntos.
+const SITE_URL = "https://www.mercasa.cr";
+const PAGE_PATH = "/legal/politica-de-privacidad";
+
 export async function generateMetadata({
   params,
 }: {
@@ -9,7 +16,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Legal.privacy" });
-  return { title: t("metaTitle") };
+  // Descripción/canonical propios de esta página (ver
+  // seo-mejora-diferenciacion.md, puntos 1 y 5) — a diferencia de la home,
+  // NO hereda la description genérica del layout raíz.
+  const canonicalUrl = locale === "en" ? `${SITE_URL}/en${PAGE_PATH}` : `${SITE_URL}${PAGE_PATH}`;
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    alternates: {
+      canonical: canonicalUrl,
+      languages: {
+        es: `${SITE_URL}${PAGE_PATH}`,
+        en: `${SITE_URL}/en${PAGE_PATH}`,
+      },
+    },
+  };
 }
 
 export default async function PrivacyPage({

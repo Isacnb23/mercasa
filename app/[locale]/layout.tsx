@@ -14,6 +14,7 @@ import { site } from "@/lib/data";
 import SmoothScroll from "@/components/chrome/SmoothScroll";
 import PageLoader from "@/components/chrome/PageLoader";
 import AmbientBackdrop from "@/components/chrome/AmbientBackdrop";
+import OrganizationJsonLd from "@/components/chrome/OrganizationJsonLd";
 
 const SITE_URL = "https://www.mercasa.cr";
 
@@ -38,6 +39,24 @@ export async function generateMetadata({
     "x-default": SITE_URL,
   };
 
+  // URL propia de esta página (sin importar el locale) — mismo valor que ya
+  // usa openGraph.url de abajo, reusado acá para la canonical (ver
+  // seo-mejora-diferenciacion.md, punto 5: evitar contenido duplicado entre
+  // es/en a los ojos de Google).
+  const canonicalUrl = locale === "en" ? languages.en : languages.es;
+
+  // Foto real de bodega (ya usada como fondo del Hero, ver HeroContent.tsx)
+  // — no hay un og:image dedicado en el proyecto todavía, esta es la imagen
+  // "de marca" más representativa disponible hoy. 1672x941 (~1.78:1),
+  // suficientemente cerca del ratio ideal de OG (1.91:1) para no recortarse
+  // mal en la mayoría de previews.
+  const ogImage = {
+    url: `${SITE_URL}/brand/Hero/hero-warehouse.png`,
+    width: 1672,
+    height: 941,
+    alt: t("title"),
+  };
+
   return {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -47,15 +66,23 @@ export async function generateMetadata({
     description: t("description"),
     keywords: t.raw("keywords") as string[],
     alternates: {
+      canonical: canonicalUrl,
       languages,
     },
     openGraph: {
       title: t("title"),
       description: t("ogDescription"),
-      url: locale === "en" ? languages.en : languages.es,
+      url: canonicalUrl,
       siteName: site.name,
       locale: locale === "en" ? "en_US" : "es_CR",
       type: "website",
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("ogDescription"),
+      images: [ogImage.url],
     },
     robots: {
       index: true,
@@ -85,6 +112,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body className="bg-ink text-mist-100 antialiased">
+        <OrganizationJsonLd />
         {/*
           Adelanta la descarga del modelo 3D del camión (7.8MB comprimido con
           Draco) al instante en que el documento se parsea, en paralelo con
