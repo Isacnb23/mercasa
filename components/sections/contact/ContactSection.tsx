@@ -8,16 +8,13 @@ import { Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone } from "luci
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
+import WhatsAppIcon from "../../ui/WhatsAppIcon";
 import CustomerClassSection, { resolveChipTarget } from "../customer-class/CustomerClassSection";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
 import { businessSegments, contactSites, site } from "@/lib/data";
-import { cn } from "@/lib/utils";
+import { buildWhatsappHref, cn } from "@/lib/utils";
 import type { HierarchyNode } from "@/lib/product-types";
 import type { ContactSite } from "@/lib/data";
-
-function buildWhatsappHref(baseHref: string, message: string) {
-  return `${baseHref}?text=${encodeURIComponent(message)}`;
-}
 
 // Busca el nodo real de categoría (sub-familia -> categoría) dentro de una
 // Familia, a partir del id resuelto por `resolveChipTarget` — necesario para
@@ -267,7 +264,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
               {t("title")}
             </h2>
             <p
-              className="mx-auto mt-4 max-w-[700px] text-[15px] leading-[1.55] md:text-[16px]"
+              className="mx-auto mt-4 max-w-[700px] text-[16px] leading-[1.55] md:text-[17px]"
               style={{ color: "#3A4A5F" }}
             >
               {t("paragraph")}
@@ -303,7 +300,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                   >
                     {t("infoTitle")}
                   </h3>
-                  <p className="mt-3 text-[15px] leading-[1.6]" style={{ color: "#5C6B7D" }}>
+                  <p className="mt-3 text-[16px] leading-[1.6]" style={{ color: "#5C6B7D" }}>
                     {t("infoDescription")}
                   </p>
                 </div>
@@ -327,7 +324,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                           role="tab"
                           aria-selected={isActive}
                           onClick={() => setActiveSiteKey(s.key)}
-                          className="rounded-full px-4 py-2 text-[14px] font-semibold transition"
+                          className="rounded-full px-4 py-2 text-[15px] font-semibold transition"
                           style={{ color: isActive ? "#ffffff" : NAVY, background: isActive ? NAVY : "transparent" }}
                         >
                           {t(`sites.${s.key}.tabLabel`)}
@@ -348,7 +345,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
                           inconsistente.md): reserva altura para el caso más
                           largo (CEDI Central, 3 líneas físicas — dirección +
                           línea 2 + código postal) para que la tarjeta no
-                          cambie de tamaño cuando San Antonio, con menos
+                          cambie de tamaño cuando San Francisco, con menos
                           datos, deja el resto del espacio vacío en vez de
                           inventar un line2/CP falso solo para rellenar. */}
                       <InfoRow
@@ -484,7 +481,7 @@ function InfoRow({
         <p className="text-[12.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
           {title}
         </p>
-        <p className={cn("mt-1 break-words text-[15px] leading-[1.55]", contentClassName)} style={{ color: "#3A4A5F" }}>
+        <p className={cn("mt-1 break-words text-[16px] leading-[1.55]", contentClassName)} style={{ color: "#3A4A5F" }}>
           {children}
         </p>
       </div>
@@ -525,11 +522,11 @@ function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslat
         >
           <div className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-white" />
-            <p className="text-[13px] font-bold text-white" style={{ letterSpacing: "0.01em" }}>
+            <p className="text-[14px] font-bold text-white" style={{ letterSpacing: "0.01em" }}>
               {t(`sites.${activeSite.key}.mapCardTitle`)}
             </p>
           </div>
-          <p className="mt-1 text-[11.5px] leading-snug" style={{ color: "#B8C2D0" }}>
+          <p className="mt-1 text-[12.5px] leading-snug" style={{ color: "#B8C2D0" }}>
             {activeSite.address.line1}
           </p>
         </motion.div>
@@ -542,7 +539,7 @@ function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslat
           href={`https://www.google.com/maps/dir/?api=1&destination=${activeSite.address.lat},${activeSite.address.lng}`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[11.5px] font-semibold transition hover:brightness-95"
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[12.5px] font-semibold transition hover:brightness-95"
           style={{ color: MAP_NAVY }}
         >
           {t("openInGoogleMaps")}
@@ -552,7 +549,7 @@ function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslat
           href={`https://waze.com/ul?ll=${activeSite.address.lat},${activeSite.address.lng}&navigate=yes`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[11.5px] font-semibold transition hover:brightness-95"
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[12.5px] font-semibold transition hover:brightness-95"
           style={{ color: MAP_NAVY }}
         >
           {t("openInWaze")}
@@ -563,20 +560,12 @@ function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslat
       <button
         type="button"
         onClick={handleCopyLocation}
-        className="mt-2.5 inline-flex items-center gap-1.5 text-[11.5px] font-medium transition hover:opacity-80"
+        className="mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] font-medium transition hover:opacity-80"
         style={{ color: "#B8C2D0" }}
       >
         <Copy className="h-3 w-3" />
         {copied ? t("copiedFeedback") : t("copyLocation")}
       </button>
     </div>
-  );
-}
-
-function WhatsAppIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.39a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.51 2 12.04 2Zm5.8 14.02c-.24.68-1.4 1.3-1.93 1.38-.5.08-1.12.11-1.81-.11-.42-.13-.95-.31-1.64-.6-2.9-1.25-4.79-4.17-4.94-4.36-.14-.2-1.18-1.57-1.18-3 0-1.42.75-2.12 1.02-2.41.26-.29.57-.36.76-.36h.55c.18 0 .42-.03.65.5.24.55.81 1.93.88 2.07.07.14.12.3.02.49-.1.19-.15.31-.29.48-.14.17-.3.37-.43.5-.14.14-.29.29-.13.57.17.29.75 1.24 1.61 2 1.11.99 2.04 1.3 2.33 1.44.29.15.46.13.63-.07.17-.2.72-.85.91-1.14.19-.29.38-.24.63-.14.26.1 1.63.77 1.91.91.29.14.48.21.55.34.07.13.07.75-.17 1.43Z" />
-    </svg>
   );
 }

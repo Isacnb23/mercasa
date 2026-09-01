@@ -21,12 +21,12 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import type { HierarchyNode } from "@/lib/product-types";
-import { businessSegments } from "@/lib/data";
-import { cn } from "@/lib/utils";
-import { useScrollTo } from "@/lib/hooks/useScrollTo";
+import { businessSegments, site } from "@/lib/data";
+import { buildWhatsappHref, cn } from "@/lib/utils";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
+import WhatsAppIcon from "../../ui/WhatsAppIcon";
 
 const segmentIcons = {
   store: Store,
@@ -131,7 +131,18 @@ export default function CustomerClassSection({
   const tContact = useTranslations("Contact");
   const activeSegment = businessSegments.find((seg) => seg.key === activeKey) ?? businessSegments[0];
   const reduceMotion = useReducedMotion();
-  const scrollTo = useScrollTo();
+
+  // WhatsApp directo por segmento (ver customer-class-whatsapp-directo.md):
+  // MISMA lógica de armado de mensaje que ya usa el botón "Escríbanos por
+  // WhatsApp" de Contacto (ContactSection.tsx) — mismo número
+  // (site.whatsappHref) y misma key de mensaje "segmentsWhatsappMessage",
+  // solo que acá se recalcula contra `activeSegment` de ESTE componente en
+  // vez del estado compartido, para no depender de que ContactSection ya
+  // haya montado.
+  const segmentWhatsappHref = buildWhatsappHref(
+    site.whatsappHref,
+    tContact("segmentsWhatsappMessage", { noun: tContact(`segments.${activeSegment.key}.whatsappNoun`) })
+  );
 
   // Segmentos sin copy detallado propio (todos menos "supermercados", ver
   // lib/data.ts `detailedCopy`) reusan el valuePhrase corto ya validado como
@@ -395,7 +406,7 @@ export default function CustomerClassSection({
                     })}
                   </div>
 
-                  <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                  <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-5">
                     <button
                       type="button"
                       onClick={onExploreProducts}
@@ -405,27 +416,40 @@ export default function CustomerClassSection({
                       {t("exploreCta")}
                     </button>
 
-                    {/* CTA secundario para bajar directo a "Hablemos de
-                        negocios" con el segmento ya elegido acá arriba (ver
-                        customer-class-fixes.md, punto 4) — el WhatsApp de esa
-                        sección ya arma su mensaje según `activeSegmentKey`
-                        (estado compartido, ver ContactSection.tsx), así que
-                        alcanza con hacer scroll, sin pasar nada más. Se
-                        mantiene el copy real ("Contactar sobre {segmento}"),
-                        solo se restyle a link simple navy sin caja/fondo (ver
-                        customer-class-rediseno-final.md — la referencia
-                        muestra un texto genérico "Hablar con un asesor", pero
-                        el doc pide explícitamente mantener el comportamiento
-                        y copy real ya implementado, solo ajustar el estilo). */}
-                    <button
-                      type="button"
-                      onClick={() => scrollTo("#hablemos-de-negocios")}
-                      className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold underline-offset-4 transition hover:gap-2.5 hover:underline sm:w-fit"
-                      style={{ color: NAVY }}
+                    {/* CTA secundario: antes hacía scroll a "Hablemos de
+                        negocios" para que el usuario buscara ahí el botón de
+                        WhatsApp — ahora abre WhatsApp DIRECTO en una pestaña
+                        nueva, ya con el mensaje personalizado del segmento
+                        elegido acá arriba, sin el paso intermedio (ver
+                        customer-class-whatsapp-directo.md). Mismo armado de
+                        link (buildWhatsappHref + site.whatsappHref) y mismo
+                        ícono que el botón "Escríbanos por WhatsApp" de
+                        Contacto (ContactSection.tsx) — no se duplica la
+                        lógica, se reusa. Se mantiene el copy real ("Contactar
+                        sobre {segmento}"), ver customer-class-rediseno-
+                        final.md — la referencia muestra un texto genérico
+                        "Hablar con un asesor", pero el doc pide explícitamente
+                        mantener el comportamiento y copy real ya
+                        implementado, solo ajustar el estilo. Restyle a botón
+                        "outline" real (ver customer-class-boton-contactar-
+                        visible.md): antes era texto plano azul sin caja, se
+                        veía demasiado discreto al lado de "Explorar
+                        productos" — mismo tratamiento de botón secundario con
+                        borde que ya usa el CTA final de LogisticsSteps (borde
+                        1.5px + relleno navy en hover), pero se mantiene sin
+                        fondo sólido en reposo para que "Explorar productos"
+                        siga siendo el CTA dominante. */}
+                    <a
+                      href={segmentWhatsappHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[#0B315E] hover:text-white sm:w-fit"
+                      style={{ color: NAVY, border: `1.5px solid ${NAVY}` }}
                     >
+                      <WhatsAppIcon className="h-3.5 w-3.5 shrink-0" />
                       {t("contactCta", { segment: tContact(`segments.${activeSegment.key}.label`) })}
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0" style={{ color: NAVY }} aria-hidden />
-                    </button>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    </a>
                   </div>
                 </div>
               </motion.div>

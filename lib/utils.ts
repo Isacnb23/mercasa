@@ -23,3 +23,11 @@ export function normalizeSearchText(value: string): string {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
 }
+
+// Compartida entre el botón "Escríbanos por WhatsApp" de Contacto
+// (ContactSection.tsx) y el CTA "Contactar sobre [segmento]" de Customer
+// Class (CustomerClassSection.tsx, ver customer-class-whatsapp-directo.md) —
+// mismo armado de link para no duplicar la lógica en dos lugares.
+export function buildWhatsappHref(baseHref: string, message: string) {
+  return `${baseHref}?text=${encodeURIComponent(message)}`;
+}
