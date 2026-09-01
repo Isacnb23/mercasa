@@ -241,7 +241,7 @@ export default function CustomerClassSection({
                   />
                 )}
                 <Icon className="h-7 w-7 shrink-0" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
-                <span className="text-[13px] font-semibold leading-tight" style={{ color: NAVY }}>
+                <span className="text-[14px] font-semibold leading-tight" style={{ color: NAVY }}>
                   {tContact(`segments.${segment.key}.label`)}
                 </span>
               </button>
@@ -365,7 +365,7 @@ export default function CustomerClassSection({
                   </h3>
 
                   {description && (
-                    <p className="mt-4 max-w-[440px] text-[14.5px] leading-[1.65]" style={{ color: TEXT_SECONDARY }}>
+                    <p className="mt-4 max-w-[440px] text-[15.5px] leading-[1.65]" style={{ color: TEXT_SECONDARY }}>
                       {description}
                     </p>
                   )}
@@ -385,7 +385,7 @@ export default function CustomerClassSection({
                           key={categoryKey}
                           type="button"
                           onClick={() => onSelectCategory(categoryKey)}
-                          className="flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-medium transition hover:-translate-y-0.5"
+                          className="flex items-center gap-2 rounded-full px-3.5 py-2 text-[14px] font-medium transition hover:-translate-y-0.5"
                           style={{ border: "1px solid rgba(205,187,159,0.45)", background: BEIGE_LIGHT, color: NAVY }}
                         >
                           <CategoryIcon className="h-4 w-4 shrink-0" style={{ color: NAVY }} strokeWidth={1.8} aria-hidden />
@@ -399,7 +399,7 @@ export default function CustomerClassSection({
                     <button
                       type="button"
                       onClick={onExploreProducts}
-                      className="inline-flex w-full items-center justify-center rounded-full px-7 py-3.5 text-[14.5px] font-bold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-fit"
+                      className="inline-flex w-full items-center justify-center rounded-full px-7 py-3.5 text-[15.5px] font-bold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-fit"
                       style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,49,94,0.22)" }}
                     >
                       {t("exploreCta")}
@@ -420,7 +420,7 @@ export default function CustomerClassSection({
                     <button
                       type="button"
                       onClick={() => scrollTo("#hablemos-de-negocios")}
-                      className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold underline-offset-4 transition hover:gap-2.5 hover:underline sm:w-fit"
+                      className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold underline-offset-4 transition hover:gap-2.5 hover:underline sm:w-fit"
                       style={{ color: NAVY }}
                     >
                       {t("contactCta", { segment: tContact(`segments.${activeSegment.key}.label`) })}

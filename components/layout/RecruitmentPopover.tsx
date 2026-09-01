@@ -50,7 +50,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
         className={
           variant === "mobile"
             ? "flex w-full items-center justify-center rounded-2xl px-4 py-3 text-base font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.45)] transition duration-300 hover:brightness-95 active:scale-[0.98]"
-            : "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full px-5 py-[9px] text-[13px] font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.5)] transition duration-300 hover:-translate-y-0.5 hover:brightness-95 active:scale-95"
+            : "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full px-5 py-[9px] text-[14px] font-semibold shadow-[0_6px_16px_-4px_rgba(255,210,26,0.5)] transition duration-300 hover:-translate-y-0.5 hover:brightness-95 active:scale-95"
         }
       >
         {t("navLabel")}
@@ -85,7 +85,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="mt-2 text-[13px] leading-[1.55] text-slate-500">
+            <p className="mt-2 text-[14px] leading-[1.55] text-slate-500">
               {t("intro")}
               {t("intro2")}
             </p>
@@ -103,7 +103,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                   {t("emailLabel")}
                 </p>
-                <p className="truncate text-[13.5px] font-medium text-corp-ink">{site.emails.rh}</p>
+                <p className="truncate text-[14.5px] font-medium text-corp-ink">{site.emails.rh}</p>
               </div>
             </a>
           </motion.div>

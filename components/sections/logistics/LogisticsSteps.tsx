@@ -99,7 +99,7 @@ export default function LogisticsSteps() {
                     {t(`steps.${step.key}.title`)}
                   </h3>
 
-                  <p className="mt-3 text-[14px] leading-[1.65]" style={{ color: "#3A4A5F" }}>
+                  <p className="mt-3 text-[15px] leading-[1.65]" style={{ color: "#3A4A5F" }}>
                     {t(`steps.${step.key}.description`)}
                   </p>
 
@@ -111,7 +111,7 @@ export default function LogisticsSteps() {
                           className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full"
                           style={{ background: STEP_ACCENT }}
                         />
-                        <p className="text-[13.5px] leading-[1.55]" style={{ color: "#3A4A5F" }}>
+                        <p className="text-[14.5px] leading-[1.55]" style={{ color: "#3A4A5F" }}>
                           <span className="font-semibold text-corp-ink">
                             {t(`steps.${step.key}.features.${fKey}.title`)}:{" "}
                           </span>
@@ -148,7 +148,7 @@ export default function LogisticsSteps() {
                     <button
                       type="button"
                       onClick={() => scrollTo("#productos")}
-                      className="group mt-7 inline-flex w-fit items-center justify-center gap-2 rounded-full border-2 border-corp-ink bg-white px-6 py-[11px] text-[13.5px] font-semibold text-corp-ink transition duration-300 hover:-translate-y-0.5 hover:bg-corp-ink hover:text-white"
+                      className="group mt-7 inline-flex w-fit items-center justify-center gap-2 rounded-full border-2 border-corp-ink bg-white px-6 py-[11px] text-[14.5px] font-semibold text-corp-ink transition duration-300 hover:-translate-y-0.5 hover:bg-corp-ink hover:text-white"
                     >
                       {t("cta")}
                       <ChevronRight className="h-4 w-4 transition duration-300 group-hover:translate-x-0.5" strokeWidth={2} />

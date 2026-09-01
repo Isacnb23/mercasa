@@ -103,14 +103,14 @@ export default async function Footer() {
             {/* Único acento amarillo del footer, a propósito: el color de
                 marca cierra el sitio en vez de quedar ausente en la última
                 sección — el texto va en marino, el subrayado en amarillo. */}
-            <p className="mt-[22px] text-[14px] font-medium text-corp-ink md:text-[15px]">
+            <p className="mt-[22px] text-[15px] font-medium text-corp-ink md:text-[16px]">
               {t("tagline", { year: site.foundedYear })}
             </p>
             <span
               aria-hidden
               className="mt-[14px] block h-[2px] w-[48px] rounded-full bg-corp-yellow"
             />
-            <p className="mt-4 max-w-sm text-[14px] leading-[1.7] md:text-[15px]" style={{ color: "#3A4A5F" }}>
+            <p className="mt-4 max-w-sm text-[15px] leading-[1.7] md:text-[16px]" style={{ color: "#3A4A5F" }}>
               {t("description")}
             </p>
           </div>
