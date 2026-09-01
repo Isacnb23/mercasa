@@ -347,6 +347,28 @@ const Page = forwardRef<HTMLDivElement, { children: React.ReactNode }>(function 
   );
 });
 
+// Motivo geométrico muy sutil para el panel decorativo del hueco de spread
+// simple (ver catalogo-portada-espacio-y-mobile.md) — mismo lenguaje visual
+// (círculos concéntricos + hexágono en trazo fino, blanco a baja opacidad)
+// que ya usa la franja navy de ProductExplorer.tsx, para que se sienta la
+// misma mano de diseño en vez de inventar un patrón nuevo.
+function SpreadGutterPattern({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      className={`absolute bottom-[-15%] h-[70%] w-[70%] opacity-[0.08] ${flip ? "right-[-25%]" : "left-[-25%]"}`}
+      viewBox="0 0 320 320"
+      fill="none"
+      aria-hidden
+    >
+      <g stroke="#ffffff" strokeWidth="1.5" transform={flip ? "translate(320,0) scale(-1,1)" : undefined}>
+        <circle cx="90" cy="230" r="140" />
+        <circle cx="90" cy="230" r="95" />
+        <polygon points="90,120 180,168 180,264 90,312 0,264 0,168" />
+      </g>
+    </svg>
+  );
+}
+
 // Métodos reales de PageFlip que usamos (el paquete `page-flip` no publica
 // tipos, así que se declara acá solo lo que se consume — evita `any` suelto
 // sin depender de los tipos internos de un paquete de terceros).
@@ -533,6 +555,12 @@ export default function ProductCatalogModal({
   // altura de pantalla completa queda realmente libre.
   const bookAreaRef = useRef<HTMLDivElement>(null);
   const [bookBox, setBookBox] = useState({ width: BOOK_WIDTH * 2, height: BOOK_HEIGHT });
+  // Expuesto para el panel decorativo del "hueco" de spread simple (ver
+  // catalogo-portada-espacio-y-mobile.md, más abajo) — en mobile/portrait
+  // react-pageflip nunca reserva un spread de dos páginas (ver Render.ts,
+  // calculateBoundsRect: pageWidth = blockWidth completo en PORTRAIT), así
+  // que ese panel no aplica ahí.
+  const [isPortraitBook, setIsPortraitBook] = useState(false);
 
   useEffect(() => {
     const el = bookAreaRef.current;
@@ -544,6 +572,7 @@ export default function ProductCatalogModal({
     // aunque el libro adentro termine renderizando una sola.
     function fit(availableWidth: number, availableHeight: number) {
       const isPortrait = availableWidth < BOOK_MIN_WIDTH * 2;
+      setIsPortraitBook(isPortrait);
       const ratio = isPortrait ? BOOK_WIDTH / BOOK_HEIGHT : (BOOK_WIDTH * 2) / BOOK_HEIGHT;
       let width = availableWidth;
       let height = width / ratio;
@@ -576,7 +605,7 @@ export default function ProductCatalogModal({
   // libro tal como se ve en pantalla, no como lo calculamos.
   const shellRef = useRef<HTMLDivElement>(null);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [bookEdges, setBookEdges] = useState({ left: 0, right: 0 });
+  const [bookEdges, setBookEdges] = useState({ left: 0, right: 0, bookWidth: 0, chromeWidth: 0 });
 
   useLayoutEffect(() => {
     const containerEl = bookAreaRef.current;
@@ -586,10 +615,22 @@ export default function ProductCatalogModal({
 
     function measure() {
       const shellRect = shellEl!.getBoundingClientRect();
+      const containerRect = containerEl!.getBoundingClientRect();
       const bookRect = bookEl!.getBoundingClientRect();
       return {
         left: bookRect.left - shellRect.left,
         right: shellRect.right - bookRect.right,
+        // Ancho real del `.catalog-flipbook` (la caja de spread completa
+        // que pide react-pageflip, no solo la página visible) — lo usa el
+        // panel decorativo del hueco de spread simple más abajo, para
+        // cubrir exactamente su mitad izquierda.
+        bookWidth: bookRect.width,
+        // Todo lo que NO es `.flipbook-container` dentro de `.catalog-
+        // shell` (las flechas prev/next + sus márgenes) — medido, no
+        // adivinado con constantes, para que el ajuste del ancho del panel
+        // más abajo (ver catalogo-encuadre-y-zoom-divisoras.md, Problema 1)
+        // le deje exactamente el espacio que las flechas necesitan.
+        chromeWidth: shellRect.width - containerRect.width,
       };
     }
 
@@ -648,6 +689,86 @@ export default function ProductCatalogModal({
       if (settleTimeoutRef.current != null) clearTimeout(settleTimeoutRef.current);
     };
   }, []);
+
+  // Misma cuenta que page-flip usa internamente para armar sus spreads en
+  // landscape (ver PageCollection.ts createSpread): con `showCover`, la
+  // portada (índice 0) siempre queda sola; si el total de páginas es PAR,
+  // la última también queda sola (impar restante después de sacar la
+  // portada). Sirve para saber cuándo mostrar el panel decorativo del
+  // hueco de spread simple (ver catalogo-portada-espacio-y-mobile.md, más
+  // arriba en el JSX del libro).
+  const isSingleSpread = currentPage === 0 || (totalPages % 2 === 0 && currentPage === totalPages - 1);
+  const showSpreadGutter = isSingleSpread && !isPortraitBook;
+  // La portada (índice 0, "página 1" 1-indexed, impar) siempre se dibuja a
+  // la DERECHA (misma convención de libro físico: impar = derecha, par =
+  // izquierda) → el hueco va a la izquierda. La última página suelta con
+  // total par (índice totalPages-1, siempre impar en 0-indexed = par
+  // 1-indexed) cae del lado contrario — confirmado en vivo con una familia
+  // de 26 páginas, la 26 se dibuja a la izquierda con el hueco a la
+  // derecha, no al revés (ver comentario junto al JSX del panel).
+  const gutterOnLeft = currentPage === 0;
+
+  // Piso mínimo del ancho del panel = lo que el header necesita para NO
+  // envolver a una segunda línea (ver catalogo-fix-regresion-barra-
+  // espacio.md, Problema 1 — regresión del ajuste de ancho de abajo). El
+  // header usa `flex-wrap`: si el panel se angosta más de la cuenta,
+  // envuelve y se vuelve más ALTO, lo que le resta alto disponible al
+  // libro DESPUÉS de que `bookBox` ya se había calculado con el alto
+  // "de antes" — el libro terminaba más grande de lo que el hueco real
+  // entre header y footer permitía, empujándose sobre la barra inferior.
+  // No hay forma de medir "cuánto ancho necesita en una sola línea" una
+  // vez que ya envolvió (scrollWidth de un contenedor envuelto da el
+  // ancho de la línea más ancha, no el total sin envolver) — en vez de
+  // adivinar un número fijo, se detecta el envolvido comparando el alto
+  // actual contra el alto de una sola línea (medido la primera vez, con
+  // el panel todavía sin `maxWidth` propio) y, si envolvió, se sube el
+  // piso en pasos hasta que se desarma solo.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerMinWidth, setHeaderMinWidth] = useState<number | null>(null);
+  const singleLineHeaderHeightRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const headerEl = headerRef.current;
+    if (!headerEl) return;
+
+    function checkWrap() {
+      const rect = headerEl!.getBoundingClientRect();
+      if (singleLineHeaderHeightRef.current == null) {
+        singleLineHeaderHeightRef.current = rect.height;
+        return;
+      }
+      if (rect.height > singleLineHeaderHeightRef.current + 4) {
+        setHeaderMinWidth((w) => (w ?? rect.width) + 100);
+      }
+    }
+
+    checkWrap();
+    const observer = new ResizeObserver(checkWrap);
+    observer.observe(headerEl);
+    return () => observer.disconnect();
+  }, []);
+
+  // Ancho del panel del modal (ver catalogo-encuadre-y-zoom-divisoras.md,
+  // Problema 1): `.catalog-panel` traía un `max-width: 1400px` fijo,
+  // pensado para el ANCHO disponible — pero en la mayoría de pantallas
+  // (más anchas que altas) el libro termina limitado por el ALTO del panel
+  // (`height: 90vh`), no por su ancho, porque la proporción de página
+  // (600×820, cercana a A4) es angosta. El resultado: el libro renderizado
+  // (`bookBox.width`) queda bastante más chico que el ancho que
+  // `.flipbook-container` tiene reservado, y ese ancho de sobra se ve como
+  // espacio en blanco a los lados del panel completo (flechas incluidas).
+  // En vez de adivinar un `max-width` fijo distinto (que solo sería
+  // correcto para una altura de pantalla puntual), se mide en vivo cuánto
+  // ocupan las flechas prev/next (`bookEdges.chromeWidth`, lo único del
+  // panel que NO es el libro) y se le pide al panel exactamente ese ancho
+  // más el del libro real — nunca menos de lo que el header necesita para
+  // no envolver (`headerMinWidth`, ver arriba). Antes de la primera
+  // medición (chromeWidth === 0) se deja sin `maxWidth` inline para que
+  // rija el 1400px de CSS como valor inicial sensato.
+  const measuredPanelWidth =
+    bookEdges.chromeWidth > 0 ? bookEdges.chromeWidth + bookBox.width : null;
+  const panelMaxWidth =
+    measuredPanelWidth != null ? Math.max(640, headerMinWidth ?? 0, measuredPanelWidth) : undefined;
 
   const activeCategoryId = useMemo(() => {
     let found: string | null = null;
@@ -755,10 +876,14 @@ export default function ProductCatalogModal({
           if (e.target === e.currentTarget) handleClose();
         }}
       >
-        <div className={`catalog-panel${isClosing ? " is-closing" : ""}`} style={{ background: PAGE_BG }}>
+        <div
+          className={`catalog-panel${isClosing ? " is-closing" : ""}`}
+          style={{ background: PAGE_BG, ...(panelMaxWidth != null ? { maxWidth: panelMaxWidth } : {}) }}
+        >
           {/* Barra superior: identidad de familia + ir a categoría + PDF + cerrar. */}
           <div
-            className="catalog-header flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
+            ref={headerRef}
+            className="catalog-header relative flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
             style={{ borderBottom: `1px solid ${RULE}` }}
           >
             <div className="flex items-center gap-3">
@@ -775,15 +900,9 @@ export default function ProductCatalogModal({
               </div>
             </div>
 
-            {/* relative: ancla de posicionamiento del popover del glosario
-                de abajo — así queda anclado al borde derecho de TODA esta
-                fila de controles (que coincide con el borde derecho del
-                header) en vez de al botón "Glosario" en sí, que en mobile
-                puede quedar lejos del borde y hacer que el popover se
-                corte contra el borde izquierdo de la pantalla. */}
-            <div className="relative flex items-center gap-4">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
-                <span className="hidden text-[12px] font-medium sm:inline" style={{ color: MUTED }}>
+                <span className="hidden text-[13px] font-medium sm:inline" style={{ color: MUTED }}>
                   {t("catalog.jumpToCategoryLabel")}
                 </span>
                 <select
@@ -794,7 +913,7 @@ export default function ProductCatalogModal({
                   }}
                   disabled={!isBookReady}
                   aria-label={t("catalog.jumpToCategoryLabel")}
-                  className="rounded-none border-0 border-b bg-transparent py-1 text-[13px] font-semibold outline-none disabled:opacity-40"
+                  className="max-w-[130px] truncate rounded-none border-0 border-b bg-transparent py-1 text-[14px] font-semibold outline-none disabled:opacity-40 sm:max-w-[220px]"
                   style={{ borderColor: RULE, color: ACCENT }}
                 >
                   {categorySections.map(({ subFamily, categories }) => (
@@ -815,9 +934,16 @@ export default function ProductCatalogModal({
                   CUALQUIER punto del catálogo. Backdrop invisible a pantalla
                   completa para cerrar con click afuera, además de ESC (ver
                   el handleKeyDown de arriba) y la X propia del popover.
-                  Fragment, no un <div> con `relative`: el ancla real es el
-                  contenedor de todos los controles de arriba, no este
-                  botón puntual (ver comentario ahí). */}
+                  Fragment, no un <div> con `relative`: el ancla real es
+                  `.catalog-header` (ver `relative` agregado ahí arriba) —
+                  ese sí siempre coincide con el ancho completo del panel,
+                  a diferencia de esta fila de controles, que en mobile
+                  puede quedar envuelta a una segunda línea más angosta que
+                  el panel (ver catalogo-contenido-cortado-y-mobile.md,
+                  Problema 2) y antes hacía que `right-0` anclara al borde
+                  derecho de ESA fila corta, no al del panel — el popover
+                  (340px fijos) se salía por la izquierda de la pantalla en
+                  mobile en vez de quedar dentro. */}
               <>
                 <button
                   type="button"
@@ -825,7 +951,7 @@ export default function ProductCatalogModal({
                   aria-label={t("catalog.glossaryButtonLabel")}
                   title={t("catalog.glossaryButtonLabel")}
                   aria-expanded={isGlossaryOpen}
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition hover:opacity-70"
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[14px] font-semibold transition hover:opacity-70"
                   style={{ borderColor: RULE, color: ACCENT }}
                 >
                   <Info className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
@@ -846,7 +972,7 @@ export default function ProductCatalogModal({
                       style={{ borderColor: RULE }}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-display text-[14px] font-semibold" style={{ color: INK }}>
+                        <p className="font-display text-[15px] font-semibold" style={{ color: INK }}>
                           {t("catalog.glossaryTitle")}
                         </p>
                         <button
@@ -871,7 +997,7 @@ export default function ProductCatalogModal({
                             </p>
                             <ul className="space-y-1.5">
                               {group.entries.map((entry) => (
-                                <li key={entry.abbr} className="flex items-baseline gap-2 text-[12.5px] leading-snug">
+                                <li key={entry.abbr} className="flex items-baseline gap-2 text-[13.5px] leading-snug">
                                   <span className="shrink-0 font-semibold" style={{ color: ACCENT }}>
                                     {entry.abbr}
                                   </span>
@@ -890,7 +1016,7 @@ export default function ProductCatalogModal({
               <button
                 type="button"
                 onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-1.5 text-[13px] font-semibold underline underline-offset-4 transition hover:opacity-70"
+                className="inline-flex items-center gap-1.5 text-[14px] font-semibold underline underline-offset-4 transition hover:opacity-70"
                 style={{ color: ACCENT, textDecorationColor: RULE }}
               >
                 <Download className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
@@ -902,7 +1028,7 @@ export default function ProductCatalogModal({
                 onClick={handleClose}
                 aria-label={t("catalog.backToSite")}
                 title={t("catalog.backToSite")}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition hover:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[14px] font-semibold transition hover:opacity-70"
                 style={{ borderColor: RULE, color: INK }}
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
@@ -946,6 +1072,62 @@ export default function ProductCatalogModal({
               style={{ left: bookEdges.left - leftStackWidth, width: leftStackWidth }}
               aria-hidden
             />
+
+            {/* Panel decorativo del hueco de spread simple (ver
+                catalogo-portada-espacio-y-mobile.md, Problema 1): react-
+                pageflip SIEMPRE reserva el ancho de un spread de DOS
+                páginas en modo landscape (Render.ts, calculateBoundsRect:
+                `width: pageWidth * 2` sin importar cuántas páginas tenga
+                el spread actual) — con `showCover` la portada (y, si el
+                total de páginas es par, también la última) se dibuja SOLA,
+                dejando la otra mitad de esa caja completamente vacía; no
+                es un bug de nuestro tamaño de imagen/contenedor, es el
+                comportamiento propio de la librería. En vez de intentar
+                angostar la caja que le pedimos a react-pageflip (arriesga
+                cruzar su propio umbral interno de `usePortrait` y cambiar
+                el tipo de animación de vuelta de página a mitad de
+                sesión), se cubre ese hueco con un panel a propósito —
+                mismo navy que el bloque de sellos de la portada (INK) —
+                para que se lea como el interior de la tapa del libro, no
+                como espacio en blanco sin llenar.
+                QUÉ LADO: no es siempre el mismo — depende de la paridad
+                del índice de la página suelta (misma convención que un
+                libro físico: página 1-indexed impar = derecha, par =
+                izquierda). La portada (índice 0, 1-indexed "página 1",
+                impar) siempre cae a la DERECHA → el hueco va a la
+                izquierda (confirmado visualmente). La última página suelta
+                cuando el total es par (índice = totalPages-1, siempre
+                impar en 0-indexed = 1-indexed par) cae a la IZQUIERDA →
+                el hueco va a la derecha (confirmado con Cuidado Personal,
+                26 páginas: la página 26 se dibuja a la izquierda con el
+                hueco en blanco a la derecha, no al revés). */}
+            {showSpreadGutter && (
+              <div
+                aria-hidden
+                className="absolute overflow-hidden"
+                style={
+                  gutterOnLeft
+                    ? {
+                        left: bookEdges.left,
+                        top: 0,
+                        bottom: 0,
+                        width: bookEdges.bookWidth / 2,
+                        background: INK,
+                        borderRadius: "16px 0 0 16px",
+                      }
+                    : {
+                        right: bookEdges.right,
+                        top: 0,
+                        bottom: 0,
+                        width: bookEdges.bookWidth / 2,
+                        background: INK,
+                        borderRadius: "0 16px 16px 0",
+                      }
+                }
+              >
+                <SpreadGutterPattern flip={!gutterOnLeft} />
+              </div>
+            )}
 
             {/* Este div (no los botones/franjas de al lado) es lo que mide el
                 ResizeObserver: su tamaño es el espacio real disponible para el
@@ -1145,12 +1327,17 @@ function FamilyStripItem({
 }) {
   const EntryIcon = FAMILY_ICONS[entry.id] ?? Package;
   return (
+    // min-w-0: sin esto un flex-1 nunca se achica más allá del contenido
+    // (min-width:auto por default) — "Electrónica" como palabra única no
+    // podía envolver y se desbordaba/cortaba en páginas angostas (mobile
+    // portrait, ver catalogo-contenido-cortado-y-mobile.md, Problema 2).
+    // break-words fuerza el corte si aun así no entra en una línea.
     <div
-      className="flex flex-1 flex-col items-center gap-1.5 px-1 text-center"
+      className="flex min-w-0 flex-1 flex-col items-center gap-1.5 break-words px-1 text-center"
       style={showDivider ? { borderLeft: "1px solid rgba(255,255,255,0.16)" } : undefined}
     >
       <EntryIcon
-        className="h-4 w-4 sm:h-5 sm:w-5"
+        className="h-4 w-4 shrink-0 sm:h-5 sm:w-5"
         strokeWidth={1.7}
         style={{ color: isActive ? "#FFFFFF" : "rgba(255,255,255,0.55)" }}
         aria-hidden
@@ -1191,7 +1378,7 @@ function BookPageContent({
 
   if (page.kind === "cover") {
     return (
-      <div className="flex min-h-full flex-col p-7 sm:p-9">
+      <div className="flex h-full flex-col" style={{ padding: "clamp(12px, 5cqh, 36px)" }}>
         <div className="flex items-center justify-between">
           <Image src={mercasaLogo} alt="Mercasa" className="h-6 w-auto sm:h-7" priority />
           <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5" style={{ background: CHIP_BG }}>
@@ -1202,7 +1389,15 @@ function BookPageContent({
           </span>
         </div>
 
-        <div className="relative mt-6 h-[190px] overflow-hidden rounded-2xl sm:h-[240px]">
+        {/* Alto en `cqh` (% del alto REAL de `.page-content`, ver
+            container-type:size en product-catalog-flipbook-realism.css) en
+            vez de px fijo — así se achica junto con `bookBox.height` en
+            pantallas de poca altura en vez de desbordar la página (ver
+            catalogo-contenido-cortado-y-mobile.md, Problema 1). */}
+        <div
+          className="relative overflow-hidden rounded-2xl"
+          style={{ marginTop: "clamp(6px, 3cqh, 24px)", height: "clamp(84px, 27cqh, 240px)" }}
+        >
           <Image src={coverPhoto} alt="" fill priority className="object-cover" sizes="600px" />
           <div
             className="absolute inset-0"
@@ -1210,28 +1405,73 @@ function BookPageContent({
           />
         </div>
 
-        <div className="mt-7">
+        <div style={{ marginTop: "clamp(10px, 3.4cqh, 28px)" }}>
+          {/* `vw` (ancho de VENTANA) en vez de `cqh` (alto REAL de la
+              página) era el culpable real de que la portada siguiera
+              cortándose después del primer fix — en una ventana ancha pero
+              de poca altura, 5vw se queda pegado cerca del techo (40px, 2
+              líneas ≈ 84px de alto) sin importar cuán chica sea la página
+              (ver catalogo-portada-sigue-cortada.md). Con `cqh` el título
+              se achica junto con el resto cuando la página es baja. */}
           <h1
             className="font-display"
-            style={{ color: INK, fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 650, lineHeight: 1.05 }}
+            style={{ color: INK, fontSize: "clamp(18px, 7.5cqh, 40px)", fontWeight: 650, lineHeight: 1.05 }}
           >
             {t("catalog.coverTitle")}
           </h1>
-          <p className="mt-3 text-[14px] font-semibold" style={{ color: ACCENT_BRIGHT }}>
+          <p
+            className="font-semibold"
+            style={{ color: ACCENT_BRIGHT, marginTop: "clamp(4px, 1.2cqh, 12px)", fontSize: "clamp(11px, 3cqh, 14px)" }}
+          >
             {t("catalog.printCoverFooterTitle")}
           </p>
-          <span aria-hidden className="mt-4 block h-[3px] w-[46px] rounded-full bg-corp-yellow" />
+          <span
+            aria-hidden
+            className="block h-[3px] w-[46px] rounded-full bg-corp-yellow"
+            style={{ marginTop: "clamp(6px, 1.6cqh, 16px)" }}
+          />
         </div>
 
-        <div className="mt-8 flex-1 rounded-2xl" style={{ background: INK }}>
-          <div className="flex items-stretch justify-between px-4 py-4 sm:px-6 sm:py-5">
+        {/* A propósito SIN `min-h-0` acá: con `min-h-0` esta caja se dejaba
+            achicar por flexbox por DEBAJO de la altura que su propio
+            contenido necesita (el strip de familias + la línea de cierre,
+            que en columnas angostas envuelve a 2-3 líneas) — el resultado
+            no era un corte sino algo peor: la parte que no entraba se
+            pintaba AFUERA del rectángulo navy, sobre blanco, con texto
+            blanco = invisible (ver catalogo-portada-sigue-cortada.md,
+            iteración 2). Dejar el flex-item con su altura de contenido
+            natural (default min-height:auto) y en cambio bajar los PISOS
+            del resto de la portada (foto, padding) le deja sitio de sobra
+            sin necesitar encogerse. El padding interno pasa a `cqh` —
+            antes quedaba fijo y no se achicaba con el resto del fix de
+            catalogo-contenido-cortado-y-mobile.md. */}
+        <div
+          className="flex flex-1 flex-col rounded-2xl"
+          style={{ background: INK, marginTop: "clamp(6px, 3.4cqh, 32px)" }}
+        >
+          <div
+            className="flex items-stretch justify-between px-4 sm:px-6"
+            style={{ paddingTop: "clamp(6px, 1.8cqh, 20px)", paddingBottom: "clamp(6px, 1.8cqh, 20px)" }}
+          >
             {allFamilies.map((entry, index) => (
               <FamilyStripItem key={entry.id} entry={entry} isActive={entry.id === family.id} showDivider={index > 0} />
             ))}
           </div>
+          {/* En páginas angostas (spread portrait) esta fila envuelve a DOS
+              líneas — `gap-2` fijo (8px) asumía una sola línea y no se
+              achicaba con el resto, dejando ~4-5px de desborde residual
+              incluso después de escalar el padding (ver
+              catalogo-portada-sigue-cortada.md). El gap entre líneas
+              también pasa a `cqh`. */}
           <div
-            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-[9px] font-medium sm:px-6 sm:text-[10px]"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.16)", color: "rgba(255,255,255,0.75)" }}
+            className="flex flex-wrap items-center justify-between px-4 text-[9px] font-medium sm:px-6 sm:text-[10px]"
+            style={{
+              borderTop: "1px solid rgba(255,255,255,0.16)",
+              color: "rgba(255,255,255,0.75)",
+              paddingTop: "clamp(4px, 1.4cqh, 12px)",
+              paddingBottom: "clamp(4px, 1.4cqh, 12px)",
+              gap: "clamp(2px, 0.8cqh, 8px)",
+            }}
           >
             <span>{t("catalog.coverClosingLine")}</span>
             <span>{t("catalog.coverClosingLocation")}</span>
@@ -1243,7 +1483,7 @@ function BookPageContent({
 
   if (page.kind === "portfolio-info") {
     return (
-      <div className="flex min-h-full flex-col p-7 sm:p-9">
+      <div className="flex h-full flex-col" style={{ padding: "clamp(16px, 5cqh, 36px)" }}>
         <p className="text-[10px] font-bold uppercase" style={{ color: ACCENT, letterSpacing: "0.18em" }}>
           {t("catalog.printEyebrow")}
         </p>
@@ -1287,7 +1527,7 @@ function BookPageContent({
 
   if (page.kind === "portfolio-visual") {
     return (
-      <div className="flex min-h-full flex-col" style={{ background: PAGE_BG }}>
+      <div className="flex h-full flex-col" style={{ background: PAGE_BG }}>
         <div className="relative flex-1 overflow-hidden">
           <Image src={portfolioPhoto} alt="" fill className="object-cover" sizes="560px" />
         </div>
@@ -1317,8 +1557,25 @@ function BookPageContent({
   if (page.kind === "subfamily-divider") {
     const SubFamilyIcon = Icon;
     return (
-      <div className="flex min-h-full flex-col items-center justify-center p-7 text-center sm:p-9">
-        <div className="relative h-[300px] w-full overflow-hidden rounded-2xl sm:h-[420px]">
+      <div
+        className="flex h-full flex-col items-center justify-center text-center"
+        style={{ padding: "clamp(16px, 5cqh, 36px)" }}
+      >
+        {/* Alto reducido (ver catalogo-encuadre-y-zoom-divisoras.md,
+            Problema 2): las 37 fotos divisoras reales son panorámicas
+            (1536×1024 ≈ 1.5:1, o 1672×941 ≈ 1.78:1) — con el alto fijo
+            anterior (420px sobre un ancho de página bastante más angosto,
+            ratio ≈1.25:1) `object-cover` recortaba mucho de los costados
+            para llenar un contenedor mucho más vertical que la foto
+            original. 300px acerca la proporción del contenedor a la de
+            las fotos reales (queda entre 1.5:1 y 1.78:1), así se recorta
+            bastante menos composición. Alto en `cqh` (ver comentario en
+            "cover" arriba) para no desbordar en páginas de poca altura real
+            (catalogo-contenido-cortado-y-mobile.md, Problema 1). */}
+        <div
+          className="relative w-full overflow-hidden rounded-2xl"
+          style={{ height: "clamp(160px, 36cqh, 300px)" }}
+        >
           <Image src={page.photo} alt="" fill className="object-cover" sizes="600px" />
           <div className="absolute inset-0" style={{ background: "rgba(8,43,92,0.38)" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
@@ -1347,8 +1604,8 @@ function BookPageContent({
   // línea de acento, grilla de tarjetas de producto con foto real (fallback
   // a ícono de familia).
   return (
-    <div className="flex min-h-full flex-col p-7 sm:p-9">
-      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "14px" }}>
+    <div className="flex h-full flex-col" style={{ padding: "clamp(16px, 5cqh, 36px)" }}>
+      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "clamp(6px, 1.7cqh, 14px)" }}>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: CHIP_BG }}>
             <Icon className="h-4.5 w-4.5" strokeWidth={1.7} style={{ color: ACCENT }} aria-hidden />
@@ -1368,14 +1625,36 @@ function BookPageContent({
           </span>
         )}
       </div>
-      <span aria-hidden className="mt-4 block h-[3px] w-[42px] shrink-0 rounded-full bg-corp-yellow" />
+      <span
+        aria-hidden
+        className="block h-[3px] w-[42px] shrink-0 rounded-full bg-corp-yellow"
+        style={{ marginTop: "clamp(6px, 1.7cqh, 16px)" }}
+      />
 
       {/* items-start: sin esto, CSS grid estira todas las tarjetas de una
           fila a la altura de la más alta (stretch es el default) — con
           nombres de largo variable (ver fix-truncamiento-y-glosario.md)
           eso dejaría hueco vacío abajo de las tarjetas con nombre corto.
-          Cada tarjeta conserva su alto natural en vez de estirarse. */}
-      <div className="mt-5 grid flex-1 grid-cols-3 content-start items-start gap-3">
+          Cada tarjeta conserva su alto natural en vez de estirarse. Gap y
+          margen superior en `cqh` (ver comentario junto a "cover" arriba)
+          para que una grilla densa (9 productos, varias filas) no desborde
+          en páginas de poca altura real. Red de seguridad adicional
+          (catalogo-contenido-cortado-y-mobile.md, Problema 1): en mobile
+          portrait la página es mucho más angosta (una sola página, no
+          media hoja de spread) así que 3 columnas dejan poco ancho por
+          tarjeta — con nombres de producto largos (sin truncar a
+          propósito, ver ProductCard) el texto envuelve a varias líneas y
+          la grilla completa puede seguir sin entrar aunque ya esté
+          reducida al piso de los clamp de arriba. `min-h-0` (los flex
+          children no se achican bajo su alto de contenido por default) +
+          `overflow-y-auto` SOLO en esta grilla (no en toda la página) para
+          que ese caso límite haga scroll interno en vez de cortar
+          productos en silencio — el resto de la página (header/línea de
+          acento) se queda fijo arriba. */}
+      <div
+        className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto"
+        style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(4px, 1.2cqh, 12px)" }}
+      >
         {page.products.map((product) => (
           <ProductCard key={product.id} product={product} icon={Icon} onClick={() => onProductClick(product)} />
         ))}
@@ -1417,12 +1696,17 @@ function ProductCard({
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
       aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
-      className="flex w-full flex-col items-center gap-1.5 rounded-xl border bg-white p-2 text-center transition hover:-translate-y-0.5"
-      style={{ borderColor: RULE, boxShadow: "0 2px 8px rgba(8,43,92,0.06)" }}
+      className="flex w-full flex-col items-center rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
+      style={{
+        borderColor: RULE,
+        boxShadow: "0 2px 8px rgba(8,43,92,0.06)",
+        padding: "clamp(4px, 1.4cqh, 8px)",
+        gap: "clamp(3px, 0.9cqh, 6px)",
+      }}
     >
       <div
-        className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-16 sm:w-16"
-        style={{ background: CHIP_BG }}
+        className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
+        style={{ background: CHIP_BG, height: "clamp(32px, 8cqh, 64px)", width: "clamp(32px, 8cqh, 64px)" }}
       >
         <ProductImage
           itemId={product.id}

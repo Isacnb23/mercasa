@@ -45,3 +45,18 @@
     radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
     linear-gradient(135deg, #fefefe 0%, #f7f6f3 100%);
 }
+
+/* Container query ancladas al ALTO REAL de la página (ver
+   catalogo-contenido-cortado-y-mobile.md, Problema 1): react-pageflip le da
+   a cada `.page-content` el tamaño de `bookBox` calculado contra el espacio
+   disponible entre header y footer, que puede ser bastante menor que el
+   BOOK_HEIGHT nominal (820) en pantallas de poca altura. Los elementos con
+   alto/margen fijo en px de BookPageContent (portada, divisor de
+   sub-familia) usan `cqh` (1% del alto de este contenedor) en vez de vh/px
+   puros, así se achican junto con la página real en vez de desbordarla.
+   `size` (no solo `block-size`) porque también necesitamos el ancho para
+   media-queries de contenedor si hicieran falta más adelante. */
+.page-content {
+  container-type: size;
+  container-name: catalog-page;
+}

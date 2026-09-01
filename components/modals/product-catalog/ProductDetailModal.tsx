@@ -115,7 +115,7 @@ export default function ProductDetailModal({
           {imageStatus === "error" && (
             <div className="pointer-events-none absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5">
               <ImageOff className="h-4 w-4" strokeWidth={1.8} style={{ color: MUTED }} aria-hidden />
-              <span className="text-[12px] font-semibold" style={{ color: MUTED }}>
+              <span className="text-[13px] font-semibold" style={{ color: MUTED }}>
                 {t("catalog.productDetailPhotoNotAvailable")}
               </span>
             </div>
@@ -135,12 +135,12 @@ export default function ProductDetailModal({
               </p>
               <div className="mt-2 flex flex-col gap-1.5">
                 {product.packSize && (
-                  <p className="text-[13.5px] font-medium" style={{ color: INK }}>
+                  <p className="text-[14.5px] font-medium" style={{ color: INK }}>
                     {product.packSize}
                   </p>
                 )}
                 {packagingCodes.map(({ code, meaning }) => (
-                  <p key={code} className="text-[13.5px] font-medium" style={{ color: INK }}>
+                  <p key={code} className="text-[14.5px] font-medium" style={{ color: INK }}>
                     <span className="font-semibold">{code}</span>
                     {meaning && <span style={{ color: MUTED }}> · {meaning}</span>}
                   </p>
