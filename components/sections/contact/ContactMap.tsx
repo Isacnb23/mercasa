@@ -348,7 +348,7 @@ export default function ContactMap({ site }: { site: ContactSite }) {
           selector-sedes.md), con el mismo crossfade breve del resto de los
           textos que dependen de la sede. */}
       <div
-        className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 overflow-hidden rounded-full py-2 pl-3 pr-3.5 text-[12.5px] font-semibold text-white"
+        className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 overflow-hidden rounded-full py-2 pl-3 pr-3.5 text-[13.5px] font-semibold text-white"
         style={{ background: NAVY, boxShadow: "0 10px 24px -6px rgba(11,49,94,0.45)" }}
       >
         <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />

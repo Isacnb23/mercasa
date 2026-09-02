@@ -300,10 +300,13 @@ export default function PageLoader3D({ phase, onProgress, onIndeterminate, onRes
       c.width = 512;
       c.height = 256;
       const ctx = c.getContext("2d")!;
+      // Un poco más presente que antes (ver loader-fondo-contraste.md,
+      // complemento al fondo menos blanco): ayuda a separar el camión del
+      // piso por contraste de sombra, no solo de color.
       const g = ctx.createRadialGradient(256, 128, 4, 256, 128, 250);
-      g.addColorStop(0, "rgba(0,0,0,0.14)");
-      g.addColorStop(0.36, "rgba(0,0,0,0.06)");
-      g.addColorStop(0.72, "rgba(0,0,0,0.015)");
+      g.addColorStop(0, "rgba(0,0,0,0.20)");
+      g.addColorStop(0.36, "rgba(0,0,0,0.09)");
+      g.addColorStop(0.72, "rgba(0,0,0,0.02)");
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, 512, 256);

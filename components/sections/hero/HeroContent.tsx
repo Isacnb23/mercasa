@@ -30,7 +30,7 @@ export default function HeroContent() {
           {t("badgeSince", { year: site.foundedYear })}
         </span>
         <span style={{ color: MUTED, opacity: 0.4 }}>|</span>
-        <span className="whitespace-nowrap text-[13.5px] font-medium" style={{ color: MUTED }}>
+        <span className="whitespace-nowrap text-[14.5px] font-medium" style={{ color: MUTED }}>
           {t("badgeParent", { parent: site.parentCompany })}
         </span>
       </motion.div>
@@ -84,7 +84,7 @@ export default function HeroContent() {
         <button
           type="button"
           onClick={() => scrollTo("#logistica")}
-          className="group inline-flex w-full items-center gap-4 rounded-full bg-corp-blue py-2 pl-7 pr-2 text-[14px] font-semibold text-white shadow-[0_12px_24px_rgba(11,46,95,0.28)] transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-auto"
+          className="group inline-flex w-full items-center gap-4 rounded-full bg-corp-blue py-2 pl-7 pr-2 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(11,46,95,0.28)] transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-auto"
         >
           {t("ctaPrimary")}
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-corp-blue transition-transform duration-300 group-hover:translate-x-1">

@@ -373,12 +373,19 @@
    REDISEÑO PREMIUM — versión clara, mismo lenguaje corporativo
    ============================================================ */
 
+/* Fondo menos blanco (ver loader-fondo-contraste.md): el camión también
+   trae carrocería/tonos claros, así que contra un fondo casi blanco puro
+   perdía presencia. Mismos stops de siempre, corridos para que el blanco
+   puro quede solo cerca del centro-arriba y el resto del cuadro (donde
+   vive el camión, tercio inferior) tenga más cuerpo del azul pálido de
+   marca — mismo tono #E6F1FB que ya usan los chips/íconos del resto del
+   sitio, no un azul nuevo inventado acá. */
 .backdrop {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(85% 72% at 50% 39%, rgba(7, 95, 216, 0.08), transparent 61%),
-    linear-gradient(180deg, #FFFFFF 0%, #F8F9FB 52%, #F3F5F7 100%);
+    radial-gradient(85% 72% at 50% 39%, rgba(7, 95, 216, 0.13), transparent 64%),
+    linear-gradient(180deg, #FFFFFF 0%, #EAF1F9 46%, #DCE9F7 100%);
 }
 
 .waveField {

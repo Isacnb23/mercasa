@@ -85,7 +85,7 @@ export default function ProductsHeader() {
               <h3 className="mt-2 text-[13px] font-bold uppercase text-corp-ink" style={{ letterSpacing: "0.06em" }}>
                 {t(`pillars.${key}.title`)}
               </h3>
-              <p className="mt-1 max-w-[240px] text-[14.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
+              <p className="mt-1 max-w-[240px] text-[15.5px] leading-[1.5]" style={{ color: "#3A4A5F" }}>
                 {t(`pillars.${key}.description`)}
               </p>
             </motion.li>

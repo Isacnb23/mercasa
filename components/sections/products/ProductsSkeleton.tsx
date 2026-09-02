@@ -9,11 +9,11 @@ function Bone({ className }: { className: string }) {
 export default function ProductsSkeleton() {
   return (
     <div className="mt-10 lg:mt-14" role="status" aria-live="polite">
-      <div className="flex snap-x gap-5 overflow-x-auto px-1 pb-2 pt-4 [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:justify-center lg:overflow-visible lg:px-0">
+      <div className="flex snap-x gap-4 overflow-x-auto px-1 pb-2 pt-4 [&::-webkit-scrollbar]:hidden xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex w-[220px] shrink-0 flex-col items-center rounded-[26px] border px-6 pb-7 pt-8 sm:w-[240px]"
+            className="flex w-[210px] shrink-0 flex-col items-center rounded-[26px] border px-6 pb-7 pt-8 sm:w-[240px] xl:w-[212px]"
             style={{ borderColor: "#E7ECF2" }}
           >
             <Bone className="h-20 w-20 rounded-full" />

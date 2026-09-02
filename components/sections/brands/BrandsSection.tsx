@@ -74,7 +74,7 @@ export default function BrandsSection() {
             {t("muralTitle")}
           </h2>
           <span aria-hidden className="mx-auto mt-4 block h-[3px] w-[46px] rounded-full bg-corp-yellow" />
-          <p className="mx-auto mt-4 max-w-[480px] text-[14.5px] leading-[1.6]" style={{ color: "#3A4A5F" }}>
+          <p className="mx-auto mt-4 max-w-[480px] text-[15.5px] leading-[1.6]" style={{ color: "#3A4A5F" }}>
             {t("muralSubtitle")}
           </p>
         </Reveal>
@@ -141,7 +141,7 @@ export default function BrandsSection() {
               {muralCategory.brands.map((name) => (
                 <li
                   key={name}
-                  className="rounded-full border px-3.5 py-[7px] text-[12.5px] font-medium leading-snug text-corp-ink"
+                  className="rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink"
                   style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
                 >
                   {name}
@@ -167,7 +167,7 @@ export default function BrandsSection() {
               {cat.brands.map((name) => (
                 <li
                   key={name}
-                  className="rounded-full border px-3.5 py-[7px] text-[12.5px] font-medium leading-snug"
+                  className="rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug"
                   style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
                 >
                   {name}

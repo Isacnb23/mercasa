@@ -381,9 +381,9 @@
         "mapCardTitle": "CEDI · El Guarco"
       },
       "san-antonio": {
-        "tabLabel": "San Antonio",
+        "tabLabel": "San Francisco",
         "sedeTitle": "Grupo Inteca Offices",
-        "mapCardTitle": "Grupo Inteca · San Antonio"
+        "mapCardTitle": "Grupo Inteca · San Francisco"
       }
     },
     "telefonoTitle": "Main phone line",
@@ -407,7 +407,7 @@
       },
       "san-antonio": {
         "iframeTitle": "Grupo Inteca's location in San Antonio de Desamparados",
-        "badgeLabel": "Grupo Inteca · San Antonio"
+        "badgeLabel": "Grupo Inteca · San Francisco"
       }
     }
   },
@@ -417,6 +417,26 @@
     "intro": "Interested in joining our team? Reach out to us at this email.",
     "emailLabel": "Email",
     "close": "Close"
+  },
+  "Notification": {
+    "ariaLabel": "Notifications",
+    "close": "Close",
+    "eyebrow": "Notification",
+    "dudomi": {
+      "title": "Shelf-life extension",
+      "subtitle": "Dudomi Noodle Cup 60g",
+      "product": "Dudomi Chicken Flavored Noodle Cup 60g / Dudomi Beef Flavored Noodle Cup 60g / Dudomi Noodle With Vegetable Cup 60g",
+      "body": "Laboratory analysis on retained samples confirmed that these batches remain in satisfactory condition beyond their original expiration date. As a result, their shelf life was extended by 3 additional months:",
+      "lot1Label": "Batch B220825",
+      "lot1Old": "08.22.2026",
+      "lot1New": "11.22.2026",
+      "lot2Label": "Batch B210725",
+      "lot2Old": "07.21.2026",
+      "lot2New": "10.21.2026",
+      "results": "Analysis results: acceptable appearance, texture, aroma, and flavor; fat content, moisture, acidity, and presence of mold/yeast within normal parameters — all indicators approved.",
+      "footer": "Certificate issued by ERİŞ (Turkey), responsible testing laboratory: Çağlar Ceylan. Document available for download.",
+      "download": "Download certificate (PDF)"
+    }
   },
   "Footer": {
     "tagline": "Distributing trust since {year}",

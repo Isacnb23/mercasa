@@ -8,12 +8,17 @@
   inset: 0;
   z-index: 9999;
   overflow: hidden;
+  /* Fondo menos blanco (ver loader-fondo-contraste.md): mismos stops de
+     siempre, corridos hacia más presencia del azul pálido de marca
+     (#E6F1FB, el mismo tono que ya usan los chips/íconos del resto del
+     sitio) — el camión (2D, carrocería clara) se perdía contra el blanco
+     casi puro anterior. */
   background:
     radial-gradient(
       110% 80% at 50% 40%,
       #FFFFFF 0%,
-      #F8F9FB 55%,
-      #F3F5F7 100%
+      #EAF1F9 48%,
+      #DCE9F7 100%
     );
   display: flex;
   flex-direction: column;
