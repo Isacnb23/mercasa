@@ -8,7 +8,9 @@ import type { MetadataRoute } from "next";
 // SITE_URL repetido acá (no importado desde otro lado) — mismo criterio que
 // app/[locale]/layout.tsx: es un solo valor, no vale la pena una capa de
 // indirección extra por esto. Si cambia el dominio, actualizar ambos.
-const SITE_URL = "https://www.mercasa.cr";
+// Ver seo-corregir-dominio.md: dominio real es "mercasacr.com" (sin "www",
+// ".com"), HTTP por ahora — mismo criterio que app/[locale]/layout.tsx.
+const SITE_URL = "http://mercasacr.com";
 
 // Rutas reales del sitio además de la home — mismos slugs que
 // app/[locale]/legal/*/page.tsx. El resto del contenido (Nosotros,

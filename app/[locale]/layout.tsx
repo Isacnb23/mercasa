@@ -16,7 +16,13 @@ import PageLoader from "@/components/chrome/PageLoader";
 import AmbientBackdrop from "@/components/chrome/AmbientBackdrop";
 import OrganizationJsonLd from "@/components/chrome/OrganizationJsonLd";
 
-const SITE_URL = "https://www.mercasa.cr";
+// Dominio real de producción (AWS) — ver seo-corregir-dominio.md: es
+// "mercasacr.com" (sin "www", ".com" en vez de ".cr"), NO "www.mercasa.cr"
+// como se usó por error en el primer pase de SEO. HTTP por ahora: HTTPS
+// existe en el puerto 443 pero responde con certificado inválido y 503 (la
+// app en sí no está sirviendo ahí todavía) — cambiar a "https://" el día
+// que haya un certificado válido y la app responda bien por ese puerto.
+const SITE_URL = "http://mercasacr.com";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

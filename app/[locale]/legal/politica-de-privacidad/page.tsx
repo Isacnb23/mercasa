@@ -6,7 +6,9 @@ import LegalPage from "@/components/sections/legal/LegalPage";
 // criterio que el resto del proyecto: son constantes chicas, no vale la
 // pena una capa de indirección extra. Si cambia el dominio o el slug,
 // actualizar layout.tsx, sitemap.ts y esta página juntos.
-const SITE_URL = "https://www.mercasa.cr";
+// Ver seo-corregir-dominio.md: dominio real es "mercasacr.com" (sin "www",
+// ".com"), HTTP por ahora — mismo criterio que app/[locale]/layout.tsx.
+const SITE_URL = "http://mercasacr.com";
 const PAGE_PATH = "/legal/politica-de-privacidad";
 
 export async function generateMetadata({

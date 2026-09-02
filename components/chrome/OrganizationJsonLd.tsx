@@ -18,7 +18,9 @@ import { contactSites, site } from "@/lib/data";
 // SITE_URL hardcodeado iguial que en layout.tsx (no vale la pena
 // compartirlo vía import solo por esto) — si ese valor cambia, actualizar
 // ambos lugares.
-const SITE_URL = "https://www.mercasa.cr";
+// Ver seo-corregir-dominio.md: dominio real es "mercasacr.com" (sin "www",
+// ".com"), HTTP por ahora — mismo criterio que app/[locale]/layout.tsx.
+const SITE_URL = "http://mercasacr.com";
 
 function siteToAddress(address: { line1: string; line2?: string; postalCode?: string }) {
   return {

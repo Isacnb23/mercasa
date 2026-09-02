@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       canal === "proveedor" ? "Nuevo Proveedor Internacional" : "Nuevo Cliente Local";
 
     const html = `
-      <h2>Nuevo contacto desde mercasa.cr — ${canalLabel}</h2>
+      <h2>Nuevo contacto desde mercasacr.com — ${canalLabel}</h2>
       <p><strong>Empresa / negocio:</strong> ${escapeHtml(empresa)}</p>
       <p><strong>Nombre de contacto:</strong> ${escapeHtml(nombre)}</p>
       <p><strong>Correo:</strong> ${escapeHtml(correo)}</p>
