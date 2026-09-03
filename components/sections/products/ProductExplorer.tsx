@@ -79,8 +79,22 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
         </div>
 
         <div
-          className="relative flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-1 pb-2 pt-4 [&::-webkit-scrollbar]:hidden xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className="relative flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-1 pb-2 pt-4 [&::-webkit-scrollbar]:hidden xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0 xl:[mask-image:none]"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            // Indicio visual de scroll horizontal (ver mobile-revision-
+            // completa.md, punto 2): la scrollbar va oculta y el patrón
+            // scroll-snap por sí solo no deja claro que hay más tarjetas al
+            // costado. Un `mask-image` (en vez de un overlay de color sólido)
+            // desvanece el borde derecho de las tarjetas mismas, así que
+            // revela lo que sea que haya detrás (beige de la sección o la
+            // franja navy, según el scroll) sin depender de adivinar un color
+            // de fondo fijo. `xl:[mask-image:none]` de arriba lo apaga donde
+            // la fila ya no scrollea (envuelve en grid fijo).
+            WebkitMaskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
+            maskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
+          }}
         >
           {families.map((family, i) => (
             <Reveal key={family.id} delay={i * 0.1} className="flex h-auto shrink-0 snap-start">

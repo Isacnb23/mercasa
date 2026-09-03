@@ -352,16 +352,30 @@ export default function CustomerClassSection({
                     contenido (centrado gracias al alto fijo) el numeral se
                     quedaría pegado arriba de todo mientras el texto baja al
                     centrarse, separándose cada vez más de él. */}
+                {/* Piso del clamp bajado de 96px a 44px (ver mobile-revision-
+                    completa.md, punto 3): en mobile la columna es angosta
+                    (una sola, foto arriba) y 11vw cae por debajo de 96px, así
+                    que el clamp forzaba siempre el piso — un numeral de 96px
+                    en una columna de ~340px choca con la etiqueta "01/07 ·
+                    SEGMENTO" de abajo, que en mobile ocupa casi todo el ancho
+                    disponible. A partir de md (columna angosta pero ya con
+                    más aire real, ver comentario de altura fija arriba) 11vw
+                    vuelve a superar el piso nuevo sin cambiar el tamaño que
+                    ya se veía bien en desktop. */}
                 <span
                   aria-hidden
                   className="pointer-events-none absolute -right-3 -top-6 select-none font-display font-semibold"
-                  style={{ fontSize: "clamp(96px, 11vw, 156px)", lineHeight: 1, color: "rgba(11,49,94,0.06)" }}
+                  style={{ fontSize: "clamp(44px, 11vw, 156px)", lineHeight: 1, color: "rgba(11,49,94,0.06)" }}
                 >
                   {segmentNumber}
                 </span>
 
                 <div className="relative">
-                  <span className="text-[12px] font-bold uppercase tracking-[0.14em]">
+                  {/* pr-14 en mobile: deja el ancho justo para que la
+                      etiqueta no corra por debajo del numeral de la esquina
+                      (ver comentario arriba) — md+ ya tiene columna angosta
+                      pero con suficiente aire natural, así que no hace falta. */}
+                  <span className="block max-w-[calc(100%-56px)] text-[12px] font-bold uppercase tracking-[0.14em] md:max-w-none">
                     <span style={{ color: BEIGE_MAIN }}>
                       {segmentNumber} / {segmentTotal}
                     </span>

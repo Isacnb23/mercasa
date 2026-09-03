@@ -27,10 +27,17 @@ function StatCard({
   itemKey,
   offset,
   delay,
+  stacked,
 }: {
   itemKey: keyof typeof HIGHLIGHT_ICONS;
   offset: number;
   delay: number;
+  /** variant "stacked" (mobile, ver Hero.tsx) pasa `className="w-full"` al
+   * wrapper esperando que las tarjetas ocupen el ancho completo — pero el
+   * w-[230px] fijo de acá abajo lo ignoraba siempre, dejando un hueco vacío
+   * a la derecha en mobile en vez de estirarse (ver mobile-revision-
+   * completa.md). */
+  stacked: boolean;
 }) {
   const t = useTranslations("Hero");
   const Icon = HIGHLIGHT_ICONS[itemKey];
@@ -46,7 +53,7 @@ function StatCard({
         border: "1px solid rgba(10,55,110,0.06)",
         boxShadow: "0 20px 55px rgba(12,35,70,0.12)",
       }}
-      className="w-[230px] rounded-[18px] p-4"
+      className={`${stacked ? "w-full" : "w-[230px]"} rounded-[18px] p-4`}
     >
       <div className="flex items-start gap-3">
         <span
@@ -83,6 +90,7 @@ export default function StatsCards({
           itemKey={item.key as keyof typeof HIGHLIGHT_ICONS}
           offset={variant === "floating" ? OFFSETS[i] : 0}
           delay={0.5 + i * 0.12}
+          stacked={variant === "stacked"}
         />
       ))}
     </div>
