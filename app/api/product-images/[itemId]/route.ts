@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProductImage, type ImageVariant } from "@/lib/arte";
 
-// Endpoint real de imágenes de producto: ITEMID -> tabla Arte (SQL Server,
-// resuelve Nombre_Archivo) -> Microsoft Graph (contenido del archivo en
-// SharePoint). Reemplaza al proxy de HomeX en app/api/images/[itemId].
+// Endpoint real de imágenes de producto: en vez de conectarse directo a SQL
+// Server (lib/arte.ts, que se deja intacta sin usar por si hace falta
+// revertir rápido — sjodb01 no es resoluble desde la nube pública, ver
+// mercasa-api/README.md), reenvía a `mercasa-api` (servicio hermano,
+// desplegado por Steve dentro de la red de Mercasa con acceso real a
+// sjodb01) — ver conectar-mercasa-web-api-local.md y
+// probar-mercasa-api-produccion.md (verificado end-to-end contra
+// https://api.mercasacr.com con datos reales de SQL + SharePoint).
+//
+// Mismo contrato externo que antes (misma URL, mismos query params, mismos
+// status codes) — ProductImage.tsx no se entera del cambio, cualquier
+// status no-200 del <img> ya cae al ícono de fallback por su cuenta.
 
-// Mismo criterio de seguridad que el proxy de HomeX que reemplaza: los
-// ItemId de MercasaVIP son alfanuméricos (+ guiones/puntos), cualquier otra
-// cosa se rechaza antes de usarla en la consulta a Arte.
+// Mismo criterio de seguridad que la ruta original: los ItemId de
+// MercasaVIP son alfanuméricos (+ guiones/puntos), cualquier otra cosa se
+// rechaza antes de reenviarla a mercasa-api.
 const SAFE_ITEM_ID = /^[A-Za-z0-9_.-]+$/;
 
-function parseVariant(value: string | null): ImageVariant {
+function parseVariant(value: string | null): "s" | "m" | "l" {
   return value === "s" || value === "m" ? value : "l";
 }
 
@@ -26,38 +34,54 @@ export async function GET(
 
   const variant = parseVariant(request.nextUrl.searchParams.get("size"));
 
-  // DEBUG TEMPORAL — ver diagnostico-product-images-404.md — quitar una vez
-  // identificada la causa real del 404 total.
-  console.log("[product-images] ENV check:", {
-    hasDbUser: !!process.env.ARTE_DB_USER,
-    hasDbPassword: !!process.env.ARTE_DB_PASSWORD,
-    hasDbServer: !!process.env.ARTE_DB_SERVER,
-    hasDbDatabase: !!process.env.ARTE_DB_DATABASE,
-    hasTenantId: !!process.env.SHAREPOINT_TENANT_ID,
-    hasClientId: !!process.env.SHAREPOINT_CLIENT_ID,
-    hasClientSecret: !!process.env.SHAREPOINT_CLIENT_SECRET,
-  });
-  console.log(`[product-images] Pedido: itemId=${itemId} variant=${variant}`);
+  const apiBase = process.env.MERCASA_API_BASE;
+  const apiKey = process.env.MERCASA_API_KEY;
+
+  if (!apiBase || !apiKey) {
+    console.error(
+      "[product-images] Falta configurar MERCASA_API_BASE/MERCASA_API_KEY en .env.local (ver conectar-mercasa-web-api-local.md)"
+    );
+    return NextResponse.json({ error: "No se pudo obtener la imagen" }, { status: 502 });
+  }
+
+  const upstreamUrl = `${apiBase}/api/product-images/${encodeURIComponent(itemId)}?size=${variant}`;
+  console.log(`[product-images] Pidiendo a mercasa-api: itemId=${itemId} variant=${variant}`);
 
   try {
-    const image = await getProductImage(itemId, variant);
+    const upstream = await fetch(upstreamUrl, {
+      headers: { "X-Api-Key": apiKey },
+      cache: "no-store",
+      // mercasa-api corriendo local pero no respondiendo (colgada, red
+      // interna caída) no debe trabar la página esperando para siempre —
+      // mismo espíritu del punto 5 del doc: no romper la página.
+      signal: AbortSignal.timeout(10_000),
+    });
 
-    if (!image) {
-      console.log(`[product-images] getProductImage devolvió null para itemId=${itemId} variant=${variant} -> 404`);
+    if (upstream.status === 404) {
+      console.log(`[product-images] mercasa-api devolvió 404 para itemId=${itemId} variant=${variant} (sin foto)`);
       return NextResponse.json({ error: "Imagen no encontrada" }, { status: 404 });
     }
 
-    return new NextResponse(image.body, {
+    if (!upstream.ok || !upstream.body) {
+      const errorBody = await upstream.text().catch(() => "");
+      console.error(`[product-images] mercasa-api respondió ${upstream.status} para itemId=${itemId}: ${errorBody}`);
+      return NextResponse.json({ error: "No se pudo obtener la imagen" }, { status: 502 });
+    }
+
+    return new NextResponse(upstream.body, {
       status: 200,
       headers: {
-        "Content-Type": image.contentType,
+        "Content-Type": upstream.headers.get("content-type") ?? "image/png",
         // Contenido público de solo lectura y estable (fotos de catálogo):
         // cache agresivo en el navegador/CDN, con revalidación de fondo.
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
       },
     });
   } catch (error) {
-    console.error("[/api/product-images]", error);
+    // mercasa-api apagada (ECONNREFUSED), timeout, DNS, etc. — se loguea el
+    // error real acá, pero el cliente recibe el mismo 502 "genérico" de
+    // siempre, que cae al mismo ícono de fallback que un producto sin foto.
+    console.error("[product-images] No se pudo contactar a mercasa-api:", error);
     return NextResponse.json({ error: "No se pudo obtener la imagen" }, { status: 502 });
   }
 }
