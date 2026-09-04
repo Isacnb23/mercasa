@@ -19,7 +19,7 @@
     "nosotros": "About",
     "logistica": "Our Logistics",
     "productos": "Products",
-    "customerClass": "Customer Class",
+    "customerClass": "Market Segment",
     "contacto": "Contact"
   },
   "Header": {
@@ -41,7 +41,7 @@
     "badgeSince": "Since {year}",
     "badgeParent": "A {parent} company",
     "title": "Costa Rica's leader in <accent>distribution</accent> of consumer goods",
-    "paragraph": "Import, logistics, and wholesale distribution of <accent>consumer goods</accent>, reaching supermarkets, retail, and local trade nationwide.",
+    "paragraph": "Import, logistics, and distribution of <accent>consumer goods</accent>, reaching supermarkets, retail, and local trade nationwide.",
     "ctaPrimary": "Discover our operation",
     "scrollLabel": "Connections that move business",
     "scrollAria": "Scroll down",
@@ -311,7 +311,7 @@
   },
   "CustomerClass": {
     "eyebrow": "Solutions by customer type",
-    "title": "Customer Class",
+    "title": "Market Segment",
     "subtitle": "We understand what every business needs and build solutions tailored to it.",
     "categoriesLabel": "Available categories",
     "exploreCta": "Explore products",
@@ -418,29 +418,9 @@
     "emailLabel": "Email",
     "close": "Close"
   },
-  "Notification": {
-    "ariaLabel": "Notifications",
-    "close": "Close",
-    "eyebrow": "Notification",
-    "dudomi": {
-      "title": "Shelf-life extension",
-      "subtitle": "Dudomi Noodle Cup 60g",
-      "product": "Dudomi Chicken Flavored Noodle Cup 60g / Dudomi Beef Flavored Noodle Cup 60g / Dudomi Noodle With Vegetable Cup 60g",
-      "body": "Laboratory analysis on retained samples confirmed that these batches remain in satisfactory condition beyond their original expiration date. As a result, their shelf life was extended by 3 additional months:",
-      "lot1Label": "Batch B220825",
-      "lot1Old": "08.22.2026",
-      "lot1New": "11.22.2026",
-      "lot2Label": "Batch B210725",
-      "lot2Old": "07.21.2026",
-      "lot2New": "10.21.2026",
-      "results": "Analysis results: acceptable appearance, texture, aroma, and flavor; fat content, moisture, acidity, and presence of mold/yeast within normal parameters — all indicators approved.",
-      "footer": "Certificate issued by ERİŞ (Turkey), responsible testing laboratory: Çağlar Ceylan. Document available for download.",
-      "download": "Download certificate (PDF)"
-    }
-  },
   "Footer": {
     "tagline": "Distributing trust since {year}",
-    "description": "Import, logistics, and wholesale distribution of consumer goods across Costa Rica.",
+    "description": "Import, logistics, and distribution of consumer goods across Costa Rica.",
     "navTitle": "Navigation",
     "contactTitle": "Contact",
     "copyright": "© {year} {name} - {parent}. All rights reserved.",

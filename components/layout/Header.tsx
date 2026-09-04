@@ -11,7 +11,6 @@ import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import logo from "@/public/models/mercasa-logo-transparent.png";
 import isotype from "@/public/favicon/icon-responsive.png";
 import LocaleSwitcher from "./LocaleSwitcher";
-import NotificationBell from "./NotificationBell";
 import RecruitmentPopover from "./RecruitmentPopover";
 
 export default function Header() {
@@ -127,13 +126,7 @@ export default function Header() {
 
           <div className="col-start-3 flex items-center justify-end gap-3">
             <div className="hidden lg:flex">
-              <NotificationBell variant="desktop" />
-            </div>
-            <div className="hidden lg:flex">
               <RecruitmentPopover variant="desktop" />
-            </div>
-            <div className="lg:hidden">
-              <NotificationBell variant="desktop" />
             </div>
             <LocaleSwitcher />
             <button ref={triggerRef} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-corp-ink transition hover:bg-corp-ink/[0.06] lg:hidden" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen((v) => !v)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>

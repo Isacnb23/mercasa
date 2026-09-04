@@ -18,15 +18,16 @@ import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModa
 // esa familia (ProductCatalogModal ya resuelve categorías/sub-familias
 // adentro).
 //
-// Pulido (ver productos-pulido-tarjetas.md): las 5 tarjetas caben en una
-// sola fila desde xl (a partir de lg el ancho de contenedor real todavía no
-// alcanza para 5 tarjetas cómodas — a 1024px el área útil son ~896px, muy
-// justo — así que el punto de quiebre scroll-horizontal → fila fija se
-// movió a xl, donde sí sobra margen), todas a la misma altura (flex +
-// h-full en cada tarjeta + items-stretch en la fila, spacer flex-1 antes
-// del botón para que quede siempre a la misma distancia del borde inferior)
-// y el estado "destacado" ya no queda fijo en la familia con más productos:
-// ahora es hover/focus de cualquier tarjeta.
+// Pulido (ver productos-pulido-tarjetas.md): de sm a xl scroll horizontal con
+// tarjetas de ancho fijo (a 1024px, lg, el área útil real todavía no alcanza
+// para varias tarjetas cómodas). Desde xl, grid fija de 3 columnas (ver
+// familias-orden-grilla-3-columnas.md): con las 6 familias actuales da
+// exactamente 2 filas completas, sin ninguna tarjeta huérfana — a diferencia
+// del wrap anterior (5 por fila), que dejaba la sexta sola. Todas a la misma
+// altura (flex + h-full en cada tarjeta + items-stretch en la fila, spacer
+// flex-1 antes del botón para que quede siempre a la misma distancia del
+// borde inferior) y el estado "destacado" ya no queda fijo en la familia con
+// más productos: ahora es hover/focus de cualquier tarjeta.
 const NAVY = "#0B2F63";
 const ACCENT = "#2F6FED";
 const MUTED = "#5C6B7D";
@@ -97,11 +98,11 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
             `[mask-image:none]` base) y desde xl la fila ya no scrollea
             (envuelve, `xl:[mask-image:none]`). */}
         <div
-          className="relative grid grid-cols-2 gap-3 px-1 pb-2 pt-4 [mask-image:none] [-webkit-mask-image:none] sm:flex sm:snap-x sm:snap-mandatory sm:items-stretch sm:gap-4 sm:overflow-x-auto sm:[&::-webkit-scrollbar]:hidden sm:[-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] sm:[mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0 xl:[mask-image:none] xl:[-webkit-mask-image:none]"
+          className="relative grid grid-cols-2 gap-3 px-1 pb-2 pt-4 [mask-image:none] [-webkit-mask-image:none] sm:flex sm:snap-x sm:snap-mandatory sm:items-stretch sm:gap-4 sm:overflow-x-auto sm:[&::-webkit-scrollbar]:hidden sm:[-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] sm:[mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] xl:grid xl:grid-cols-3 xl:items-stretch xl:gap-6 xl:overflow-visible xl:px-0 xl:[mask-image:none] xl:[-webkit-mask-image:none]"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {families.map((family, i) => (
-            <Reveal key={family.id} delay={i * 0.1} className="flex h-auto w-full sm:w-auto sm:shrink-0 sm:snap-start">
+            <Reveal key={family.id} delay={i * 0.1} className="flex h-auto w-full sm:w-auto sm:shrink-0 sm:snap-start xl:w-full">
               <FamilyCard family={family} onOpenCatalog={() => openCatalog(family.id)} />
             </Reveal>
           ))}
@@ -144,7 +145,7 @@ function FamilyCard({
             }
       }
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-      className="flex h-full w-full flex-col items-center rounded-[22px] border border-t-4 px-3 pb-5 pt-6 text-center sm:w-[240px] sm:rounded-[26px] sm:px-6 sm:pb-7 sm:pt-8 xl:w-[212px]"
+      className="flex h-full w-full flex-col items-center rounded-[22px] border border-t-4 px-3 pb-5 pt-6 text-center sm:w-[240px] sm:rounded-[26px] sm:px-6 sm:pb-7 sm:pt-8 xl:w-full xl:rounded-[28px] xl:px-8 xl:pb-9 xl:pt-10"
       style={
         reduceMotion
           ? {
@@ -157,22 +158,22 @@ function FamilyCard({
       }
     >
       <span
-        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors duration-300 sm:h-20 sm:w-20"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors duration-300 sm:h-20 sm:w-20 xl:h-24 xl:w-24"
         style={{ background: isActive ? ICON_BG_ACTIVE : ICON_BG }}
       >
         <Icon
-          className="h-6 w-6 transition-colors duration-300 sm:h-9 sm:w-9"
+          className="h-6 w-6 transition-colors duration-300 sm:h-9 sm:w-9 xl:h-11 xl:w-11"
           strokeWidth={1.5}
           style={{ color: isActive ? ACCENT : NAVY }}
           aria-hidden
         />
       </span>
 
-      <p className="mt-3 font-display text-[15px] font-bold sm:mt-5 sm:text-[22px]" style={{ color: NAVY }}>
+      <p className="mt-3 font-display text-[15px] font-bold sm:mt-5 sm:text-[22px] xl:mt-6 xl:text-[26px]" style={{ color: NAVY }}>
         {family.name}
       </p>
-      <span aria-hidden className="my-1.5 h-4 w-px sm:my-2" style={{ background: CARD_BORDER }} />
-      <p className="text-[13px] sm:text-[16.5px]" style={{ color: MUTED }}>
+      <span aria-hidden className="my-1.5 h-4 w-px sm:my-2 xl:my-3" style={{ background: CARD_BORDER }} />
+      <p className="text-[13px] sm:text-[16.5px] xl:text-[18px]" style={{ color: MUTED }}>
         {t("productsCount", { count: family.itemCount })}
       </p>
 
@@ -186,7 +187,7 @@ function FamilyCard({
         type="button"
         onClick={onOpenCatalog}
         aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition hover:opacity-85 sm:mt-6 sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[15px]"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition hover:opacity-85 sm:mt-6 sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[15px] xl:mt-8 xl:px-6 xl:py-3 xl:text-[16px]"
         style={
           isActive
             ? { background: NAVY, color: "#ffffff" }

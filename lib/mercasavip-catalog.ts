@@ -15,15 +15,15 @@ export type { HierarchyNode } from "./product-types";
 const API_BASE = process.env.MERCASAVIP_API_BASE;
 const API_KEY = process.env.MERCASAVIP_API_KEY;
 
-// Fijos: PriceGroup=AF y AddressId=-1 son los que usa el catálogo público (sin
+// Fijos: PriceList=AF y AddressId=-1 son los que usa el catálogo público (sin
 // sesión de cliente ni dirección real seleccionada) — no hay UI de login/
 // dirección en el sitio corporativo, así que no hace falta parametrizarlos.
-const PRICE_GROUP = "AF";
+const PRICE_LIST = "AF";
 const ADDRESS_ID = "-1";
 
-// Una fila por combinación item+sucursal (~8000 filas). Solo Hierarchy1-4 nos
-// importan para el árbol; Hierarchy5 viene vacío en todos los ítems actuales
-// y se ignora a propósito.
+// Una fila por combinación item+sucursal. Solo Hierarchy1-4 nos importan para
+// el árbol; Hierarchy5 viene vacío en todos los ítems actuales y se ignora a
+// propósito.
 export interface HE_InventItemRaw {
   ItemId: string;
   ItemName: string;
@@ -38,7 +38,82 @@ export type MercasaVipResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function fetchInventoryItemsFMCM(): Promise<
+// IMPORTANTE (ver fix-consolidado-demo-roisbel.md, punto 4): `HE_GetInventoryItemsFMCM`
+// es el catálogo de HomeX (DataAreaId "fmcm"), NO el de Mercasa — la base
+// GIPLUS es compartida entre ambas empresas del grupo y ese endpoint sí o sí
+// devuelve el inventario de HomeX (confirmado: ~8000 filas, 100% DataAreaId
+// fmcm/FMCM, sin una sola fila cmer). Pasarle `DataAreaId=CMER` como query
+// param no filtra nada — el endpoint lo ignora. El catálogo real de Mercasa
+// (DataAreaId "cmer") vive en `HE_GetInventoryItemsByFamily`, que solo acepta
+// un `Hierarchy1` a la vez, así que hay que armarlo en dos pasos: primero
+// `HE_GetFamilies` para la lista real de familias, después una llamada por
+// familia. Confirmado contra la API real: 6 familias (incl. "Construcción",
+// que no existe en el catálogo de HomeX), ~490 filas totales, 100% cmer.
+async function fetchFamilies(): Promise<MercasaVipResult<string[]>> {
+  try {
+    const url = new URL("/Inventory/HE_GetFamilies", API_BASE);
+    url.searchParams.set("PriceList", PRICE_LIST);
+
+    const res = await fetch(url, {
+      headers: { "X-Api-Key": API_KEY! },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: `MercasaVIP API (HE_GetFamilies) respondió ${res.status} ${res.statusText}`,
+      };
+    }
+
+    const data = (await res.json()) as string[];
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Error desconocido llamando a MercasaVIP API (HE_GetFamilies)",
+    };
+  }
+}
+
+async function fetchInventoryItemsByFamily(
+  hierarchy1: string
+): Promise<MercasaVipResult<HE_InventItemRaw[]>> {
+  try {
+    const url = new URL("/Inventory/HE_GetInventoryItemsByFamily", API_BASE);
+    url.searchParams.set("PriceList", PRICE_LIST);
+    url.searchParams.set("Hierarchy1", hierarchy1);
+    url.searchParams.set("AddressId", ADDRESS_ID);
+
+    const res = await fetch(url, {
+      headers: { "X-Api-Key": API_KEY! },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: `MercasaVIP API (HE_GetInventoryItemsByFamily, ${hierarchy1}) respondió ${res.status} ${res.statusText}`,
+      };
+    }
+
+    const data = (await res.json()) as HE_InventItemRaw[];
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : `Error desconocido llamando a MercasaVIP API (HE_GetInventoryItemsByFamily, ${hierarchy1})`,
+    };
+  }
+}
+
+async function fetchInventoryItemsCMER(): Promise<
   MercasaVipResult<HE_InventItemRaw[]>
 > {
   if (!API_BASE) {
@@ -54,34 +129,20 @@ async function fetchInventoryItemsFMCM(): Promise<
     };
   }
 
-  try {
-    const url = new URL("/Inventory/HE_GetInventoryItemsFMCM", API_BASE);
-    url.searchParams.set("PriceGroup", PRICE_GROUP);
-    url.searchParams.set("AddressId", ADDRESS_ID);
+  const families = await fetchFamilies();
+  if (!families.ok) return families;
 
-    const res = await fetch(url, {
-      headers: { "X-Api-Key": API_KEY },
-      cache: "no-store",
-    });
+  const perFamily = await Promise.all(
+    families.data.map((hierarchy1) => fetchInventoryItemsByFamily(hierarchy1))
+  );
 
-    if (!res.ok) {
-      return {
-        ok: false,
-        error: `MercasaVIP API respondió ${res.status} ${res.statusText}`,
-      };
-    }
+  const failed = perFamily.find((result) => !result.ok);
+  if (failed && !failed.ok) return failed;
 
-    const data = (await res.json()) as HE_InventItemRaw[];
-    return { ok: true, data };
-  } catch (err) {
-    return {
-      ok: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : "Error desconocido llamando a MercasaVIP API",
-    };
-  }
+  const data = perFamily.flatMap((result) =>
+    result.ok ? result.data : []
+  );
+  return { ok: true, data };
 }
 
 // Colapsa espacios repetidos y bordes — la API trae valores con espaciado
@@ -236,7 +297,23 @@ export function buildProductHierarchy(
     subCategory.itemIds.add(item.ItemId);
   }
 
-  return toNodes(families, []);
+  return reorderTopFamilies(toNodes(families, []));
+}
+
+// Orden de negocio para las familias en la grilla de "Nuestros Productos"
+// (ver familias-orden-grilla-3-columnas.md): Alimentos y Bebidas primero
+// pase lo que pase, el resto queda como venía (por volumen de productos, de
+// mayor a menor — ya es el criterio que aplica toNodes()). Solo afecta el
+// nivel de familia; sub-familia/categoría/sub-categoría siguen ordenadas
+// por cantidad de ítems como siempre.
+const TOP_FAMILY_PRIORITY = ["alimentos", "bebidas"].map(normalizeKey);
+
+function reorderTopFamilies(families: HierarchyNode[]): HierarchyNode[] {
+  const byPriority = (name: string) => {
+    const index = TOP_FAMILY_PRIORITY.indexOf(normalizeKey(name));
+    return index === -1 ? TOP_FAMILY_PRIORITY.length : index;
+  };
+  return [...families].sort((a, b) => byPriority(a.name) - byPriority(b.name));
 }
 
 function getOrCreate(
@@ -265,7 +342,7 @@ export async function getProductHierarchy(): Promise<
     return { ok: true, data: cachedTree.data };
   }
 
-  const result = await fetchInventoryItemsFMCM();
+  const result = await fetchInventoryItemsCMER();
   if (!result.ok) return result;
 
   const tree = buildProductHierarchy(result.data);

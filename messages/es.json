@@ -19,7 +19,7 @@
     "nosotros": "Nosotros",
     "logistica": "Nuestra Logística",
     "productos": "Productos",
-    "customerClass": "Customer Class",
+    "customerClass": "Segmento de Mercado",
     "contacto": "Contacto"
   },
   "Header": {
@@ -40,8 +40,8 @@
   "Hero": {
     "badgeSince": "Desde {year}",
     "badgeParent": "Una empresa de {parent}",
-    "title": "Líderes en <accent>distribución</accent> de productos de Costa Rica",
-    "paragraph": "Importación, logística y distribución mayorista de productos de <accent>consumo masivo</accent>, con cobertura en supermercados, retail y comercio local en todo el país.",
+    "title": "Líderes en <accent>distribución</accent> de productos en Costa Rica",
+    "paragraph": "Importación, logística y distribución de productos de <accent>consumo masivo</accent>, con cobertura en supermercados, retail y comercio local en todo el país.",
     "ctaPrimary": "Conocer nuestra operación",
     "scrollLabel": "Conexiones que mueven negocios",
     "scrollAria": "Desplazarse hacia abajo",
@@ -311,7 +311,7 @@
   },
   "CustomerClass": {
     "eyebrow": "Soluciones por tipo de cliente",
-    "title": "Customer Class",
+    "title": "Segmento de Mercado",
     "subtitle": "Entendemos las necesidades de cada negocio y creamos soluciones a su medida.",
     "categoriesLabel": "Categorías disponibles",
     "exploreCta": "Explorar productos",
@@ -419,29 +419,9 @@
     "emailLabel": "Correo",
     "close": "Cerrar"
   },
-  "Notification": {
-    "ariaLabel": "Notificaciones",
-    "close": "Cerrar",
-    "eyebrow": "Notificación",
-    "dudomi": {
-      "title": "Extensión de vigencia",
-      "subtitle": "Dudomi Noodle Cup 60g",
-      "product": "Dudomi Chicken Flavored Noodle Cup 60g / Dudomi Beef Flavored Noodle Cup 60g / Dudomi Noodle With Vegetable Cup 60g",
-      "body": "Se confirmó, mediante análisis de laboratorio sobre muestras de retención, que estos lotes mantienen condiciones satisfactorias más allá de su fecha de vencimiento original. En consecuencia, se extendió su vigencia por 3 meses adicionales:",
-      "lot1Label": "Lote B220825",
-      "lot1Old": "22.08.2026",
-      "lot1New": "22.11.2026",
-      "lot2Label": "Lote B210725",
-      "lot2Old": "21.07.2026",
-      "lot2New": "21.10.2026",
-      "results": "Resultados del análisis: aspecto, textura, aroma y sabor aceptables; contenido de grasa, humedad, acidez, y presencia de hongos/levaduras dentro de parámetros normales — todos los indicadores aprobados.",
-      "footer": "Certificado emitido por ERİŞ (Turquía), laboratorio de análisis responsable: Çağlar Ceylan. Documento disponible para descarga.",
-      "download": "Descargar certificado (PDF)"
-    }
-  },
   "Footer": {
     "tagline": "Distribuyendo confianza desde {year}",
-    "description": "Importación, logística y distribución mayorista de consumo masivo en todo Costa Rica.",
+    "description": "Importación, logística y distribución de consumo masivo en todo Costa Rica.",
     "navTitle": "Navegación",
     "contactTitle": "Contacto",
     "copyright": "© {year} {name} - {parent}. Todos los derechos reservados.",
