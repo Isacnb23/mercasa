@@ -107,7 +107,16 @@ export default function AboutSection() {
       // directo desde el menú. Mismo valor que el resto de las secciones
       // (About/Brands/Collaborators/Contact/Logistics/Products/Customer
       // Class) para que el espaciado se sienta parejo en todo el sitio.
-      className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px]"
+      // `min-h-dvh` gateado a `lg` (ver mobile-fixes-ronda2.md, punto 1):
+      // antes aplicaba siempre, forzando esta sección a ocupar SIEMPRE al
+      // menos una pantalla completa — en mobile/tablet, con el layout
+      // apilado en una columna (contenido bastante más corto que en
+      // desktop, ver grid-cols-1 más abajo), eso dejaba un tramo largo de
+      // scroll vacío antes de llegar a Colaboradores (misma sección
+      // siguiente, mismo problema, ver ese archivo). Desde `lg` el layout
+      // pasa a 2 columnas (más ancho, contenido más corto verticalmente)
+      // y ahí sí tiene sentido forzar la pantalla completa.
+      className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px] lg:min-h-dvh"
       style={{ background: "#F7F3EB" }}
     >
       <Container className="relative z-10">

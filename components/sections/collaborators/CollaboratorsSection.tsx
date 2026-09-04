@@ -63,7 +63,12 @@ export default function CollaboratorsSection() {
     // del header). Subido de nuevo a 130/150px (ver header-spacing-fix.md):
     // 72/84px ya no tapaba el título, pero quedaba casi sin aire visual —
     // mismo valor que el resto de las secciones para un espaciado parejo.
-    <section id="colaboradores" className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px]">
+    // `min-h-dvh` gateado a `lg` (ver mobile-fixes-ronda2.md, punto 1, mismo
+    // motivo que AboutSection): en mobile/tablet el mosaico es grid-cols-2
+    // (más corto verticalmente que el lg:grid-cols-4 de desktop), así que
+    // forzar pantalla completa siempre dejaba un tramo largo de scroll
+    // vacío entre Nosotros y esta sección.
+    <section id="colaboradores" className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px] lg:min-h-dvh">
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior
           de Logística. Acá se agrega la salida hacia Productos. */}
       <SoftCurve position="bottom" flip />

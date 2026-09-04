@@ -78,26 +78,30 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
           <StripePattern />
         </div>
 
+        {/* Mobile (< sm): grid fija de 2 columnas, todas las tarjetas
+            visibles sin scroll horizontal (ver mobile-fixes-ronda2.md,
+            punto 3 — Isaac prefirió esto al scroll-con-fade de la ronda
+            anterior). Si el número de familias es impar, la última tarjeta
+            queda sola en su columna (grid no la estira a las 2, ver
+            FamilyCard más abajo: `w-full` normal, no `col-span-2`).
+            De sm en adelante se mantiene el scroll horizontal con snap +
+            fade de siempre (tarjetas de ancho fijo, no entran 2 por fila
+            cómodas ahí), y desde xl la fila fija envuelta de siempre. */}
+        {/* Indicio visual de scroll horizontal (ver mobile-revision-
+            completa.md, punto 2): la scrollbar va oculta y el patrón
+            scroll-snap por sí solo no deja claro que hay más tarjetas al
+            costado. Un `mask-image` desvanece el borde derecho de las
+            tarjetas mismas en vez de pintar un overlay de color que
+            tendría que adivinar qué hay detrás (beige o la franja navy).
+            Solo de sm a xl — en mobile es grid fija sin scroll (ver arriba,
+            `[mask-image:none]` base) y desde xl la fila ya no scrollea
+            (envuelve, `xl:[mask-image:none]`). */}
         <div
-          className="relative flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-1 pb-2 pt-4 [&::-webkit-scrollbar]:hidden xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0 xl:[mask-image:none]"
-          style={{
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-            // Indicio visual de scroll horizontal (ver mobile-revision-
-            // completa.md, punto 2): la scrollbar va oculta y el patrón
-            // scroll-snap por sí solo no deja claro que hay más tarjetas al
-            // costado. Un `mask-image` (en vez de un overlay de color sólido)
-            // desvanece el borde derecho de las tarjetas mismas, así que
-            // revela lo que sea que haya detrás (beige de la sección o la
-            // franja navy, según el scroll) sin depender de adivinar un color
-            // de fondo fijo. `xl:[mask-image:none]` de arriba lo apaga donde
-            // la fila ya no scrollea (envuelve en grid fijo).
-            WebkitMaskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
-            maskImage: "linear-gradient(to right, black calc(100% - 32px), transparent)",
-          }}
+          className="relative grid grid-cols-2 gap-3 px-1 pb-2 pt-4 [mask-image:none] [-webkit-mask-image:none] sm:flex sm:snap-x sm:snap-mandatory sm:items-stretch sm:gap-4 sm:overflow-x-auto sm:[&::-webkit-scrollbar]:hidden sm:[-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] sm:[mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] xl:flex-wrap xl:justify-center xl:overflow-visible xl:px-0 xl:[mask-image:none] xl:[-webkit-mask-image:none]"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {families.map((family, i) => (
-            <Reveal key={family.id} delay={i * 0.1} className="flex h-auto shrink-0 snap-start">
+            <Reveal key={family.id} delay={i * 0.1} className="flex h-auto w-full sm:w-auto sm:shrink-0 sm:snap-start">
               <FamilyCard family={family} onOpenCatalog={() => openCatalog(family.id)} />
             </Reveal>
           ))}
@@ -140,7 +144,7 @@ function FamilyCard({
             }
       }
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-      className="flex h-full w-[210px] flex-col items-center rounded-[26px] border border-t-4 px-6 pb-7 pt-8 text-center sm:w-[240px] xl:w-[212px]"
+      className="flex h-full w-full flex-col items-center rounded-[22px] border border-t-4 px-3 pb-5 pt-6 text-center sm:w-[240px] sm:rounded-[26px] sm:px-6 sm:pb-7 sm:pt-8 xl:w-[212px]"
       style={
         reduceMotion
           ? {
@@ -153,22 +157,22 @@ function FamilyCard({
       }
     >
       <span
-        className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors duration-300 sm:h-20 sm:w-20"
         style={{ background: isActive ? ICON_BG_ACTIVE : ICON_BG }}
       >
         <Icon
-          className="h-9 w-9 transition-colors duration-300"
+          className="h-6 w-6 transition-colors duration-300 sm:h-9 sm:w-9"
           strokeWidth={1.5}
           style={{ color: isActive ? ACCENT : NAVY }}
           aria-hidden
         />
       </span>
 
-      <p className="mt-5 font-display text-[20px] font-bold sm:text-[22px]" style={{ color: NAVY }}>
+      <p className="mt-3 font-display text-[15px] font-bold sm:mt-5 sm:text-[22px]" style={{ color: NAVY }}>
         {family.name}
       </p>
-      <span aria-hidden className="my-2 h-4 w-px" style={{ background: CARD_BORDER }} />
-      <p className="text-[16.5px]" style={{ color: MUTED }}>
+      <span aria-hidden className="my-1.5 h-4 w-px sm:my-2" style={{ background: CARD_BORDER }} />
+      <p className="text-[13px] sm:text-[16.5px]" style={{ color: MUTED }}>
         {t("productsCount", { count: family.itemCount })}
       </p>
 
@@ -182,14 +186,14 @@ function FamilyCard({
         type="button"
         onClick={onOpenCatalog}
         aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
-        className="mt-6 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-semibold transition hover:opacity-85"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition hover:opacity-85 sm:mt-6 sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[15px]"
         style={
           isActive
             ? { background: NAVY, color: "#ffffff" }
             : { background: "#ffffff", color: NAVY, border: `1.5px solid ${NAVY}` }
         }
       >
-        <BookOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
+        <BookOpen className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
         {t("viewCatalogCta")}
       </button>
     </motion.div>

@@ -1056,12 +1056,27 @@ export default function ProductCatalogModal({
               pasando la página con el efecto de libro real (drawShadow,
               flippingTime) como antes. */}
           <div className="catalog-shell" ref={shellRef}>
+            {/* Ocultas debajo de `sm` (ver mobile-fixes-ronda2.md, punto 2):
+                cada flecha son 40px + márgenes (~52px por lado, ~104px las
+                dos) — en un panel mobile angosto (~370px) eso le comía
+                ~28% del ancho real a `.flipbook-container` (confirmado
+                midiendo en vivo: 268px de libro contra 372px de panel). Como
+                el libro mantiene proporción de página fija, ese ancho
+                reducido también le tope aba el alto muy por debajo del
+                espacio vertical disponible — la causa real de la "tarjeta
+                chica flotando con espacio vacío" reportada. El swipe táctil
+                (`mobileScrollSupport`/`swipeDistance` en el <HTMLFlipBook>
+                de abajo) ya cubre la navegación en mobile sin estas flechas;
+                el <select> "Ir a categoría" del header también sigue
+                funcionando. `bookEdges.chromeWidth` (usado para
+                `panelMaxWidth` más arriba) se remide solo vía el mismo
+                ResizeObserver de siempre al ocultarlas, sin tocar nada más. */}
             <button
               type="button"
               onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
               disabled={!isBookReady || currentPage <= 0}
               aria-label={t("catalog.prevPage")}
-              className="ml-1 mr-2 flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:ml-4 sm:mr-5"
+              className="ml-4 mr-5 hidden h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:flex"
               style={{ borderColor: RULE, color: ACCENT }}
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -1209,7 +1224,7 @@ export default function ProductCatalogModal({
               onClick={() => bookRef.current?.pageFlip()?.flipNext()}
               disabled={!isBookReady || currentPage >= totalPages - 1}
               aria-label={t("catalog.nextPage")}
-              className="ml-2 mr-1 flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:ml-5 sm:mr-4"
+              className="ml-5 mr-4 hidden h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border bg-white transition disabled:opacity-25 enabled:hover:opacity-70 sm:flex"
               style={{ borderColor: RULE, color: ACCENT }}
             >
               <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
