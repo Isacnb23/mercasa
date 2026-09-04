@@ -292,8 +292,27 @@ export default function ContactMap({ site }: { site: ContactSite }) {
       if (!loaded) setFailed(true);
     });
 
+    // Fix mapa-mobile-no-carga.md: en mobile el contenedor todavía puede
+    // medir 0 (o un alto transitorio incorrecto) en el instante exacto en
+    // que se crea el Map de arriba — el layout final (grid de una columna +
+    // min-h-[360px]) a veces termina de resolverse un frame después del
+    // montaje. MapLibre calcula el tamaño de su canvas/WebGL a partir de
+    // `container.offsetWidth/offsetHeight` SOLO en el momento de creación y
+    // en cada `resize()` explícito — si esa primera medición fue 0, el
+    // canvas queda con buffer interno roto (0x0) para siempre aunque el
+    // contenedor después crezca visualmente a su tamaño real: se ven los
+    // controles/marcador/popup (son <div> normales) pero ninguna tile
+    // (dibujadas en el canvas roto) — solo el fondo beige de la página
+    // detrás. Un ResizeObserver sobre el contenedor real fuerza `map.
+    // resize()` cada vez que su tamaño cambia, así el canvas siempre
+    // termina con las dimensiones correctas sin importar en qué momento del
+    // layout se haya creado el mapa.
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
+
     return () => {
       window.clearTimeout(failSafeTimer);
+      resizeObserver.disconnect();
       mapRef.current = null;
       markerRef.current = null;
       map.remove();
