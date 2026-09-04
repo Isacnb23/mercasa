@@ -4,13 +4,9 @@ pipelines:
   branches:
     main:
       - step:
-          name: Build and Deploy to Firebase
+          name: Build
           caches:
             - node
           script:
             - npm install
             - npm run build
-            - npm install -g firebase-tools
-            - echo "$FIREBASE_SERVICE_ACCOUNT" > $BITBUCKET_CLONE_DIR/service-account.json
-            - export GOOGLE_APPLICATION_CREDENTIALS=$BITBUCKET_CLONE_DIR/service-account.json
-            - firebase deploy --only hosting --project mercasa-web --non-interactive
