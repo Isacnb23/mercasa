@@ -1,4 +1,4 @@
-import { GlassWater, HeartPulse, Sparkles, UtensilsCrossed, Zap, type LucideIcon } from "lucide-react";
+import { GlassWater, HardHat, HeartPulse, Sparkles, UtensilsCrossed, Zap, type LucideIcon } from "lucide-react";
 
 // Íconos por familia real de la API (keys = slug de HierarchyNode.id en el
 // nivel 1, ver buildProductHierarchy en lib/mercasavip-catalog.ts). Vive en
@@ -14,5 +14,6 @@ export const FAMILY_ICONS: Record<string, LucideIcon> = {
   bebidas: GlassWater,
   "cuidado-del-hogar": Sparkles,
   "cuidado-personal": HeartPulse,
+  construccion: HardHat,
   electronica: Zap,
 };

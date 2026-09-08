@@ -250,6 +250,7 @@
         "bebidas": "Gaseosas, jugos, aguas, energizantes y bebidas alcohólicas.",
         "cuidado-del-hogar": "Limpieza, desinfección y cuidado del hogar.",
         "cuidado-personal": "Higiene, cuidado personal y bienestar diario.",
+        "construccion": "Materiales, herrajes y suministros para construcción.",
         "electronica": "Tecnología y electrodomésticos para el hogar y el negocio."
       },
       "printEyebrow": "Distribución mayorista · Costa Rica",
@@ -297,6 +298,26 @@
     "errorTitle": "No pudimos cargar el catálogo",
     "errorDescription": "Ocurrió un problema al conectar con nuestro sistema de inventario. Escribinos y con gusto te compartimos el catálogo completo.",
     "errorCta": "Contactar por WhatsApp"
+  },
+  "Cart": {
+    "eyebrow": "Tu selección",
+    "title": "Carrito de pedido",
+    "close": "Cerrar",
+    "emptyTitle": "Tu carrito está vacío",
+    "empty": "Agregá productos desde el catálogo para armar tu pedido.",
+    "itemsCount": "{count, plural, one {# producto} other {# productos}}",
+    "openAria": "{count, plural, one {Carrito, # producto} other {Carrito, # productos}}",
+    "addToCartCta": "Agregar al carrito",
+    "addedConfirmation": "¡Agregado!",
+    "quickAddAria": "Agregar {name} al carrito",
+    "increaseAria": "Aumentar cantidad de {name}",
+    "decreaseAria": "Disminuir cantidad de {name}",
+    "removeAria": "Quitar {name} del carrito",
+    "checkoutHint": "Sin precios ni pagos en línea — un asesor te confirma disponibilidad y cotización por WhatsApp.",
+    "checkoutCta": "Enviar pedido por WhatsApp",
+    "clearCta": "Vaciar carrito",
+    "whatsappIntro": "Hola, quisiera hacer un pedido de los siguientes productos:",
+    "whatsappOutro": "¿Podrían ayudarme con la disponibilidad y cotización? Gracias."
   },
   "Brands": {
     "muralTitle": "Respaldados por marcas líderes",
@@ -397,7 +418,10 @@
     "openInGoogleMaps": "Google Maps",
     "openInWaze": "Waze",
     "copyLocation": "Copiar ubicación",
-    "copiedFeedback": "¡Copiado!"
+    "copiedFeedback": "¡Copiado!",
+    "googleRatingReviews": "reseñas en Google",
+    "googleRatingCta": "Ver reseñas en Google",
+    "reviewsTitle": "Lo que dicen nuestros clientes"
   },
   "ContactMap": {
     "sites": {

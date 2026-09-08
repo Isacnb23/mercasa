@@ -250,6 +250,7 @@
         "bebidas": "Sodas, juices, water, energy drinks and alcoholic beverages.",
         "cuidado-del-hogar": "Cleaning, disinfection and home care.",
         "cuidado-personal": "Personal hygiene and everyday wellness.",
+        "construccion": "Building materials, hardware and construction supplies.",
         "electronica": "Electronics and appliances for home and business."
       },
       "printEyebrow": "Wholesale distribution · Costa Rica",
@@ -297,6 +298,26 @@
     "errorTitle": "We couldn't load the catalog",
     "errorDescription": "We had a problem connecting to our inventory system. Reach out to us and we'll gladly share the full catalog.",
     "errorCta": "Contact us on WhatsApp"
+  },
+  "Cart": {
+    "eyebrow": "Your selection",
+    "title": "Order cart",
+    "close": "Close",
+    "emptyTitle": "Your cart is empty",
+    "empty": "Add products from the catalog to build your order.",
+    "itemsCount": "{count, plural, one {# product} other {# products}}",
+    "openAria": "{count, plural, one {Cart, # product} other {Cart, # products}}",
+    "addToCartCta": "Add to cart",
+    "addedConfirmation": "Added!",
+    "quickAddAria": "Add {name} to cart",
+    "increaseAria": "Increase quantity of {name}",
+    "decreaseAria": "Decrease quantity of {name}",
+    "removeAria": "Remove {name} from cart",
+    "checkoutHint": "No prices or online payments — an advisor confirms availability and pricing over WhatsApp.",
+    "checkoutCta": "Send order via WhatsApp",
+    "clearCta": "Clear cart",
+    "whatsappIntro": "Hi, I'd like to place an order for the following products:",
+    "whatsappOutro": "Could you help me with availability and pricing? Thank you."
   },
   "Brands": {
     "muralTitle": "Backed by leading brands",
@@ -397,7 +418,10 @@
     "openInGoogleMaps": "Google Maps",
     "openInWaze": "Waze",
     "copyLocation": "Copy location",
-    "copiedFeedback": "Copied!"
+    "copiedFeedback": "Copied!",
+    "googleRatingReviews": "reviews on Google",
+    "googleRatingCta": "See reviews on Google",
+    "reviewsTitle": "What our clients say"
   },
   "ContactMap": {
     "sites": {

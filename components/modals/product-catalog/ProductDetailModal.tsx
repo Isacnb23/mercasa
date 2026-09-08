@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ImageOff, X, type LucideIcon } from "lucide-react";
+import { ImageOff, Minus, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
+import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
@@ -67,8 +68,20 @@ export default function ProductDetailModal({
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
+  const tCart = useTranslations("Cart");
   const [imageStatus, setImageStatus] = useState<"loading" | "loaded" | "error">("loading");
   const packagingCodes = findPackagingCodes(product.name, glossaryGroups);
+
+  const { addItem } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [justAdded, setJustAdded] = useState(false);
+
+  const handleAddToCart = () => {
+    addItem(product, quantity);
+    setJustAdded(true);
+    setQuantity(1);
+    setTimeout(() => setJustAdded(false), 1800);
+  };
 
   return (
     <div
@@ -148,6 +161,43 @@ export default function ProductDetailModal({
               </div>
             </div>
           )}
+
+          {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
+              — carrito de pedido sin precios, no e-commerce; el checkout
+              real pasa por WhatsApp desde el drawer del carrito. */}
+          <div className="mt-4 flex items-center gap-3 border-t pt-4" style={{ borderColor: RULE }}>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                aria-label={tCart("decreaseAria", { name: product.name })}
+                className="flex h-9 w-9 items-center justify-center rounded-full border transition hover:opacity-70"
+                style={{ borderColor: RULE, color: INK }}
+              >
+                <Minus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+              </button>
+              <span className="w-6 text-center text-[15px] font-semibold" style={{ color: INK }}>
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                aria-label={tCart("increaseAria", { name: product.name })}
+                className="flex h-9 w-9 items-center justify-center rounded-full border transition hover:opacity-70"
+                style={{ borderColor: RULE, color: INK }}
+              >
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-corp-blue px-4 py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90"
+            >
+              <ShoppingCart className="h-4 w-4" strokeWidth={2} aria-hidden />
+              {justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

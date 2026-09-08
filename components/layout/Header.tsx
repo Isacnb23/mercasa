@@ -12,6 +12,8 @@ import logo from "@/public/models/mercasa-logo-transparent.png";
 import isotype from "@/public/favicon/icon-responsive.png";
 import LocaleSwitcher from "./LocaleSwitcher";
 import RecruitmentPopover from "./RecruitmentPopover";
+import CartButton from "@/components/cart/CartButton";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 export default function Header() {
   const t = useTranslations("Header");
@@ -129,6 +131,7 @@ export default function Header() {
               <RecruitmentPopover variant="desktop" />
             </div>
             <LocaleSwitcher />
+            <CartButton />
             <button ref={triggerRef} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-corp-ink transition hover:bg-corp-ink/[0.06] lg:hidden" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen((v) => !v)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
           </div>
         </div>
@@ -167,6 +170,7 @@ export default function Header() {
           </>
         )}
       </AnimatePresence>
+      <CartDrawer />
     </header>
   );
 }

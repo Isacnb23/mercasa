@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { BookOpen, Package } from "lucide-react";
 import type { HierarchyNode } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
+import { DEFAULT_FAMILY_COLOR, FAMILY_COLORS } from "@/lib/product-family-colors";
 import Reveal from "../../ui/Reveal";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
 
@@ -29,11 +30,8 @@ import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModa
 // borde inferior) y el estado "destacado" ya no queda fijo en la familia con
 // más productos: ahora es hover/focus de cualquier tarjeta.
 const NAVY = "#0B2F63";
-const ACCENT = "#2F6FED";
 const MUTED = "#5C6B7D";
 const CARD_BORDER = "#E7ECF2";
-const ICON_BG = "#E6F1FB";
-const ICON_BG_ACTIVE = "#D9EAFC";
 const FEATURED_BG = "#EAF3FC";
 const STRIPE_BG = "#0B2947";
 
@@ -121,6 +119,7 @@ function FamilyCard({
 }) {
   const t = useTranslations("Products");
   const Icon = FAMILY_ICONS[family.id] ?? Package;
+  const color = FAMILY_COLORS[family.id] ?? DEFAULT_FAMILY_COLOR;
   const [isActive, setIsActive] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -136,12 +135,12 @@ function FamilyCard({
           ? undefined
           : {
               y: isActive ? -10 : 0,
-              boxShadow: isActive ? "0 24px 48px rgba(11,47,99,0.18)" : "0 12px 28px rgba(16,37,63,0.06)",
+              boxShadow: isActive ? `0 24px 48px ${color.shadowTint}` : "0 12px 28px rgba(16,37,63,0.06)",
               backgroundColor: isActive ? FEATURED_BG : "#ffffff",
               borderLeftColor: isActive ? NAVY : CARD_BORDER,
               borderRightColor: isActive ? NAVY : CARD_BORDER,
               borderBottomColor: isActive ? NAVY : CARD_BORDER,
-              borderTopColor: isActive ? NAVY : ACCENT,
+              borderTopColor: isActive ? NAVY : color.accent,
             }
       }
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
@@ -151,20 +150,20 @@ function FamilyCard({
           ? {
               background: isActive ? FEATURED_BG : "#ffffff",
               borderColor: isActive ? NAVY : CARD_BORDER,
-              borderTopColor: isActive ? NAVY : ACCENT,
-              boxShadow: isActive ? "0 24px 48px rgba(11,47,99,0.18)" : "0 12px 28px rgba(16,37,63,0.06)",
+              borderTopColor: isActive ? NAVY : color.accent,
+              boxShadow: isActive ? `0 24px 48px ${color.shadowTint}` : "0 12px 28px rgba(16,37,63,0.06)",
             }
           : undefined
       }
     >
       <span
         className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors duration-300 sm:h-20 sm:w-20 xl:h-24 xl:w-24"
-        style={{ background: isActive ? ICON_BG_ACTIVE : ICON_BG }}
+        style={{ background: isActive ? color.iconBgActive : color.iconBg }}
       >
         <Icon
           className="h-6 w-6 transition-colors duration-300 sm:h-9 sm:w-9 xl:h-11 xl:w-11"
           strokeWidth={1.5}
-          style={{ color: isActive ? ACCENT : NAVY }}
+          style={{ color: isActive ? color.accent : NAVY }}
           aria-hidden
         />
       </span>

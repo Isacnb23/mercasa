@@ -13,6 +13,7 @@ import {
   HeartHandshake,
   Info,
   Package,
+  Plus,
   ShieldCheck,
   X,
   type LucideIcon,
@@ -20,6 +21,7 @@ import {
 import type { HierarchyNode, ProductSummary } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
+import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -1668,7 +1670,7 @@ function BookPageContent({
           acento) se queda fijo arriba. */}
       <div
         className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto"
-        style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(4px, 1.2cqh, 12px)" }}
+        style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(5px, 1.4cqh, 14px)" }}
       >
         {page.products.map((product) => (
           <ProductCard key={product.id} product={product} icon={Icon} onClick={() => onProductClick(product)} />
@@ -1688,6 +1690,8 @@ function ProductCard({
   onClick: () => void;
 }) {
   const t = useTranslations("Products");
+  const tCart = useTranslations("Cart");
+  const { addItem } = useCart();
   // Cortar la propagación en fase de CAPTURA, no alcanza con
   // stopPropagation en el onClick normal (ver catalogo-detalle-fix-imagen-
   // click.md, punto 2): react-pageflip (la librería `page-flip`) engancha
@@ -1704,24 +1708,49 @@ function ProductCard({
   // nunca se entera del mousedown/touchstart. El click del propio botón
   // (mismo nodo) sigue disparando normal, stopPropagation en captura solo
   // bloquea que el evento SIGA hacia otros nodos.
+  //
+  // Raíz: era un <button> pero necesita anidar el botón de agregado rápido
+  // al carrito (ver montar-carrito-en-base-al-catalogo.md) — un <button>
+  // dentro de otro <button> es HTML inválido, así que pasa a ser un
+  // "botón" semántico con role/tabIndex/onKeyDown propios.
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
       aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
-      className="flex w-full flex-col items-center rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
+      className="relative flex w-full cursor-pointer flex-col items-center rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
       style={{
         borderColor: RULE,
         boxShadow: "0 2px 8px rgba(8,43,92,0.06)",
-        padding: "clamp(4px, 1.4cqh, 8px)",
-        gap: "clamp(3px, 0.9cqh, 6px)",
+        padding: "clamp(5px, 1.7cqh, 10px)",
+        gap: "clamp(3px, 1.1cqh, 7px)",
       }}
     >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          addItem(product, 1);
+        }}
+        aria-label={tCart("quickAddAria", { name: product.name })}
+        title={tCart("addToCartCta")}
+        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-85"
+        style={{ background: ACCENT }}
+      >
+        <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+      </button>
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ background: CHIP_BG, height: "clamp(32px, 8cqh, 64px)", width: "clamp(32px, 8cqh, 64px)" }}
+        style={{ background: CHIP_BG, height: "clamp(36px, 9.5cqh, 76px)", width: "clamp(36px, 9.5cqh, 76px)" }}
       >
         <ProductImage
           itemId={product.id}
@@ -1736,14 +1765,14 @@ function ProductCard({
           hay forma de ver el nombre completo si se corta con "...", así
           que el nombre SIEMPRE tiene que verse entero, sin importar
           cuántas líneas necesite. */}
-      <p className="text-[9.5px] font-semibold leading-snug" style={{ color: INK }}>
+      <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK }}>
         {product.name}
       </p>
       {product.packSize && (
-        <p className="text-[8.5px] font-medium" style={{ color: MUTED }}>
+        <p className="text-[9.5px] font-medium" style={{ color: MUTED }}>
           {product.packSize}
         </p>
       )}
-    </button>
+    </div>
   );
 }

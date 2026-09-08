@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone } from "lucide-react";
+import { Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone, Quote, Star } from "lucide-react";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
@@ -443,11 +443,131 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
               </div>
             </div>
           </Reveal>
+
+          {/* ---------- Testimonios, franja propia a todo el ancho ----------
+              Antes vivían apretados dentro de la columna de info (entre el
+              horario y los botones de WhatsApp/Llamar) — ver
+              testimonios-seccion-propia.md: quedaban chicos y perdidos en
+              medio de mucha otra información. Ahora tienen su propia tarjeta
+              (mismo lenguaje visual CARD_BG que la de arriba), con el rating
+              de Google como encabezado que "presenta" la sección — el link
+              "Ver reseñas en Google" sigue viviendo ahí. */}
+          <Reveal
+            className="relative mx-auto mt-8 max-w-[1380px] overflow-hidden rounded-[30px] px-8 py-14 text-center sm:px-12 sm:py-16"
+            style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
+          >
+            <div className="flex justify-center">
+              <GoogleRating t={t} />
+            </div>
+            <h3
+              className="mx-auto mt-6 max-w-2xl font-display text-corp-ink"
+              style={{ fontSize: "clamp(32px, 4vw, 48px)", lineHeight: 1.1, fontWeight: 600, letterSpacing: "-0.02em" }}
+            >
+              {t("reviewsTitle")}
+            </h3>
+            <div className="mx-auto mt-10 grid max-w-[880px] grid-cols-1 gap-6 md:grid-cols-2">
+              {GOOGLE_REVIEWS.map((review) => (
+                <div
+                  key={review.author}
+                  // Contraste contra el CARD_BG beige que envuelve la sección
+                  // (ver fix-contraste-testimonios.md): el blanco puro +
+                  // sombra más difusa/opaca que antes (era 0.08, casi
+                  // invisible sobre el beige) + borde sutil de refuerzo hacen
+                  // que la tarjeta "flote" en vez de perderse contra el fondo.
+                  className="rounded-[24px] border border-black/[0.05] bg-white p-8 text-left"
+                  style={{ boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
+                >
+                  <Quote className="h-8 w-8" style={{ color: "rgba(11,47,99,0.22)" }} fill="currentColor" strokeWidth={0} />
+                  <p
+                    className="mt-3 font-display italic leading-snug"
+                    style={{ fontSize: "clamp(20px, 2vw, 24px)", color: NAVY }}
+                  >
+                    &ldquo;{review.quote}&rdquo;
+                  </p>
+                  <div className="mt-5 flex items-center justify-between">
+                    <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
+                      — {review.author}
+                    </p>
+                    <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
+                      {Array.from({ length: review.stars }).map((_, i) => (
+                        <Star key={i} className="h-4 w-4" fill="currentColor" strokeWidth={0} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </Container>
       </section>
     </>
   );
 }
+
+// Calificación de Google ESTÁTICA/hardcodeada (ver google-rating-
+// estatico.md) — dato real de la ficha "Grupo Inteca CEDI" en Google Maps,
+// sin consultar la API de Places (requiere API key + facturación, no
+// disponible todavía). Si la calificación cambia, actualizar los valores acá
+// a mano; la versión con API en vivo queda documentada en
+// google-reviews-contacto.md para cuando haya API key.
+const GOOGLE_RATING = 4.3;
+const GOOGLE_RATING_COUNT = 18;
+const GOOGLE_PLACE_URL = "https://www.google.com/maps/place/?q=place_id:ChIJCw1XyOEfoY8RKYSZrRjlUxA";
+
+function GoogleRating({ t }: { t: ReturnType<typeof useTranslations> }) {
+  // Relleno parcial de estrellas vía overlay recortado con `width` en % (5
+  // estrellas grises de fondo + 5 doradas encima, cortadas al ancho exacto
+  // de 4.3/5) en vez de mostrar solo el número, para que se lea como una
+  // calificación real de un vistazo.
+  const fillPercent = (GOOGLE_RATING / 5) * 100;
+
+  return (
+    <a
+      href={GOOGLE_PLACE_URL}
+      target="_blank"
+      rel="noreferrer"
+      className="group inline-flex w-fit items-center gap-3 rounded-2xl border bg-white px-4 py-3 transition hover:-translate-y-0.5"
+      style={{ borderColor: "rgba(11,47,99,0.1)" }}
+    >
+      <div className="relative inline-flex shrink-0">
+        <div className="flex gap-0.5" style={{ color: "rgba(11,47,99,0.18)" }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className="h-[18px] w-[18px]" fill="currentColor" strokeWidth={0} />
+          ))}
+        </div>
+        <div
+          className="absolute inset-0 flex gap-0.5 overflow-hidden"
+          style={{ width: `${fillPercent}%`, color: "#F5B400" }}
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className="h-[18px] w-[18px] shrink-0" fill="currentColor" strokeWidth={0} />
+          ))}
+        </div>
+      </div>
+      <p className="text-[14px] leading-tight" style={{ color: "#3A4A5F" }}>
+        <span className="font-bold" style={{ color: NAVY }}>
+          {GOOGLE_RATING}
+        </span>{" "}
+        · {GOOGLE_RATING_COUNT} {t("googleRatingReviews")}
+        <br />
+        <span className="text-[12.5px] font-medium group-hover:underline" style={{ color: "#075FD8" }}>
+          {t("googleRatingCta")}
+        </span>
+      </p>
+    </a>
+  );
+}
+
+// Reseñas reales de Google con nombre de autor (ver google-comentarios-
+// reales.md) — reemplaza el enfoque anterior (cita genérica "Very good" sin
+// nombre, de la API limitada a 5 resultados) por dos citas más creíbles que
+// Isaac encontró revisando la ficha real de Google Maps directamente. Texto
+// de la cita NUNCA se traduce (es lo que escribió el cliente real en
+// español) — solo el título del apartado tiene traducción ES/EN.
+const GOOGLE_REVIEWS = [
+  { quote: "Excelente mercadería", author: "René Calderón", stars: 5 },
+  { quote: "Muy bueno", author: "Marcelo G.", stars: 5 },
+];
 
 function InfoRow({
   icon: Icon,
