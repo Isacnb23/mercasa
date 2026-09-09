@@ -337,10 +337,14 @@
     "categoriesLabel": "Categorías disponibles",
     "exploreCta": "Explorar productos",
     "contactCta": "Contactar sobre {segment}",
-    "photoAlt": "Abastecimiento de Mercasa para {segment}"
+    "photoAlt": "Abastecimiento de Mercasa para {segment}",
+    "catalogGeneral": "Catálogo general",
+    "catalogGeneralTitle": "Todo nuestro catálogo, por familia",
+    "catalogGeneralDescription": "Explorá el portafolio completo de Mercasa organizado por familia de producto, sin filtrar por segmento."
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",
+    "genericWhatsappMessage": "Hola, me interesa conocer el catálogo de Mercasa para mi negocio.",
     "segmentCategories": {
       "alimentos": { "label": "Alimentos" },
       "bebidas": { "label": "Bebidas" },

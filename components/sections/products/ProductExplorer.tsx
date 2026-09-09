@@ -35,12 +35,41 @@ const CARD_BORDER = "#E7ECF2";
 const FEATURED_BG = "#EAF3FC";
 const STRIPE_BG = "#0B2947";
 
-export default function ProductExplorer({ families }: { families: HierarchyNode[] }) {
+export default function ProductExplorer({
+  families,
+  compact = false,
+}: {
+  families: HierarchyNode[];
+  /** Versión chica/discreta (ver refactor-segmento-mercado-catalogo-
+   * general.md, punto 3): usada dentro del panel de "Catálogo general" de
+   * Segmento de Mercado, donde esta grilla es secundaria al selector de
+   * arriba — sin la franja navy full-bleed ni el borde de color de acento
+   * por familia, y tarjetas más chicas y parejas en vez de escalar hasta el
+   * tamaño "hero" que usa la sección Productos original. */
+  compact?: boolean;
+}) {
   const [catalogFamilyId, setCatalogFamilyId] = useState<string | null>(null);
   const catalogFamily = families.find((f) => f.id === catalogFamilyId) ?? null;
 
   const openCatalog = (familyId: string) => setCatalogFamilyId(familyId);
   const closeCatalog = () => setCatalogFamilyId(null);
+
+  if (compact) {
+    return (
+      <div>
+        {catalogFamily && (
+          <ProductCatalogModal family={catalogFamily} allFamilies={families} onClose={closeCatalog} />
+        )}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {families.map((family, i) => (
+            <Reveal key={family.id} delay={i * 0.06}>
+              <FamilyCard family={family} onOpenCatalog={() => openCatalog(family.id)} compact />
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-10 lg:mt-14">
@@ -113,15 +142,49 @@ export default function ProductExplorer({ families }: { families: HierarchyNode[
 function FamilyCard({
   family,
   onOpenCatalog,
+  compact = false,
 }: {
   family: HierarchyNode;
   onOpenCatalog: () => void;
+  compact?: boolean;
 }) {
   const t = useTranslations("Products");
   const Icon = FAMILY_ICONS[family.id] ?? Package;
   const color = FAMILY_COLORS[family.id] ?? DEFAULT_FAMILY_COLOR;
   const [isActive, setIsActive] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onMouseEnter={() => setIsActive(true)}
+        onMouseLeave={() => setIsActive(false)}
+        onFocus={() => setIsActive(true)}
+        onBlur={() => setIsActive(false)}
+        onClick={onOpenCatalog}
+        aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
+        className="flex h-full w-full flex-col items-center gap-2 rounded-2xl border px-3 py-4 text-center transition duration-200"
+        style={{
+          background: isActive ? FEATURED_BG : "#ffffff",
+          borderColor: isActive ? NAVY : CARD_BORDER,
+        }}
+      >
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+          style={{ background: isActive ? color.iconBgActive : color.iconBg }}
+        >
+          <Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: isActive ? color.accent : NAVY }} aria-hidden />
+        </span>
+        <p className="text-[13px] font-semibold leading-tight" style={{ color: NAVY }}>
+          {family.name}
+        </p>
+        <span className="text-[11.5px]" style={{ color: MUTED }}>
+          {t("viewCatalogCta")}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <motion.div

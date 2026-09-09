@@ -86,7 +86,6 @@ export const navLinks = [
   { href: "#inicio", key: "inicio" },
   { href: "#nosotros", key: "nosotros" },
   { href: "#logistica", key: "logistica" },
-  { href: "#productos", key: "productos" },
   { href: "#customer-class", key: "customerClass" },
   { href: "#hablemos-de-negocios", key: "contacto" },
 ];
@@ -234,6 +233,14 @@ export const brandPillars = [{ key: "calidad" }, { key: "alianzas" }, { key: "co
 // una por una, en `public/customer-class/` (ver fix-path-fotos-y-curva-
 // otra-vez.md — la carpeta real tenía un typo, "custumer-class", corregido
 // acá; el nombre de archivo de "restaurantes" trae un espacio literal).
+
+// 8va opción del selector de "Segmento de Mercado" (ver
+// refactor-segmento-mercado-catalogo-general.md): no es un segmento de
+// cliente real, así que vive fuera de `businessSegments` (que sigue
+// representando exclusivamente los 7 segmentos con foto/copy/categorías
+// propios) — es solo la key que activa el panel de grilla de familias en
+// vez del panel de foto+contenido habitual.
+export const CATALOG_GENERAL_KEY = "catalogo-general";
 
 export const businessSegments = [
   {

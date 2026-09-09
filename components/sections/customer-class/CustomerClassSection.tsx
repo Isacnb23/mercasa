@@ -14,6 +14,7 @@ import {
   GlassWater,
   Hotel,
   Landmark,
+  LayoutGrid,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
@@ -21,12 +22,13 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import type { HierarchyNode } from "@/lib/product-types";
-import { businessSegments, site } from "@/lib/data";
+import { businessSegments, CATALOG_GENERAL_KEY, site } from "@/lib/data";
 import { buildWhatsappHref, cn } from "@/lib/utils";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
 import WhatsAppIcon from "../../ui/WhatsAppIcon";
+import ProductExplorer from "../products/ProductExplorer";
 
 const segmentIcons = {
   store: Store,
@@ -121,14 +123,22 @@ export default function CustomerClassSection({
   onSelect,
   onSelectCategory,
   onExploreProducts,
+  families = [],
 }: {
   activeKey: string;
   onSelect: (key: string) => void;
   onSelectCategory: (categoryKey: string) => void;
   onExploreProducts: () => void;
+  /** Familias reales de MercasaVIP (ver refactor-segmento-mercado-catalogo-
+   * general.md, punto 3) — usadas por la grilla chica de "Catálogo general",
+   * la 8va opción del selector de arriba. Mismos datos que ya recibe
+   * ContactSection (fetch cacheado en ContactSectionLoader), no se duplica
+   * el fetch acá. */
+  families?: HierarchyNode[];
 }) {
   const t = useTranslations("CustomerClass");
   const tContact = useTranslations("Contact");
+  const isCatalogGeneral = activeKey === CATALOG_GENERAL_KEY;
   const activeSegment = businessSegments.find((seg) => seg.key === activeKey) ?? businessSegments[0];
   const reduceMotion = useReducedMotion();
 
@@ -258,6 +268,47 @@ export default function CustomerClassSection({
               </button>
             );
           })}
+
+          {/* 8va tarjeta: "Catálogo general" (ver refactor-segmento-
+              mercado-catalogo-general.md, punto 2) — mismo tratamiento
+              visual que las 7 anteriores, ícono LayoutGrid (no repite
+              ninguno de los usados arriba) para representar "ver todo". */}
+          <button
+            id="customer-class-tab-catalog-general"
+            type="button"
+            role="tab"
+            aria-selected={isCatalogGeneral}
+            aria-controls="customer-class-panel"
+            onClick={() => onSelect(CATALOG_GENERAL_KEY)}
+            className={cn(
+              "relative flex min-h-[130px] w-[136px] shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-2xl px-3 py-5 text-center transition duration-300 sm:w-[150px]",
+              isCatalogGeneral ? "shadow-[0_12px_28px_rgba(11,49,94,0.1)]" : "hover:border-[#c7d0d8] hover:bg-[#FBFAF7]"
+            )}
+            style={{
+              background: "#ffffff",
+              border: `1px solid ${isCatalogGeneral ? NAVY : BORDER}`,
+            }}
+          >
+            {isCatalogGeneral && (
+              <span
+                aria-hidden
+                className="absolute inset-x-5 top-0 h-[3px] rounded-full"
+                style={{ background: BEIGE_MAIN }}
+              />
+            )}
+            {isCatalogGeneral && (
+              <Check
+                aria-hidden
+                className="absolute right-3 top-3 h-4 w-4"
+                strokeWidth={2.5}
+                style={{ color: NAVY }}
+              />
+            )}
+            <LayoutGrid className="h-7 w-7 shrink-0" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
+            <span className="text-[14px] font-semibold leading-tight" style={{ color: NAVY }}>
+              {t("catalogGeneral")}
+            </span>
+          </button>
         </div>
 
         {/* ---------- Panel principal ---------- */}
@@ -276,6 +327,31 @@ export default function CustomerClassSection({
             salida y recién DESPUÉS entraba la siguiente, con blanco de por
             medio). Ahora la tarjeta es estática y foto/contenido animan
             cada una por su cuenta adentro. */}
+        {isCatalogGeneral ? (
+          /* Panel "Catálogo general" (ver refactor-segmento-mercado-
+             catalogo-general.md, punto 3): grilla de familias en versión
+             chica/discreta — el foco visual sigue siendo el selector de 8
+             tarjetas de arriba, no esta grilla secundaria. Reusa
+             ProductExplorer (modo `compact`) con los mismos datos/lógica de
+             familias que ya usaba la sección "Productos" original. */
+          <div
+            id="customer-class-panel"
+            role="tabpanel"
+            aria-labelledby="customer-class-tab-catalog-general"
+            className="relative mx-auto mt-12 max-w-[1280px] overflow-hidden rounded-[30px] bg-white p-6 sm:p-8"
+            style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
+          >
+            <h3 className="font-display text-[20px] font-semibold" style={{ color: NAVY }}>
+              {t("catalogGeneralTitle")}
+            </h3>
+            <p className="mt-2 max-w-[560px] text-[14.5px] leading-[1.6]" style={{ color: TEXT_SECONDARY }}>
+              {t("catalogGeneralDescription")}
+            </p>
+            <div className="mt-6">
+              <ProductExplorer families={families} compact />
+            </div>
+          </div>
+        ) : (
         <div
           id="customer-class-panel"
           role="tabpanel"
@@ -470,6 +546,7 @@ export default function CustomerClassSection({
             </AnimatePresence>
           </div>
         </div>
+        )}
       </Container>
 
       <SoftCurve position="bottom" flip />

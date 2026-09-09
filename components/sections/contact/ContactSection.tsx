@@ -11,7 +11,7 @@ import SoftCurve from "../../ui/SoftCurve";
 import WhatsAppIcon from "../../ui/WhatsAppIcon";
 import CustomerClassSection, { resolveChipTarget } from "../customer-class/CustomerClassSection";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
-import { businessSegments, contactSites, site } from "@/lib/data";
+import { businessSegments, CATALOG_GENERAL_KEY, contactSites, site } from "@/lib/data";
 import { buildWhatsappHref, cn } from "@/lib/utils";
 import type { HierarchyNode } from "@/lib/product-types";
 import type { ContactSite } from "@/lib/data";
@@ -71,10 +71,16 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
   // sigue viviendo acá arriba para no perder la contextualización del
   // WhatsApp de cierre con el segmento elegido en Customer Class.
   const [activeSegmentKey, setActiveSegmentKey] = useState("supermercados");
+  const isCatalogGeneral = activeSegmentKey === CATALOG_GENERAL_KEY;
   const activeSegment = businessSegments.find((seg) => seg.key === activeSegmentKey) ?? businessSegments[0];
+  // "Catálogo general" no es un segmento de cliente real (ver refactor-
+  // segmento-mercado-catalogo-general.md, punto 4) — el mensaje de WhatsApp
+  // omite el "represento {noun}" en vez de inventar un segmento falso.
   const whatsappHref = buildWhatsappHref(
     site.whatsappHref,
-    t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
+    isCatalogGeneral
+      ? t("genericWhatsappMessage")
+      : t("segmentsWhatsappMessage", { noun: t(`segments.${activeSegment.key}.whatsappNoun`) })
   );
 
   // Selector de sedes (ver contacto-selector-sedes.md): teléfono, correos y
@@ -206,6 +212,7 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
         onSelect={setActiveSegmentKey}
         onSelectCategory={handleSelectCategory}
         onExploreProducts={handleExploreProducts}
+        families={families}
       />
 
       {catalogFamily && (

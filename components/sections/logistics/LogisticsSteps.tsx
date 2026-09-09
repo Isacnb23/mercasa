@@ -147,7 +147,7 @@ export default function LogisticsSteps() {
                   {isLast && (
                     <button
                       type="button"
-                      onClick={() => scrollTo("#productos")}
+                      onClick={() => scrollTo("#customer-class")}
                       className="group mt-7 inline-flex w-fit items-center justify-center gap-2 rounded-full border-2 border-corp-ink bg-white px-6 py-[11px] text-[14.5px] font-semibold text-corp-ink transition duration-300 hover:-translate-y-0.5 hover:bg-corp-ink hover:text-white"
                     >
                       {t("cta")}

@@ -104,10 +104,11 @@ export default function LogisticsTimeline() {
             de logística para reemplazarla, mejor sin la barra que duplicando
             contenido. */}
 
-        {/* ---------- Transición hacia Productos ---------- */}
+        {/* ---------- Transición hacia Segmento de Mercado (antes Productos,
+            ver refactor-segmento-mercado-catalogo-general.md) ---------- */}
         <button
           type="button"
-          onClick={() => scrollTo("#productos")}
+          onClick={() => scrollTo("#customer-class")}
           className="mx-auto mt-12 flex min-h-[44px] flex-col items-center justify-center gap-2 text-slate-400 transition hover:text-corp-blue"
         >
           <span className="whitespace-nowrap text-[11px] font-semibold uppercase" style={{ letterSpacing: "0.28em" }}>

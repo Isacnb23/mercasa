@@ -337,10 +337,14 @@
     "categoriesLabel": "Available categories",
     "exploreCta": "Explore products",
     "contactCta": "Contact us about {segment}",
-    "photoAlt": "Mercasa supply for {segment}"
+    "photoAlt": "Mercasa supply for {segment}",
+    "catalogGeneral": "Full catalog",
+    "catalogGeneralTitle": "Our entire catalog, by family",
+    "catalogGeneralDescription": "Browse Mercasa's full portfolio organized by product family, with no segment filter."
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
+    "genericWhatsappMessage": "Hi, I'm interested in learning about Mercasa's catalog for my business.",
     "segmentCategories": {
       "alimentos": { "label": "Alimentos" },
       "bebidas": { "label": "Bebidas" },

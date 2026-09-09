@@ -10,7 +10,7 @@ import { useScrollTo } from "@/lib/hooks/useScrollTo";
 export default function FooterNav({
   labels,
 }: {
-  labels: Record<"inicio" | "nosotros" | "logistica" | "productos" | "customerClass" | "contacto", string>;
+  labels: Record<"inicio" | "nosotros" | "logistica" | "customerClass" | "contacto", string>;
 }) {
   const scrollTo = useScrollTo();
 
