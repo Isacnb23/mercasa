@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
+  ArrowLeft,
   ArrowRight,
   Baby,
   Building2,
@@ -168,6 +170,18 @@ export default function CustomerClassSection({
   const segmentIndex = businessSegments.findIndex((seg) => seg.key === activeSegment.key);
   const segmentNumber = String(segmentIndex + 1).padStart(2, "0");
   const segmentTotal = String(businessSegments.length).padStart(2, "0");
+
+  // Último segmento real (no "Catálogo general") visitado — usado por el
+  // botón "Volver a segmentos" del panel de familias (ver catalogo-general-
+  // volver-y-altura-fija.md, problema 1): antes no había forma de salir de
+  // esa vista más que cambiar de tab arriba, nada obvio. Guarda el ÚLTIMO
+  // segmento activo en vez de asumir siempre el primero, para volver
+  // exactamente a donde el usuario estaba antes de abrir el catálogo
+  // general.
+  const lastSegmentKeyRef = useRef(activeKey === CATALOG_GENERAL_KEY ? businessSegments[0].key : activeKey);
+  useEffect(() => {
+    if (activeKey !== CATALOG_GENERAL_KEY) lastSegmentKeyRef.current = activeKey;
+  }, [activeKey]);
 
   return (
     <section
@@ -358,14 +372,38 @@ export default function CustomerClassSection({
              chica/discreta — el foco visual sigue siendo el selector de 8
              tarjetas de arriba, no esta grilla secundaria. Reusa
              ProductExplorer (modo `compact`) con los mismos datos/lógica de
-             familias que ya usaba la sección "Productos" original. */
+             familias que ya usaba la sección "Productos" original.
+
+             Altura mínima + centrado vertical (ver catalogo-general-volver-
+             y-altura-fija.md, problema 2): mismos breakpoints de alto que
+             el panel de segmento de abajo (1000/840/920/700/640px, la suma
+             real de su foto + columna de contenido) para que alternar entre
+             ambas vistas no empuje el mural de marcas — como esta grilla de
+             familias es más corta que el panel de segmento, se centra
+             verticalmente (`flex flex-col justify-center`) en vez de
+             quedar pegada arriba con un hueco abajo. */
           <div
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="relative mx-auto mt-12 max-w-[1280px] overflow-hidden rounded-[30px] bg-white p-6 sm:p-8"
+            className="relative mx-auto flex min-h-[1000px] max-w-[1280px] flex-col justify-center overflow-hidden rounded-[30px] bg-white p-6 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
             style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
+            {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
+                fija.md, problema 1): antes no había ninguna forma de salir
+                de esta vista salvo cambiar de tab arriba, nada obvio.
+                Vuelve al ÚLTIMO segmento real activo (lastSegmentKeyRef),
+                no siempre al primero. */}
+            <button
+              type="button"
+              onClick={() => onSelect(lastSegmentKeyRef.current)}
+              className="mb-5 inline-flex w-fit items-center gap-1.5 text-[13.5px] font-semibold transition hover:-translate-x-0.5"
+              style={{ color: NAVY }}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {t("backToSegmentsCta")}
+            </button>
+
             <h3 className="font-display text-[20px] font-semibold" style={{ color: NAVY }}>
               {t("catalogGeneralTitle")}
             </h3>
@@ -381,7 +419,7 @@ export default function CustomerClassSection({
           id="customer-class-panel"
           role="tabpanel"
           aria-labelledby={`customer-class-tab-${activeSegment.key}`}
-          className="relative mx-auto mt-12 grid max-w-[1280px] grid-cols-1 overflow-hidden rounded-[30px] bg-white md:grid-cols-[52%_48%]"
+          className="relative mx-auto grid min-h-[1000px] max-w-[1280px] grid-cols-1 overflow-hidden rounded-[30px] bg-white sm:min-h-[840px] md:min-h-[920px] md:grid-cols-[52%_48%] lg:min-h-[700px] xl:min-h-[640px]"
           style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
         >
           {/* Columna izquierda: fotografía real, sin overlay ni degradado —

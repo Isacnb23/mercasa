@@ -342,7 +342,8 @@
     "catalogGeneralTitle": "Our entire catalog, by family",
     "catalogGeneralDescription": "Browse Mercasa's full portfolio organized by product family, with no segment filter.",
     "catalogGeneralBannerDescription": "Browse our entire catalog by product family.",
-    "catalogGeneralCta": "View full catalog"
+    "catalogGeneralCta": "View full catalog",
+    "backToSegmentsCta": "Back to segments"
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
