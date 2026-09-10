@@ -10,6 +10,7 @@ import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
 import WhatsAppIcon from "../../ui/WhatsAppIcon";
 import CustomerClassSection, { resolveChipTarget } from "../customer-class/CustomerClassSection";
+import BrandsSection from "../brands/BrandsSection";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
 import { businessSegments, CATALOG_GENERAL_KEY, contactSites, site } from "@/lib/data";
 import { buildWhatsappHref, cn } from "@/lib/utils";
@@ -214,6 +215,17 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
         onExploreProducts={handleExploreProducts}
         families={families}
       />
+
+      {/* Mural de marcas reubicado acá (ver marcas-orden-y-catalogo-general-
+          banner.md, cambio 1): ahora que "Productos" ya no existe como
+          sección propia, va justo después de "Segmento de Mercado" en vez de
+          después de Productos. Vive dentro de ContactSection (en vez de
+          quedar como hermano en page.tsx) porque Customer Class y "Hablemos
+          de negocios" son dos <section> que ya renderiza este mismo
+          componente — es la única forma de intercalar Marcas entre ambas sin
+          romper el estado compartido (activeSegmentKey, etc.) que vive acá
+          arriba. */}
+      <BrandsSection />
 
       {catalogFamily && (
         <ProductCatalogModal

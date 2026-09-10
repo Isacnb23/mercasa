@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/hero/Hero";
 import AboutSection from "@/components/sections/about/AboutSection";
-import BrandsSection from "@/components/sections/brands/BrandsSection";
 import LogisticsTimeline from "@/components/sections/logistics/LogisticsTimeline";
 import CollaboratorsSection from "@/components/sections/collaborators/CollaboratorsSection";
 import ContactSection from "@/components/sections/contact/ContactSection";
@@ -36,9 +35,6 @@ export default function Home() {
         </SectionReveal>
         <SectionReveal variant="fade" z={32}>
           <CollaboratorsSection />
-        </SectionReveal>
-        <SectionReveal variant="fade" z={40}>
-          <BrandsSection />
         </SectionReveal>
         <SectionReveal variant="fade" z={50}>
           {/* Suspense con la propia ContactSection (families=[]) como

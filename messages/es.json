@@ -340,7 +340,9 @@
     "photoAlt": "Abastecimiento de Mercasa para {segment}",
     "catalogGeneral": "Catálogo general",
     "catalogGeneralTitle": "Todo nuestro catálogo, por familia",
-    "catalogGeneralDescription": "Explorá el portafolio completo de Mercasa organizado por familia de producto, sin filtrar por segmento."
+    "catalogGeneralDescription": "Explorá el portafolio completo de Mercasa organizado por familia de producto, sin filtrar por segmento.",
+    "catalogGeneralBannerDescription": "Explorá todo nuestro catálogo por familia de producto.",
+    "catalogGeneralCta": "Ver catálogo completo"
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",

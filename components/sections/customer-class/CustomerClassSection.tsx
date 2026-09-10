@@ -269,47 +269,61 @@ export default function CustomerClassSection({
             );
           })}
 
-          {/* 8va tarjeta: "Catálogo general" (ver refactor-segmento-
-              mercado-catalogo-general.md, punto 2) — mismo tratamiento
-              visual que las 7 anteriores, ícono LayoutGrid (no repite
-              ninguno de los usados arriba) para representar "ver todo". */}
-          <button
-            id="customer-class-tab-catalog-general"
-            type="button"
-            role="tab"
-            aria-selected={isCatalogGeneral}
-            aria-controls="customer-class-panel"
-            onClick={() => onSelect(CATALOG_GENERAL_KEY)}
-            className={cn(
-              "relative flex min-h-[130px] w-[136px] shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-2xl px-3 py-5 text-center transition duration-300 sm:w-[150px]",
-              isCatalogGeneral ? "shadow-[0_12px_28px_rgba(11,49,94,0.1)]" : "hover:border-[#c7d0d8] hover:bg-[#FBFAF7]"
-            )}
-            style={{
-              background: "#ffffff",
-              border: `1px solid ${isCatalogGeneral ? NAVY : BORDER}`,
-            }}
-          >
-            {isCatalogGeneral && (
-              <span
-                aria-hidden
-                className="absolute inset-x-5 top-0 h-[3px] rounded-full"
-                style={{ background: BEIGE_MAIN }}
-              />
-            )}
-            {isCatalogGeneral && (
-              <Check
-                aria-hidden
-                className="absolute right-3 top-3 h-4 w-4"
-                strokeWidth={2.5}
-                style={{ color: NAVY }}
-              />
-            )}
-            <LayoutGrid className="h-7 w-7 shrink-0" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
-            <span className="text-[14px] font-semibold leading-tight" style={{ color: NAVY }}>
-              {t("catalogGeneral")}
-            </span>
-          </button>
         </div>
+
+        {/* ---------- Banner "Catálogo general" ----------
+            Ya NO es la 8va tarjeta de la grilla de arriba (ver
+            marcas-orden-y-catalogo-general-banner.md, cambio 2): la grilla
+            vuelve a ser de 7 tarjetas limpias de segmento, y "Catálogo
+            general" pasa a ser un disparador propio — banner navy de ancho
+            completo, distinto en forma (no un molde de tarjeta más grande) —
+            para que se sienta como una opción complementaria ("elegí tu
+            segmento arriba, o explorá todo el catálogo acá abajo") y no como
+            una 8va opción disputando espacio visual con las 7 de segmento.
+            Mismo comportamiento funcional que antes (abre el mismo panel de
+            familias vía ProductExplorer más abajo), solo cambia el
+            disparador visual. */}
+        <button
+          type="button"
+          role="tab"
+          id="customer-class-tab-catalog-general"
+          aria-selected={isCatalogGeneral}
+          aria-controls="customer-class-panel"
+          onClick={() => onSelect(CATALOG_GENERAL_KEY)}
+          className="group relative mx-auto mt-5 flex w-full max-w-[1280px] flex-col items-start gap-5 overflow-hidden rounded-[24px] p-6 text-left transition duration-300 hover:brightness-110 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7"
+          style={{
+            background: `linear-gradient(120deg, ${NAVY} 0%, #0E3E7A 100%)`,
+            boxShadow: isCatalogGeneral
+              ? "0 16px 36px -8px rgba(11,49,94,0.45)"
+              : "0 12px 28px -10px rgba(11,49,94,0.32)",
+            border: isCatalogGeneral ? `1.5px solid ${BEIGE_MAIN}` : "1.5px solid transparent",
+          }}
+        >
+          <div className="flex items-center gap-4 sm:gap-5">
+            <span
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+              style={{ background: IVORY }}
+            >
+              <LayoutGrid className="h-7 w-7" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
+            </span>
+            <div>
+              <p className="font-display text-[19px] font-semibold text-white sm:text-[22px]">
+                {t("catalogGeneral")}
+              </p>
+              <p className="mt-1 max-w-[420px] text-[14px] leading-[1.5]" style={{ color: "#C6D2E2" }}>
+                {t("catalogGeneralBannerDescription")}
+              </p>
+            </div>
+          </div>
+
+          <span
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3 text-[14.5px] font-bold transition duration-300 group-hover:-translate-y-0.5 sm:w-fit"
+            style={{ background: BEIGE_MAIN, color: NAVY }}
+          >
+            {t("catalogGeneralCta")}
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+          </span>
+        </button>
 
         {/* ---------- Panel principal ---------- */}
         {/* Rediseño final (ver customer-class-rediseno-final.md y
