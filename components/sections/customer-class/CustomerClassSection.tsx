@@ -316,12 +316,23 @@ export default function CustomerClassSection({
             </div>
           </div>
 
+          {/* CTA aligerado (ver transicion-fluida-boton-discreto.md y
+              unificar-fondo-marcas-y-boton-catalogo.md, problema 2): antes
+              era una píldora sólida dorada grande, que competía
+              visualmente con el ícono/título/descripción del banner —
+              ahora es solo texto + flecha, con un subrayado sutil en vez de
+              relleno, para que siga siendo claramente clickeable sin ser el
+              foco. `w-fit` fijo (sin `w-full` en mobile): al ser hijo de un
+              flex-col con `items-start`, un ancho automático ya lo deja
+              pegado a la izquierda del tamaño de su propio contenido —
+              forzarlo a 100% en mobile lo estiraba a todo el ancho del
+              banner y se veía tan grande como la píldora que reemplazó. */}
           <span
-            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3 text-[14.5px] font-bold transition duration-300 group-hover:-translate-y-0.5 sm:w-fit"
-            style={{ background: BEIGE_MAIN, color: NAVY }}
+            className="inline-flex w-fit shrink-0 items-center gap-1.5 border-b pb-0.5 text-[12.5px] font-medium transition duration-300 group-hover:gap-2.5"
+            style={{ color: BEIGE_MAIN, borderColor: "rgba(205,187,159,0.55)" }}
           >
             {t("catalogGeneralCta")}
-            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+            <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
           </span>
         </button>
 
