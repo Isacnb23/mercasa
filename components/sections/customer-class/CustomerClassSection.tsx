@@ -245,20 +245,25 @@ export default function CustomerClassSection({
       className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[130px] sm:pb-[48px] sm:pt-[150px]"
       style={{ background: IVORY }}
     >
-      {/* Degradados de entrada/salida (ver transiciones-fondo-difuminadas-
-          entre-secciones.md): antes el corte contra el Hero (blanco) y
-          contra Marcas (blanco) era una línea neta apenas se notaba el
-          tono crema de esta sección — cada mitad del seam la completa la
-          sección que corresponde (mismo criterio que ya usan Nosotros/
-          Logística/Colaboradores/Contacto). */}
+      {/* Degradado de entrada desde el Hero (blanco), ver transiciones-
+          fondo-difuminadas-entre-secciones.md: el Hero no tiene curva ni
+          degradado propio en su borde inferior, así que acá no hay
+          conflicto de "doble degradado" (ver afinar-transicion-linea-
+          ondulada.md) — esta sí puede quedarse como fundido de dos lados. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
         style={{ background: "linear-gradient(to bottom, #FFFFFF, transparent)" }}
       />
+      {/* Degradado de salida hacia Marcas (ver afinar-transicion-linea-
+          ondulada.md): esta sección tiene su PROPIA curva en el borde
+          inferior (más abajo), así que es la única dueña de este seam — sin
+          degradado de entrada simétrico del lado de Marcas (evita el
+          empalme de dos degradados opuestos que se veía como línea dura
+          compitiendo con la curva). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-32 sm:h-40"
         style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
       />
       <Container className="relative z-10">

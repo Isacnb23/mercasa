@@ -72,19 +72,16 @@ export default function BrandsSection() {
       // Segmento de Mercado como antes.
       style={{ background: "#FFFFFF" }}
     >
-      {/* Degradados de entrada/salida (ver transiciones-fondo-difuminadas-
-          entre-secciones.md): el corte contra "Segmento de Mercado" (crema)
-          arriba y contra "Nosotros" (beige) abajo se veía como línea neta
-          aun con los mismos tonos casi iguales — cada mitad del seam la
-          completa la sección que corresponde. */}
+      {/* Degradado de salida hacia Nosotros (ver afinar-transicion-linea-
+          ondulada.md): la entrada desde "Segmento de Mercado" ya la resuelve
+          esa sección del lado suyo, con SU PROPIA curva — un degradado de
+          entrada acá encima (como antes) pintaba blanco sólido justo en el
+          borde donde Segmento de Mercado ya había terminado de fundir a
+          blanco, y ese empalme de dos degradados opuestos se veía como
+          línea dura compitiendo con la curva. Un solo degradado por seam. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
-        style={{ background: "linear-gradient(to bottom, #F7F4EE, transparent)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-32 sm:h-40"
         style={{ background: "linear-gradient(to bottom, transparent, #F7F3EB)" }}
       />
       {/* Seam de salida hacia Contacto. La entrada (Productos → Marcas) la

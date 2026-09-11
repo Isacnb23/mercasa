@@ -44,18 +44,25 @@ export default function LogisticsTimeline() {
       // en vez de una transición gradual entre dos.
       style={{ background: "#FFFFFF" }}
     >
-      {/* Degradados de entrada/salida (ver gradiente-transiciones-
-          secciones.md): esta sección completa la mitad que le toca de cada
-          seam — beige de Nosotros arriba, beige de Colaboradores abajo —
-          para que el cambio de color se sienta como un fundido, no un corte. */}
+      {/* Degradado de salida hacia Colaboradores (ver afinar-transicion-
+          linea-ondulada.md): la entrada (Nosotros → Logística) la resuelve
+          Nosotros del lado suyo, con SU PROPIA curva — acá NO se agrega un
+          degradado de entrada simétrico (como sí se hacía antes, ver
+          gradiente-transiciones-secciones.md) porque terminaba pintando
+          blanco sólido justo en el borde exacto donde Nosotros ya había
+          terminado de fundir hacia blanco, y ese "empalme" de dos
+          degradados opuestos se veía como una línea dura nueva, encima
+          compitiendo con la curva ondulada. Un solo degradado por seam,
+          siempre del lado de la sección que ya trae la curva (acá, hacia
+          Colaboradores) — controlando UN solo punto de transición en vez de
+          dos que se pisan. Altura mayor que la curva (h-16/h-24, ver
+          SoftCurve) y mismo anclaje `bottom-0`: la curva queda dentro de la
+          mitad inferior del degradado, con el color ya casi asentado en el
+          beige de Colaboradores, en vez de aparecer recién después de que
+          el fondo ya cambió de golpe. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
-        style={{ background: "linear-gradient(to bottom, #F7F3EB, transparent)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-32 sm:h-40"
         style={{ background: "linear-gradient(to bottom, transparent, #F7F3EB)" }}
       />
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de

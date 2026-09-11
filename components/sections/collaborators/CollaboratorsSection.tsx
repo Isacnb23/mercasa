@@ -76,18 +76,16 @@ export default function CollaboratorsSection() {
       // blanco → Colaboradores beige → Contacto blanco (sin cambios).
       style={{ background: "#F7F3EB" }}
     >
-      {/* Degradados de entrada/salida (ver gradiente-transiciones-
-          secciones.md): blanco de Logística arriba, blanco de Contacto
-          abajo — mismo criterio que en LogisticsTimeline, para que ambos
-          seams se lean como fundido en vez de corte. */}
+      {/* Degradado de salida hacia Contacto (ver afinar-transicion-linea-
+          ondulada.md): la entrada (Logística → Colaboradores) ya la resuelve
+          LogisticsTimeline del lado suyo, con SU PROPIA curva — un
+          degradado de entrada acá encima (como antes) pintaba blanco sólido
+          justo en el borde donde Logística ya había terminado de fundir a
+          beige, y ese empalme de dos degradados opuestos se veía como línea
+          dura compitiendo con la curva. Un solo degradado por seam. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
-        style={{ background: "linear-gradient(to bottom, #FFFFFF, transparent)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-32 sm:h-40"
         style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
       />
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior

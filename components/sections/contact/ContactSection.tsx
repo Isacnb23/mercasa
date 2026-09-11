@@ -114,15 +114,13 @@ export default function ContactSection() {
         className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-24 pt-[130px] md:pb-28 md:pt-[150px]"
         style={{ background: "#FFFFFF" }}
       >
-        {/* Degradado de entrada desde Colaboradores (beige), ver gradiente-
-            transiciones-secciones.md — completa la mitad del seam que le
-            toca a esta sección (la otra mitad la pone CollaboratorsSection
-            en su propio pie). */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
-          style={{ background: "linear-gradient(to bottom, #F7F3EB, transparent)" }}
-        />
+        {/* Sin degradado de entrada propio acá (ver afinar-transicion-
+            linea-ondulada.md): la entrada desde Colaboradores (beige) ya la
+            resuelve esa sección del lado suyo, con SU PROPIA curva —
+            duplicar el degradado acá encima pintaba beige sólido justo en
+            el borde donde Colaboradores ya había terminado de fundir a
+            blanco, y ese empalme se veía como línea dura compitiendo con
+            la curva. Un solo degradado por seam. */}
         {/* Esta curva solo marca la salida hacia el Footer (que cierra en un
             tono distinto, #F3F5F7). "Segmento de Mercado" (CustomerClassSection)
             y "Marcas" ya NO son las secciones inmediatamente anteriores acá
