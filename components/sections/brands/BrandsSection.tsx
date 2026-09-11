@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { ExternalLink } from "lucide-react";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
@@ -139,7 +140,15 @@ export default function BrandsSection() {
             social puntual en vez de listar las ~50 marcas todas juntas.
             El wrapper reserva la altura de la categoría más larga (medida
             abajo) y centra verticalmente los chips dentro de ese espacio,
-            para que 1 fila o 2 filas ocupen siempre el mismo alto. */}
+            para que 1 fila o 2 filas ocupen siempre el mismo alto.
+            Clickeables cuando hay sitio oficial (ver mural-marcas-cards-
+            clickeables.md): cada marca en lib/data.ts trae un `url`
+            opcional, completado solo tras confirmar por búsqueda real cuál
+            es su sitio oficial — nunca inventado. Las que no tienen `url`
+            (marca blanca/regional sin sitio verificable, ej. toda la línea
+            "EZ*") se quedan como chip de solo texto, sin affordance de
+            link. El ícono de flecha-salida solo aparece en las que sí
+            abren algo, para no prometer un link donde no lo hay. */}
         <div
           className="mx-auto mt-6 flex max-w-[900px] items-center justify-center"
           style={{ minHeight: chipsHeight ?? undefined }}
@@ -153,13 +162,31 @@ export default function BrandsSection() {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className="flex w-full flex-wrap justify-center gap-[10px]"
             >
-              {muralCategory.brands.map((name) => (
-                <li
-                  key={name}
-                  className="rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink"
-                  style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
-                >
-                  {name}
+              {muralCategory.brands.map((brand) => (
+                <li key={brand.name}>
+                  {brand.url ? (
+                    <a
+                      href={brand.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group inline-flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink transition duration-200 hover:-translate-y-0.5 hover:border-corp-blue hover:text-corp-blue"
+                      style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
+                    >
+                      {brand.name}
+                      <ExternalLink
+                        className="h-3 w-3 shrink-0 opacity-40 transition group-hover:opacity-100"
+                        strokeWidth={2}
+                        aria-hidden
+                      />
+                    </a>
+                  ) : (
+                    <span
+                      className="inline-flex rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink"
+                      style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
+                    >
+                      {brand.name}
+                    </span>
+                  )}
                 </li>
               ))}
             </motion.ul>
@@ -169,7 +196,9 @@ export default function BrandsSection() {
         {/* Medición oculta: renderiza las 4 categorías fuera de flujo con el
             mismo ancho/estilos que el bloque visible, para calcular la
             altura máxima real (2 filas en la categoría con más marcas) sin
-            depender de un número mágico calibrado a mano. */}
+            depender de un número mágico calibrado a mano. Se mide con el
+            marcado más simple (sin link real) — el `padding`/gap es
+            idéntico al de arriba, así que el alto medido no cambia. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 select-none" style={{ visibility: "hidden" }}>
           {brandCategories.map((cat) => (
             <ul
@@ -179,13 +208,14 @@ export default function BrandsSection() {
               }}
               className="mx-auto flex max-w-[900px] flex-wrap justify-center gap-[10px]"
             >
-              {cat.brands.map((name) => (
+              {cat.brands.map((brand) => (
                 <li
-                  key={name}
-                  className="rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug"
+                  key={brand.name}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug"
                   style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
                 >
-                  {name}
+                  {brand.name}
+                  {brand.url && <ExternalLink className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />}
                 </li>
               ))}
             </ul>

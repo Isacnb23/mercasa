@@ -170,39 +170,93 @@ export const brandsMuralImage = "/brand/marcas/marcas-mural.jpg";
 
 // Orden: categoría estrella primero (alimentos), luego el resto según lo
 // pedido para el master-detail de Productos.
+//
+// `url`: sitio oficial de la marca (ver mural-marcas-cards-clickeables.md) —
+// SOLO se completa cuando una investigación real (búsqueda web, no
+// adivinado) confirmó con confianza razonable que es el sitio correcto de
+// ESA marca puntual. Las marcas sin `url` quedan sin link a propósito:
+// perfil regional/ambiguo sin sitio verificable (ej. MiSabor, Girol,
+// Marquise, Pelican, Renata, Thüringer, "5,0", B-Healthy, Choice Care,
+// Ideal, Belspá, Koa), o toda la línea "EZ*"/"Bio EZserv"/Clinx/Poderoso/
+// Pinol (marca propia/blanca de limpieza institucional o sin sitio propio
+// confirmado) — no inventar la URL de ninguna de estas si se agregan a
+// futuro.
 export const brandCategories = [
   {
     key: "alimentos",
     image: "/brand/marcas/alimentos.png",
     brands: [
-      "MiSabor", "Girol", "Marquise", "Snickers", "Oreo", "Milka", "Trident",
-      "Pietrobon", "Vitarella", "Halls", "Able Farm", "Pringles", "Renata",
-      "Smucker's", "Pomi", "Mentos", "Pelican",
+      { name: "MiSabor" },
+      { name: "Girol" },
+      { name: "Marquise" },
+      { name: "Snickers", url: "https://www.snickers.com/" },
+      { name: "Oreo", url: "https://www.oreo.com/" },
+      { name: "Milka", url: "https://www.milka.com" },
+      { name: "Trident", url: "https://www.tridentgum.com" },
+      { name: "Pietrobon" },
+      { name: "Vitarella" },
+      { name: "Halls", url: "https://www.gethalls.com/" },
+      { name: "Able Farm", url: "https://www.abledairies.com/brands/able-farm/" },
+      { name: "Pringles", url: "https://www.pringles.com/" },
+      { name: "Renata" },
+      { name: "Smucker's", url: "https://www.jmsmucker.com/" },
+      { name: "Pomi", url: "https://www.pomi.us.com/" },
+      { name: "Mentos", url: "https://www.mentos.com" },
+      { name: "Pelican" },
     ],
   },
   {
     key: "bebidas",
     image: "/brand/marcas/bebidas.png",
     brands: [
-      "Carlsberg", "Monster Energy", "B-Healthy", "5,0", "Heineken",
-      "Stella Artois", "Thüringer", "Red Bull", "Suerox", "Johnnie Walker",
-      "Nescafé", "Jägermeister", "The Macallan", "Electrolit",
+      { name: "Carlsberg", url: "https://www.carlsberggroup.com/" },
+      { name: "Monster Energy", url: "https://www.monsterenergy.com/" },
+      { name: "B-Healthy" },
+      { name: "5,0" },
+      { name: "Heineken", url: "https://www.theheinekencompany.com/" },
+      { name: "Stella Artois", url: "https://www.stellaartois.com/" },
+      { name: "Thüringer" },
+      { name: "Red Bull", url: "https://www.redbull.com/" },
+      { name: "Suerox", url: "https://www.suerox.us/" },
+      { name: "Johnnie Walker", url: "https://www.johnniewalker.com/" },
+      { name: "Nescafé", url: "https://www.nescafe.com/" },
+      { name: "Jägermeister", url: "https://www.jagermeister.com/" },
+      { name: "The Macallan", url: "https://www.themacallan.com" },
+      { name: "Electrolit", url: "https://electrolit.com/" },
     ],
   },
   {
     key: "bebe-cuidado",
     image: "/brand/marcas/cuidado-personal.png",
     brands: [
-      "Choice Care", "Ideal", "Selpak", "Nivea", "Palmolive", "Gillette",
-      "Saba", "Belspá", "Tena", "Koa",
+      { name: "Choice Care" },
+      { name: "Ideal" },
+      { name: "Selpak", url: "https://www.selpak.com.tr" },
+      { name: "Nivea", url: "https://www.nivea.com" },
+      { name: "Palmolive", url: "https://www.palmolive.com.mx" },
+      { name: "Gillette", url: "https://www.gillette-latino.com" },
+      { name: "Saba", url: "https://www.saba-centroamerica.com" },
+      { name: "Belspá" },
+      { name: "Tena", url: "https://www.tena.com.ar" },
+      { name: "Koa" },
     ],
   },
   {
     key: "hogar-institucional",
     image: "/brand/marcas/cuidado-hogar.png",
     brands: [
-      "EZlight", "EZwrap", "Bio EZserv", "Clinx", "EZserv", "EZtape",
-      "Suavitel", "Ensueño", "EZbags", "EZClean", "Poderoso", "Pinol",
+      { name: "EZlight" },
+      { name: "EZwrap" },
+      { name: "Bio EZserv" },
+      { name: "Clinx" },
+      { name: "EZserv" },
+      { name: "EZtape" },
+      { name: "Suavitel", url: "https://www.suavitel.com" },
+      { name: "Ensueño", url: "https://www.ensueno.com.mx" },
+      { name: "EZbags" },
+      { name: "EZClean" },
+      { name: "Poderoso" },
+      { name: "Pinol" },
     ],
   },
 ];
