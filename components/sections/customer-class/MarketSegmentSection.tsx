@@ -4,24 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { HierarchyNode } from "@/lib/product-types";
 import { businessSegments } from "@/lib/data";
-import CustomerClassSection, { resolveChipTarget } from "./CustomerClassSection";
+import CustomerClassSection, { resolveChipCategories, resolveChipTarget } from "./CustomerClassSection";
 import BrandsSection from "../brands/BrandsSection";
 import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
 import { useActiveSegment } from "./ActiveSegmentContext";
-
-// Busca el nodo real de categoría (sub-familia -> categoría) dentro de una
-// Familia, a partir del id resuelto por `resolveChipTarget` — necesario para
-// el modo filtrado de "Explorar productos" (ver
-// customer-class-animacion-filtro.md, punto 2), que necesita el nodo
-// HierarchyNode completo (con `.products`), no solo el id.
-function findCategoryById(family: HierarchyNode, categoryId: string): HierarchyNode | null {
-  for (const subFamily of family.children) {
-    for (const category of subFamily.children) {
-      if (category.id === categoryId) return category;
-    }
-  }
-  return null;
-}
 
 /**
  * "Segmento de Mercado" + "Marcas" (ver reestructuracion-orden-secciones.md):
@@ -99,18 +85,29 @@ export default function MarketSegmentSection({ families = [] }: { families?: Hie
   // 5 de "Supermercados y cadenas" viven en 4 Familias). Usa el nuevo modo
   // filtrado de ProductCatalogModal (aditivo — no toca el modo de una sola
   // categoría que siguen usando los chips y ProductExplorer).
+  //
+  // `resolveChipCategories` (no `resolveChipTarget`, ver panaderias-
+  // explorar-productos-incompleto.md): cada entrada de `categories` puede
+  // ser una Familia o Sub-familia ENTERA (ej. "alimentos"), no una sola
+  // categoría puntual — usar el resolver de una sola categoría acá dejaba
+  // fuera todo lo demás de esa Familia/Sub-familia (Panaderías, con
+  // "alimentos" + "limpieza-del-hogar" + "institucional", terminaba
+  // mostrando solo 2 categorías sueltas en vez de las tres áreas
+  // completas). Dedupeado por id de categoría por si dos entradas del
+  // segmento llegaran a resolver a la misma categoría.
   const handleExploreProducts = () => {
-    const resolved = activeSegment.categories
-      .map((categoryKey) => {
-        const target = resolveChipTarget(families, categoryKey);
-        if (!target || !target.categoryId) return null;
-        const family = families.find((f) => f.id === target.familyId);
-        if (!family) return null;
-        const category = findCategoryById(family, target.categoryId);
-        if (!category) return null;
-        return { family, category };
-      })
-      .filter((entry): entry is { family: HierarchyNode; category: HierarchyNode } => entry !== null);
+    const seenCategoryIds = new Set<string>();
+    const resolved: { family: HierarchyNode; category: HierarchyNode }[] = [];
+
+    for (const categoryKey of activeSegment.categories) {
+      const target = resolveChipCategories(families, categoryKey);
+      if (!target) continue;
+      for (const category of target.categories) {
+        if (seenCategoryIds.has(category.id)) continue;
+        seenCategoryIds.add(category.id);
+        resolved.push({ family: target.family, category });
+      }
+    }
 
     if (resolved.length === 0) return;
 

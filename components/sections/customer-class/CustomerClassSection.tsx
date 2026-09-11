@@ -116,6 +116,48 @@ export function resolveChipTarget(families: HierarchyNode[], categoryKey: string
   return { familyId: family.id, categoryId: firstCategoryInSubFamily(subFamily) };
 }
 
+function allCategoriesInFamily(family: HierarchyNode): HierarchyNode[] {
+  const categories: HierarchyNode[] = [];
+  for (const subFamily of family.children) {
+    for (const category of subFamily.children) {
+      if ((category.products?.length ?? 0) > 0) categories.push(category);
+    }
+  }
+  return categories;
+}
+
+function allCategoriesInSubFamily(subFamily: HierarchyNode): HierarchyNode[] {
+  return subFamily.children.filter((category) => (category.products?.length ?? 0) > 0);
+}
+
+// Variante de `resolveChipTarget` para "Explorar productos" (ver
+// panaderias-explorar-productos-incompleto.md): esa CTA promete abrir el
+// catálogo filtrado a TODAS las categorías del segmento, pero reusaba
+// `resolveChipTarget` — pensado para un chip individual, que a propósito
+// resuelve a UNA sola categoría "ancla" (la primera con productos) para
+// abrir el catálogo posicionado ahí — así que un segmento como Panaderías
+// (categories: alimentos/limpieza-del-hogar/institucional, dos de ellas
+// Familias/Sub-familias enteras con muchas categorías) terminaba mostrando
+// solo la primera categoría de cada una (ej. "Atún" y "Dispensadores"),
+// perdiendo el resto. Esta variante devuelve TODAS las categorías con
+// productos de la Familia o Sub-familia objetivo, no solo la primera.
+export function resolveChipCategories(
+  families: HierarchyNode[],
+  categoryKey: string
+): { family: HierarchyNode; categories: HierarchyNode[] } | null {
+  const target = CHIP_TARGETS[categoryKey];
+  if (!target) return null;
+  const family = families.find((f) => f.id === target.family);
+  if (!family) return null;
+
+  if (!target.subFamily) {
+    return { family, categories: allCategoriesInFamily(family) };
+  }
+  const subFamily = family.children.find((sf) => sf.id === `${family.id}/${target.subFamily}`);
+  if (!subFamily) return null;
+  return { family, categories: allCategoriesInSubFamily(subFamily) };
+}
+
 /**
  * "Customer Class" — sección independiente y comercial. Reemplaza por
  * completo el intento anterior (BusinessSegments.tsx, panel navy

@@ -114,6 +114,15 @@ export default function ContactSection() {
         className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-24 pt-[130px] md:pb-28 md:pt-[150px]"
         style={{ background: "#FFFFFF" }}
       >
+        {/* Degradado de entrada desde Colaboradores (beige), ver gradiente-
+            transiciones-secciones.md — completa la mitad del seam que le
+            toca a esta sección (la otra mitad la pone CollaboratorsSection
+            en su propio pie). */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+          style={{ background: "linear-gradient(to bottom, #F7F3EB, transparent)" }}
+        />
         {/* Esta curva solo marca la salida hacia el Footer (que cierra en un
             tono distinto, #F3F5F7). "Segmento de Mercado" (CustomerClassSection)
             y "Marcas" ya NO son las secciones inmediatamente anteriores acá
@@ -154,23 +163,25 @@ export default function ContactSection() {
             </p>
           </Reveal>
 
-          {/* ---------- Tarjeta única, dos columnas (NO panel navy) ----------
-              Réplica exacta de la referencia (ver
-              rediseno-exacto-hablemos-de-negocios.md) — reemplaza por
-              completo el panel navy del rediseño anterior
-              (rediseno-contacto-y-mapa.md), que no convenció. Fondo claro
-              crema (mismo tono que Customer Class), columna de info ~40% a
-              la izquierda, mapa ~60% a la derecha ocupando toda la altura
-              (esquinas redondeadas solo del lado derecho, heredadas del
-              rounded-[30px] + overflow-hidden del contenedor único). */}
+          {/* ---------- Tarjeta única: franja de contacto arriba, mapa y
+              reseñas uno al lado del otro abajo ----------
+              Reemplaza el layout anterior (columna angosta de info+reseñas
+              a la izquierda, mapa alto a la derecha — ver rediseno-exacto-
+              hablemos-de-negocios.md) por pedido de seguimiento: "el mapa y
+              las reseñas quedan uno arriba y otro abajo, se sentía raro —
+              probemos uno al lado del otro". La info de contacto (que antes
+              compartía columna con las reseñas) sube a una franja
+              horizontal propia arriba de toda la tarjeta; abajo quedan dos
+              columnas iguales: mapa personalizado a la izquierda, reseñas a
+              la derecha. */}
           <Reveal
             className="relative mx-auto mt-14 max-w-[1380px] overflow-hidden rounded-[30px]"
             style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
           >
-            <div className="grid grid-cols-1 lg:min-h-[520px] lg:grid-cols-[2fr_3fr]">
-              {/* Columna izquierda (~40%) */}
-              <div className="relative flex flex-col gap-8 p-8 sm:p-10 md:p-12">
-                <div>
+            {/* ---------- Franja superior: info de contacto ---------- */}
+            <div className="border-b p-8 sm:p-10 md:p-12" style={{ borderColor: MAP_BORDER }}>
+              <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-14">
+                <div className="max-w-[380px] shrink-0">
                   <span
                     className="text-[12px] font-bold uppercase"
                     style={{ letterSpacing: "0.18em", color: NAVY }}
@@ -188,14 +199,14 @@ export default function ContactSection() {
                   </p>
                 </div>
 
-                <div>
+                <div className="flex flex-1 flex-col gap-6">
                   {/* Selector de sedes: dos pills, mismo criterio visual que
                       el toggle ES/EN (LocaleSwitcher.tsx) pero en la paleta
                       navy de esta sección. */}
                   <div
                     role="tablist"
                     aria-label={t("sitesSelectorLabel")}
-                    className="mb-4 inline-flex w-fit items-center gap-1 rounded-full border p-1"
+                    className="inline-flex w-fit items-center gap-1 rounded-full border p-1"
                     style={{ borderColor: "rgba(11,47,99,0.14)", background: "rgba(11,47,99,0.04)" }}
                   >
                     {contactSites.map((s) => {
@@ -216,98 +227,105 @@ export default function ContactSection() {
                     })}
                   </div>
 
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={reduceMotion ? "static-sede" : activeSite.key}
-                      initial={reduceMotion ? false : { opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={reduceMotion ? undefined : { opacity: 0 }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
-                          inconsistente.md): reserva altura para el caso más
-                          largo (CEDI Central, 3 líneas físicas — dirección +
-                          línea 2 + código postal) para que la tarjeta no
-                          cambie de tamaño cuando San Francisco, con menos
-                          datos, deja el resto del espacio vacío en vez de
-                          inventar un line2/CP falso solo para rellenar. */}
-                      <InfoRow
-                        icon={MapPin}
-                        title={t(`sites.${activeSite.key}.sedeTitle`)}
-                        contentClassName="min-h-[3lh]"
+                  {/* Info horizontal: sede/teléfono/correos/horario uno al
+                      lado del otro (antes apilados con border-b entre cada
+                      uno) — misma info, ahora en franja en vez de columna. */}
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={reduceMotion ? "static-sede" : activeSite.key}
+                        initial={reduceMotion ? false : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={reduceMotion ? undefined : { opacity: 0 }}
+                        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                       >
-                        {activeSite.address.line1}
-                        {activeSite.address.line2 && (
-                          <>
-                            <br />
-                            {activeSite.address.line2}
-                            {activeSite.address.postalCode ? ` · CP ${activeSite.address.postalCode}` : ""}
-                          </>
-                        )}
-                      </InfoRow>
-                    </motion.div>
-                  </AnimatePresence>
-                  <InfoRow icon={Phone} title={t("telefonoTitle")}>
-                    <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
-                      {site.phone}
-                    </a>
-                  </InfoRow>
-                  <InfoRow icon={Mail} title={t("correosTitle")}>
-                    <a href={`mailto:${site.emails.comunicaciones}`} className="transition hover:text-[#075FD8]">
-                      {site.emails.comunicaciones}
-                    </a>
-                    <br />
-                    <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
-                      {site.emails.rh}
-                    </a>{" "}
-                    {t("correosRh")}
-                  </InfoRow>
-                  <InfoRow icon={Clock} title={t("horarioTitle")} last>
-                    {t("horarioWeekdays")}
-                    <br />
-                    {t("horarioSaturday")}
-                  </InfoRow>
-                </div>
+                        {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
+                            inconsistente.md): reserva altura para el caso más
+                            largo (CEDI Central, 3 líneas físicas — dirección +
+                            línea 2 + código postal) para que la franja no
+                            cambie de tamaño cuando San Francisco, con menos
+                            datos, deja el resto del espacio vacío en vez de
+                            inventar un line2/CP falso solo para rellenar. */}
+                        <InfoRow
+                          icon={MapPin}
+                          title={t(`sites.${activeSite.key}.sedeTitle`)}
+                          contentClassName="min-h-[3lh]"
+                          horizontal
+                        >
+                          {activeSite.address.line1}
+                          {activeSite.address.line2 && (
+                            <>
+                              <br />
+                              {activeSite.address.line2}
+                              {activeSite.address.postalCode ? ` · CP ${activeSite.address.postalCode}` : ""}
+                            </>
+                          )}
+                        </InfoRow>
+                      </motion.div>
+                    </AnimatePresence>
+                    <InfoRow icon={Phone} title={t("telefonoTitle")} horizontal>
+                      <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
+                        {site.phone}
+                      </a>
+                    </InfoRow>
+                    <InfoRow icon={Mail} title={t("correosTitle")} horizontal>
+                      <a href={`mailto:${site.emails.comunicaciones}`} className="transition hover:text-[#075FD8]">
+                        {site.emails.comunicaciones}
+                      </a>
+                      <br />
+                      <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
+                        {site.emails.rh}
+                      </a>{" "}
+                      {t("correosRh")}
+                    </InfoRow>
+                    <InfoRow icon={Clock} title={t("horarioTitle")} horizontal>
+                      {t("horarioWeekdays")}
+                      <br />
+                      {t("horarioSaturday")}
+                    </InfoRow>
+                  </div>
 
-                {/* Dos botones en fila: WhatsApp sólido navy, Llamar ahora
-                    con borde navy — ambos tipo píldora. */}
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <motion.a
-                    href={whatsappHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    whileTap={{ scale: 0.97 }}
-                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full px-6 text-base font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
-                    style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
-                  >
-                    <WhatsAppIcon className="h-[18px] w-[18px]" />
-                    {t("whatsappCta")}
-                  </motion.a>
-                  <motion.a
-                    href={site.phoneHref}
-                    whileTap={{ scale: 0.97 }}
-                    className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white px-6 text-base font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)]"
-                    style={{ border: `1.5px solid ${NAVY}`, color: NAVY }}
-                  >
-                    <Phone className="h-4 w-4" />
-                    {t("callCta")}
-                  </motion.a>
+                  {/* Dos botones en fila: WhatsApp sólido navy, Llamar ahora
+                      con borde navy — ambos tipo píldora. Ancho fijo en vez
+                      de flex-1 (antes ocupaban toda la columna angosta):
+                      acá la franja es mucho más ancha, flex-1 los hubiera
+                      estirado de más. */}
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <motion.a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      whileTap={{ scale: 0.97 }}
+                      className="inline-flex h-[50px] items-center justify-center gap-2.5 rounded-full px-6 text-base font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-[230px]"
+                      style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
+                    >
+                      <WhatsAppIcon className="h-[18px] w-[18px]" />
+                      {t("whatsappCta")}
+                    </motion.a>
+                    <motion.a
+                      href={site.phoneHref}
+                      whileTap={{ scale: 0.97 }}
+                      className="inline-flex h-[50px] items-center justify-center gap-2.5 rounded-full bg-white px-6 text-base font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)] sm:w-[230px]"
+                      style={{ border: `1.5px solid ${NAVY}`, color: NAVY }}
+                    >
+                      <Phone className="h-4 w-4" />
+                      {t("callCta")}
+                    </motion.a>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Columna derecha (~60%): mapa a pantalla completa — border
-                  sutil ALREDEDOR de todo el contenedor (no solo el borde
-                  compartido con la columna de info a la izquierda) — ver
-                  mapa-borde-separacion.md: el mapa "liberty" recoloreado
-                  (fondo casi blanco) y el CARD_BG beige de al lado se
-                  sentían fundidos, sin ninguna separación más que el cambio
-                  de color. Esta capa no tiene su propio border-radius, así
-                  que en las esquinas que coinciden con las del contenedor
-                  único (rounded-[30px] + overflow-hidden un poco más abajo)
-                  el corte redondeado de afuera sigue mandando — el border
-                  recto queda recortado junto con el resto, sin verse
-                  cuadrado en esas esquinas. */}
-              <div className="relative min-h-[360px] border lg:min-h-0" style={{ borderColor: MAP_BORDER }}>
+            {/* ---------- Franja inferior: mapa y reseñas, uno al lado del
+                otro (dos columnas iguales) ---------- */}
+            <div className="grid grid-cols-1 lg:min-h-[440px] lg:grid-cols-2">
+              {/* Columna izquierda: mapa a pantalla completa. Antes tenía un
+                  border propio por los 4 lados (ver mapa-borde-separacion.md,
+                  el mapa "liberty" recoloreado quedó casi blanco, muy
+                  parecido al CARD_BG de al lado) — ahora ese border vive
+                  como border-r sobre la columna de reseñas de al lado
+                  (misma separación, sin duplicar borde en el medio). */}
+              <div className="relative min-h-[360px] lg:min-h-0">
                 <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
                   {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
                   {/* Viñeta sutil para que el marco se sienta intencional aun si
@@ -324,31 +342,26 @@ export default function ContactSection() {
                   <MapInfoCard t={t} site={activeSite} />
                 </div>
               </div>
-            </div>
-          </Reveal>
 
-          {/* ---------- Testimonios, franja propia a todo el ancho ----------
-              Antes vivían apretados dentro de la columna de info (entre el
-              horario y los botones de WhatsApp/Llamar) — ver
-              testimonios-seccion-propia.md: quedaban chicos y perdidos en
-              medio de mucha otra información. Ahora tienen su propia tarjeta
-              (mismo lenguaje visual CARD_BG que la de arriba), con el rating
-              de Google como encabezado que "presenta" la sección — el link
-              "Ver reseñas en Google" sigue viviendo ahí. */}
-          <Reveal
-            className="relative mx-auto mt-8 max-w-[1380px] overflow-hidden rounded-[30px] px-8 py-14 text-center sm:px-12 sm:py-16"
-            style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
-          >
-            <div className="flex justify-center">
-              <GoogleRating t={t} />
+              {/* Columna derecha: reseñas de Google, ahora en su propia
+                  columna al lado del mapa (antes vivían apretadas al final
+                  de la columna angosta de info, empujando el layout a verse
+                  como "mapa arriba, reseñas abajo" — ver feedback de
+                  seguimiento). border-t en mobile (apiladas) / border-l en
+                  desktop (lado a lado) marcan la separación con el mapa. */}
+              <div
+                className="relative flex flex-col justify-center gap-6 border-t p-8 sm:p-10 md:p-12 lg:border-l lg:border-t-0"
+                style={{ borderColor: MAP_BORDER }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-display text-[16px] font-semibold" style={{ color: NAVY }}>
+                    {t("reviewsTitle")}
+                  </p>
+                  <GoogleRating t={t} />
+                </div>
+                <ReviewsCarousel />
+              </div>
             </div>
-            <h3
-              className="mx-auto mt-6 max-w-2xl font-display text-corp-ink"
-              style={{ fontSize: "clamp(32px, 4vw, 48px)", lineHeight: 1.1, fontWeight: 600, letterSpacing: "-0.02em" }}
-            >
-              {t("reviewsTitle")}
-            </h3>
-            <ReviewsCarousel />
           </Reveal>
         </Container>
       </section>
@@ -530,6 +543,7 @@ function InfoRow({
   children,
   last = false,
   contentClassName,
+  horizontal = false,
 }: {
   icon: React.ElementType;
   title: string;
@@ -540,7 +554,34 @@ function InfoRow({
    * mínima fija y que la tarjeta no cambie de tamaño según cuántas líneas
    * de dirección tenga la sede activa. */
   contentClassName?: string;
+  /** Variante para la franja horizontal de contacto (ver gradiente-
+   * transiciones-secciones.md / rediseño mapa+reseñas lado a lado): icono
+   * arriba en vez de al costado, sin border-b entre ítems — cada uno vive
+   * en su propia celda de grid, así que el divisor de la versión apilada
+   * ya no aplica. */
+  horizontal?: boolean;
 }) {
+  if (horizontal) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white"
+          style={{ border: "1px solid rgba(11,47,99,0.08)" }}
+        >
+          <Icon className="h-[18px] w-[18px]" style={{ color: NAVY }} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
+            {title}
+          </p>
+          <p className={cn("mt-1 break-words text-[15px] leading-[1.55]", contentClassName)} style={{ color: "#3A4A5F" }}>
+            {children}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-4">
       <span

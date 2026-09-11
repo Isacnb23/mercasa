@@ -76,6 +76,20 @@ export default function CollaboratorsSection() {
       // blanco → Colaboradores beige → Contacto blanco (sin cambios).
       style={{ background: "#F7F3EB" }}
     >
+      {/* Degradados de entrada/salida (ver gradiente-transiciones-
+          secciones.md): blanco de Logística arriba, blanco de Contacto
+          abajo — mismo criterio que en LogisticsTimeline, para que ambos
+          seams se lean como fundido en vez de corte. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, #FFFFFF, transparent)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
+      />
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior
           de Logística. Acá se agrega la salida hacia Productos. */}
       <SoftCurve position="bottom" flip />

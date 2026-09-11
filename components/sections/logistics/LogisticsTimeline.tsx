@@ -44,6 +44,20 @@ export default function LogisticsTimeline() {
       // en vez de una transición gradual entre dos.
       style={{ background: "#FFFFFF" }}
     >
+      {/* Degradados de entrada/salida (ver gradiente-transiciones-
+          secciones.md): esta sección completa la mitad que le toca de cada
+          seam — beige de Nosotros arriba, beige de Colaboradores abajo —
+          para que el cambio de color se sienta como un fundido, no un corte. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, #F7F3EB, transparent)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, transparent, #F7F3EB)" }}
+      />
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de
           Nosotros; acá solo se agrega la de salida hacia Colaboradores para
           no duplicar el mismo trazo en el mismo borde. */}
