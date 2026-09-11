@@ -169,8 +169,19 @@ export default function BrandsSection() {
                       href={brand.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="group inline-flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink transition duration-200 hover:-translate-y-0.5 hover:border-corp-blue hover:text-corp-blue"
-                      style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
+                      // Hover más "vivo" que un simple cambio de borde/texto
+                      // (ver mural-marcas-cards-clickeables.md, feedback de
+                      // seguimiento: "más lindo pero igual de discreto"):
+                      // fondo celeste pálido + sombra propia dan un lift
+                      // real en vez de solo recolorear las líneas, sin
+                      // volverse un botón grande — sigue siendo del mismo
+                      // tamaño/forma que el resto de los chips. `bg-*`/
+                      // `border-*` de reposo pasan de `style` inline a clases
+                      // Tailwind (antes el `hover:border-corp-blue` nunca se
+                      // veía: un `style={{borderColor}}` inline gana SIEMPRE
+                      // sobre cualquier clase, hover incluido, por
+                      // especificidad CSS — quedaba ahí sin efecto real).
+                      className="group inline-flex items-center gap-1.5 rounded-full border border-[#E2E8F0] bg-[#F8F9FB] px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink transition duration-200 hover:-translate-y-0.5 hover:border-corp-blue hover:bg-corp-blue/[0.07] hover:text-corp-blue hover:shadow-[0_6px_16px_-4px_rgba(7,95,216,0.35)]"
                     >
                       {brand.name}
                       <ExternalLink
