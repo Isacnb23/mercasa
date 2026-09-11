@@ -4,20 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Copy,
-  ExternalLink,
-  Mail,
-  MapPin,
-  Navigation,
-  Phone,
-  Quote,
-  Star,
-} from "lucide-react";
+import { ArrowRight, Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone, Quote, Star } from "lucide-react";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
@@ -383,56 +370,30 @@ export default function ContactSection() {
               </div>
           </Reveal>
 
-          {/* ---------- Fila 2: reseñas, franja propia con fondo beige,
-              independiente del bloque de arriba ---------- Ver contacto-
-              quitar-wrapper-y-direccion-legal.md: esto YA vivía
-              conceptualmente bien resuelto en contacto-testimonios-sin-
-              card.md (sin card blanca alrededor de la cita) — lo único que
-              cambia acá es que deja de estar anidado dentro del mismo
-              wrapper/card que la info+mapa de arriba (ver Reveal anterior)
-              y pasa a ser su propio bloque, con su propio margen (`mt-*`)
-              en vez de compartir `gap` con la fila de arriba. Label lateral
-              (rotado 90°) + rating de Google a la izquierda, cita centrada,
-              flechas de navegación a la derecha (ver contacto-rediseno-
-              distribucion-referencia.md). REVIEWS_BG (beige) le da a la
-              franja su propio fondo, distinto del blanco de la sección y
-              de la tarjeta de info. */}
+          {/* ---------- Fila 2: reseñas, rediseño desde cero ----------
+              Ver contacto-resenas-rediseno-desde-cero.md: el patrón
+              anterior (franja ancha, label vertical a la izquierda + cita
+              gigante centrada + rating flotando abajo + flechas a la
+              derecha, ver contacto-rediseno-distribucion-referencia.md) se
+              probó y no convenció — mucho espacio vacío, elementos sueltos
+              sin anclaje. Enfoque nuevo: "tarjetas en fila" (una de las 3
+              ideas del doc) — encabezado compacto (título + rating de
+              Google) arriba, y las reseñas reales como tarjetas blancas
+              lado a lado abajo, todas visibles a la vez (no una sola fija
+              rotando) — sin espacio muerto porque el grid se ajusta al
+              contenido real en vez de reservar una franja alta fija. */}
           <Reveal
-            className="relative mx-auto mt-3 flex max-w-[1380px] flex-col items-center gap-6 rounded-[22px] p-8 text-center sm:mt-4 sm:p-10 md:p-12 lg:flex-row lg:items-center lg:gap-10 lg:text-left"
+            className="relative mx-auto mt-3 max-w-[1380px] rounded-[22px] p-8 sm:mt-4 sm:p-10 md:p-12"
             style={{ background: REVIEWS_BG }}
           >
-            {/* Label lateral + rating: rotado 90° en desktop (columna
-                angosta a la izquierda, como en la referencia); en mobile
-                se acuesta horizontal arriba de la cita. */}
-            <div className="flex shrink-0 flex-col items-center gap-4 lg:h-full lg:items-start lg:justify-center">
-              {/* Label vertical en desktop (columna angosta a la
-                  izquierda, como en la referencia) — texto girado con
-                  `writing-mode` en vez de una imagen o SVG, así se sigue
-                  traduciendo como cualquier otro string. En mobile se
-                  acuesta horizontal arriba de la cita (elemento
-                  duplicado + `hidden`/`lg:hidden`, más simple y robusto
-                  que alternar `writing-mode` por breakpoint). */}
-              <p
-                className="hidden text-[12px] font-bold uppercase lg:block lg:[writing-mode:vertical-rl] lg:rotate-180"
-                style={{ letterSpacing: "0.18em", color: NAVY }}
-              >
-                {t("reviewsTitle")}
-              </p>
-              <p
-                className="text-[12px] font-bold uppercase lg:hidden"
-                style={{ letterSpacing: "0.18em", color: NAVY }}
-              >
+            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+              <p className="font-display text-[18px] font-bold" style={{ color: NAVY }}>
                 {t("reviewsTitle")}
               </p>
               <GoogleRating t={t} />
             </div>
 
-            {/* Cita + autor, centrado, con las flechas de navegación al
-                costado en vez de puntos (ver contacto-rediseno-
-                distribucion-referencia.md). */}
-            <div className="min-w-0 flex-1">
-              <ReviewsCarousel t={t} />
-            </div>
+            <ReviewCards />
           </Reveal>
         </Container>
       </section>
@@ -499,126 +460,64 @@ function GoogleRating({ t }: { t: ReturnType<typeof useTranslations> }) {
 // nombre, de la API limitada a 5 resultados) por citas más creíbles
 // encontradas revisando la ficha real de Google Maps directamente. Texto
 // de la cita NUNCA se traduce (es lo que escribió el cliente real en
-// español) — solo el título del apartado tiene traducción ES/EN. Solo 2
+// español) — solo el título del apartado tiene traducción ES/EN. Estrellas
+// ajustadas en contacto-resenas-rediseno-desde-cero.md (René Calderón es 4,
+// no 5 — dato real de la ficha, no el mismo para las dos reseñas). Solo 2
 // por ahora (ver mural-reviews-carousel.md, feedback de seguimiento: "traé
 // varias más de Google, buenas") — agregar más acá cuando se confirme el
-// texto real de otras reseñas de la ficha; el carrusel de abajo ya soporta
-// cualquier cantidad sin cambios.
+// texto real de otras reseñas de la ficha; ReviewCards ya soporta cualquier
+// cantidad (el grid de abajo simplemente agrega una tarjeta más).
 const GOOGLE_REVIEWS = [
-  { quote: "Excelente mercadería", author: "René Calderón", stars: 5 },
+  { quote: "Excelente mercadería", author: "René Calderón", stars: 4 },
   { quote: "Muy bueno", author: "Marcelo G.", stars: 5 },
 ];
 
-// Carrusel de reseñas (ver mural-reviews-carousel.md): reemplaza la grilla
-// estática de 2 tarjetas — con más reseñas reales (agregadas arriba) una
-// grilla se vuelve angosta/apretada; mostrar UNA a la vez, grande, con
-// crossfade automático escala a cualquier cantidad sin volver a tocar el
-// layout. `useEffect` reprograma el temporizador cada vez que cambia el
-// índice (por auto-avance o click en una flecha), así un click manual no
-// compite con el siguiente auto-avance.
-const REVIEW_ROTATE_MS = 6000;
-
-function ReviewsCarousel({ t }: { t: ReturnType<typeof useTranslations> }) {
-  const [index, setIndex] = useState(0);
-  const reduceMotion = useReducedMotion();
-  const review = GOOGLE_REVIEWS[index];
-
-  useEffect(() => {
-    if (reduceMotion || GOOGLE_REVIEWS.length <= 1) return;
-    const id = window.setTimeout(() => {
-      setIndex((i) => (i + 1) % GOOGLE_REVIEWS.length);
-    }, REVIEW_ROTATE_MS);
-    return () => window.clearTimeout(id);
-  }, [index, reduceMotion]);
-
-  const goPrev = () => setIndex((i) => (i - 1 + GOOGLE_REVIEWS.length) % GOOGLE_REVIEWS.length);
-  const goNext = () => setIndex((i) => (i + 1) % GOOGLE_REVIEWS.length);
-
+// Tarjetas de reseña en fila (ver contacto-resenas-rediseno-desde-cero.md):
+// reemplaza el carrusel de "una a la vez" (mural-reviews-carousel.md) — con
+// solo 2-3 reseñas reales, mostrarlas TODAS a la vez como tarjetas
+// compactas lado a lado evita el espacio vacío y los elementos flotando sin
+// anclaje del patrón anterior (label vertical + cita gigante + flechas).
+// Sin rotación/estado propio: si en el futuro hay más reseñas, el grid
+// simplemente envuelve a una fila nueva (sm:grid-cols-2), no hace falta
+// tocar este componente.
+function ReviewCards() {
   return (
-    // Sin card envolvente (ver contacto-testimonios-sin-card.md, mantenido
-    // en contacto-rediseno-distribucion-referencia.md): apoyada solo en
-    // tipografía/espaciado — comillas grandes decorativas, cita en display
-    // italic, línea sutil (border-t) antes de autor+estrellas. Alineación a
-    // la izquierda en desktop (mx-0, ver referencia: label a la izquierda,
-    // cita al lado, flechas a la derecha) y centrada en mobile (mx-auto,
-    // heredando el text-center del contenedor padre en esa franja). Flechas
-    // ← → reemplazan los puntos de la ronda anterior (ver referencia,
-    // punto "Flechas de navegación a la derecha para pasar entre reseñas").
-    <div className="flex w-full flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0 flex-1">
-        <Quote
-          className="mx-auto h-10 w-10 lg:mx-0"
-          style={{ color: "rgba(11,47,99,0.16)" }}
-          fill="currentColor"
-          strokeWidth={0}
-          aria-hidden
-        />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={reduceMotion ? "static-review" : index}
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <p
-              className="mx-auto -mt-1 max-w-[480px] font-display italic leading-snug lg:mx-0"
-              style={{ fontSize: "clamp(20px, 2.2vw, 26px)", color: NAVY }}
-            >
-              &ldquo;{review.quote}&rdquo;
-            </p>
-            <div
-              className="mx-auto mt-5 flex w-fit items-center gap-3 border-t pt-4 lg:mx-0"
-              style={{ borderColor: "rgba(11,47,99,0.16)" }}
-            >
-              {/* Avatar con la inicial del autor: sin foto real, pero le da
-                  a cada reseña un ancla visual propia en vez de ser solo
-                  texto plano — mismo tratamiento navy sólido que el resto
-                  de los acentos de la sección. */}
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
-                style={{ background: NAVY }}
-                aria-hidden
-              >
-                {review.author.charAt(0)}
-              </span>
-              <div className="text-left">
-                <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
-                  {review.author}
-                </p>
-                <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
-                  {Array.from({ length: review.stars }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
-                  ))}
-                </div>
-              </div>
+    <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2">
+      {GOOGLE_REVIEWS.map((review) => (
+        <div
+          key={review.author}
+          className="flex flex-col gap-3 rounded-2xl bg-white p-6"
+          style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 12px 32px -20px rgba(16,37,63,0.35)" }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
+              {Array.from({ length: review.stars }).map((_, i) => (
+                <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+              ))}
             </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {GOOGLE_REVIEWS.length > 1 && (
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            aria-label={t("reviewsPrev")}
-            onClick={goPrev}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5"
-            style={{ border: "1px solid rgba(11,47,99,0.14)", color: NAVY }}
-          >
-            <ChevronLeft className="h-[18px] w-[18px]" />
-          </button>
-          <button
-            type="button"
-            aria-label={t("reviewsNext")}
-            onClick={goNext}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5"
-            style={{ border: "1px solid rgba(11,47,99,0.14)", color: NAVY }}
-          >
-            <ChevronRight className="h-[18px] w-[18px]" />
-          </button>
+            <Quote className="h-5 w-5" style={{ color: "rgba(11,47,99,0.14)" }} fill="currentColor" strokeWidth={0} aria-hidden />
+          </div>
+          <p className="text-[15px] italic leading-relaxed" style={{ color: NAVY }}>
+            &ldquo;{review.quote}&rdquo;
+          </p>
+          <div className="mt-1 flex items-center gap-2.5 border-t pt-3" style={{ borderColor: "rgba(11,47,99,0.1)" }}>
+            {/* Avatar con la inicial del autor: sin foto real, pero le da a
+                cada reseña un ancla visual propia en vez de ser solo texto
+                plano — mismo tratamiento navy sólido que el resto de los
+                acentos de la sección. */}
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+              style={{ background: NAVY }}
+              aria-hidden
+            >
+              {review.author.charAt(0)}
+            </span>
+            <p className="text-[13.5px] font-semibold" style={{ color: NAVY }}>
+              {review.author}
+            </p>
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
