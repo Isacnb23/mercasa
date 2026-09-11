@@ -116,8 +116,15 @@ export default function AboutSection() {
       // siguiente, mismo problema, ver ese archivo). Desde `lg` el layout
       // pasa a 2 columnas (más ancho, contenido más corto verticalmente)
       // y ahí sí tiene sentido forzar la pantalla completa.
+      // Fondo blanco (ver reestructuracion-orden-secciones.md, ajuste de
+      // colores tras subir "Segmento de Mercado"): antes era beige
+      // (#F7F3EB), igual que Segmento de Mercado — ahora que esa sección
+      // pasó a vivir justo antes de esta (Hero → Segmento de Mercado →
+      // Nosotros), dos beige seguidos se sentían pegados/mezclados. Blanco
+      // alterna correctamente: Hero blanco → Segmento beige → Nosotros
+      // blanco → Logística beige → Colaboradores blanco → Contacto blanco.
       className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px] lg:min-h-dvh"
-      style={{ background: "#F7F3EB" }}
+      style={{ background: "#FFFFFF" }}
     >
       <Container className="relative z-10">
         {/* ---------- Bloque superior: relato + foto ---------- */}
