@@ -32,6 +32,15 @@ import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModa
 const NAVY = "#0B2F63";
 const MUTED = "#5C6B7D";
 const CARD_BORDER = "#E7ECF2";
+// Borde cálido dorado/beige (ver segmentos-familias-espaciado-animacion-
+// boton.md, tercera ronda de feedback: "un bordecito como el de las
+// marcas") — mismo tono que el marco de la vitrina de marcas
+// (BrandsSection.tsx, `#E8DFC8`), reusado acá para la versión `compact`
+// de esta tarjeta (dentro del panel "Catálogo general", ya con fondo
+// IVORY): un borde gris frío como CARD_BORDER se perdía contra ese
+// fondo cálido, este tono cálido sí se distingue y además conecta
+// visualmente con el resto del sitio.
+const WARM_BORDER = "#E8DFC8";
 const FEATURED_BG = "#EAF3FC";
 const STRIPE_BG = "#0B2947";
 
@@ -178,8 +187,8 @@ function FamilyCard({
         className="flex h-full w-full flex-col items-center gap-3.5 rounded-2xl border px-5 py-8 text-center transition duration-200 hover:-translate-y-1"
         style={{
           background: isActive ? FEATURED_BG : "#ffffff",
-          borderColor: isActive ? NAVY : CARD_BORDER,
-          boxShadow: isActive ? `0 16px 32px ${color.shadowTint}` : "0 6px 16px rgba(16,37,63,0.05)",
+          borderColor: isActive ? NAVY : WARM_BORDER,
+          boxShadow: isActive ? `0 16px 32px ${color.shadowTint}` : "0 8px 20px rgba(139,115,58,0.08)",
         }}
       >
         <span

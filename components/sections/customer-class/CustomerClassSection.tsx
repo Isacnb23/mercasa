@@ -414,7 +414,12 @@ export default function CustomerClassSection({
              familias (más corta que el encabezado + su propio contenido)
              se centra dentro del espacio restante vía el `flex-1
              justify-center` de abajo, así el panel se siente lleno y
-             equilibrado en vez de con todo el peso arriba o abajo. */
+             equilibrado en vez de con todo el peso arriba o abajo.
+             Fondo IVORY en vez de blanco (ver segmentos-familias-
+             espaciado-animacion-boton.md, tercera ronda de feedback):
+             blanco sobre blanco no dejaba distinguir las tarjetas de
+             familia del panel que las contiene — el mismo tono cálido que
+             ya usa el fondo de toda la sección les da contraste real. */
           <motion.div
             key="catalog-general"
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
@@ -424,8 +429,8 @@ export default function CustomerClassSection({
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="relative mx-auto mt-6 flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] bg-white p-6 sm:mt-8 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
-            style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
+            className="relative mx-auto mt-6 flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] p-6 sm:mt-8 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
+            style={{ background: IVORY, border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
             {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
                 fija.md, problema 1): antes no había ninguna forma de salir
