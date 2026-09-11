@@ -394,14 +394,20 @@ export default function CustomerClassSection({
             salida"): la primera versión usaba `mode="wait"` — la rama
             saliente terminaba de desvanecerse del todo ANTES de montarse
             la entrante, así que había un instante intermedio sin nada
-            (visible como un parpadeo/hueco). Este wrapper fijo (con el
-            mismo alto mínimo por breakpoint que antes tenían las dos
-            ramas por separado) + ambas ramas en `position: absolute
-            inset-0` deja que la entrante aparezca YA mientras la
-            saliente todavía se desvanece — exactamente el mismo patrón
-            que ya usa el crossfade de la foto de segmento más abajo
-            (AnimatePresence en modo "sync", el default, sin "wait"). */}
-        <div className="relative mx-auto mt-6 min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]">
+            (visible como un parpadeo/hueco).
+            `grid` + ambas ramas en la MISMA celda (`[grid-area:1/1]`, ver
+            quinta ronda de feedback: las tarjetas de familia, más grandes
+            desde el rediseño 3x2, quedaban cortadas a la mitad en la fila
+            de abajo) en vez de `position: absolute inset-0`: un hijo
+            absolute queda FUERA del flujo, así que no aporta altura real a
+            este wrapper — el `min-h-*` de abajo terminaba actuando como
+            alto FIJO (nunca crecía si el contenido necesitaba más), y
+            recortaba lo que sobraba por el `overflow-hidden` de cada
+            panel. Un hijo de grid en la misma celda SÍ participa del
+            cálculo de alto de su fila — el wrapper crece al alto del panel
+            más alto de los dos superpuestos en cada instante, sin dejar de
+            superponerse visualmente para el crossfade. */}
+        <div className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]">
         <AnimatePresence initial={false}>
         {isCatalogGeneral ? (
           /* Panel "Catálogo general" (ver refactor-segmento-mercado-
@@ -436,7 +442,7 @@ export default function CustomerClassSection({
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="absolute inset-0 flex flex-col overflow-hidden rounded-[30px] p-6 sm:p-8"
+            className="flex flex-col overflow-hidden rounded-[30px] p-6 [grid-area:1/1] sm:p-8"
             style={{ background: PANEL_BG, border: `1.5px solid ${BEIGE_MAIN}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
             {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
@@ -474,7 +480,7 @@ export default function CustomerClassSection({
           id="customer-class-panel"
           role="tabpanel"
           aria-labelledby={`customer-class-tab-${activeSegment.key}`}
-          className="absolute inset-0 grid grid-cols-1 overflow-hidden rounded-[30px] bg-white md:grid-cols-[52%_48%]"
+          className="grid grid-cols-1 overflow-hidden rounded-[30px] bg-white [grid-area:1/1] md:grid-cols-[52%_48%]"
           style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
         >
           {/* Columna izquierda: fotografía real, sin overlay ni degradado —
