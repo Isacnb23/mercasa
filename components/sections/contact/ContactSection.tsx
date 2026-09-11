@@ -163,23 +163,27 @@ export default function ContactSection() {
             </p>
           </Reveal>
 
-          {/* ---------- Tarjeta única: franja de contacto arriba, mapa y
-              reseñas uno al lado del otro abajo ----------
-              Reemplaza el layout anterior (columna angosta de info+reseñas
-              a la izquierda, mapa alto a la derecha — ver rediseno-exacto-
-              hablemos-de-negocios.md) por pedido de seguimiento: "el mapa y
-              las reseñas quedan uno arriba y otro abajo, se sentía raro —
-              probemos uno al lado del otro". La info de contacto (que antes
-              compartía columna con las reseñas) sube a una franja
-              horizontal propia arriba de toda la tarjeta; abajo quedan dos
-              columnas iguales: mapa personalizado a la izquierda, reseñas a
-              la derecha. */}
+          {/* ---------- Bandeja beige + 3 tarjetas propias (info / mapa /
+              reseñas) ----------
+              Antes las 3 áreas compartían el mismo CARD_BG sin ningún
+              límite más que un border-b/border-l delgado (ver contacto-
+              recuperar-contraste-visual.md): con el mapa "liberty"
+              recoloreado casi blanco, todo el bloque se leía plano, un
+              único beige de punta a punta. Ahora CARD_BG queda como
+              "bandeja" de fondo (visible como margen entre tarjetas, ver
+              `p-3`/`gap-3` abajo) y cada bloque es su propia tarjeta blanca
+              flotante con sombra — mismo criterio que ya usa el panel de
+              Customer Class (PANEL_BG + tarjetas propias), sin volver al
+              corte duro de color que se había descartado antes. */}
           <Reveal
-            className="relative mx-auto mt-14 max-w-[1380px] overflow-hidden rounded-[30px]"
+            className="relative mx-auto mt-14 max-w-[1380px] rounded-[30px] p-3 sm:p-4"
             style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
           >
-            {/* ---------- Franja superior: info de contacto ---------- */}
-            <div className="border-b p-8 sm:p-10 md:p-12" style={{ borderColor: MAP_BORDER }}>
+            {/* ---------- Tarjeta 1: info de contacto ---------- */}
+            <div
+              className="rounded-[22px] bg-white p-8 sm:p-10 md:p-12"
+              style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+            >
               <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-14">
                 <div className="max-w-[380px] shrink-0">
                   <span
@@ -316,16 +320,20 @@ export default function ContactSection() {
               </div>
             </div>
 
-            {/* ---------- Franja inferior: mapa y reseñas, uno al lado del
-                otro (dos columnas iguales) ---------- */}
-            <div className="grid grid-cols-1 lg:min-h-[440px] lg:grid-cols-2">
-              {/* Columna izquierda: mapa a pantalla completa. Antes tenía un
-                  border propio por los 4 lados (ver mapa-borde-separacion.md,
-                  el mapa "liberty" recoloreado quedó casi blanco, muy
-                  parecido al CARD_BG de al lado) — ahora ese border vive
-                  como border-r sobre la columna de reseñas de al lado
-                  (misma separación, sin duplicar borde en el medio). */}
-              <div className="relative min-h-[360px] lg:min-h-0">
+            {/* ---------- Tarjetas 2 y 3: mapa y reseñas, uno al lado del
+                otro (dos columnas iguales, cada una su propia tarjeta) ---------- */}
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:min-h-[440px] lg:grid-cols-2">
+              {/* Tarjeta 2: mapa. Border propio por los 4 lados (ver
+                  contacto-recuperar-contraste-visual.md, punto 2 — el mapa
+                  "liberty" recoloreado quedó casi blanco, sin un marco
+                  propio se perdía contra la tarjeta de reseñas de al lado y
+                  contra la bandeja beige de atrás) + su propio
+                  border-radius (ya no depende del overflow-hidden del
+                  contenedor único de antes). */}
+              <div
+                className="relative min-h-[360px] overflow-hidden rounded-[22px] lg:min-h-0"
+                style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+              >
                 <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
                   {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
                   {/* Viñeta sutil para que el marco se sienta intencional aun si
@@ -343,15 +351,13 @@ export default function ContactSection() {
                 </div>
               </div>
 
-              {/* Columna derecha: reseñas de Google, ahora en su propia
-                  columna al lado del mapa (antes vivían apretadas al final
-                  de la columna angosta de info, empujando el layout a verse
-                  como "mapa arriba, reseñas abajo" — ver feedback de
-                  seguimiento). border-t en mobile (apiladas) / border-l en
-                  desktop (lado a lado) marcan la separación con el mapa. */}
+              {/* Tarjeta 3: reseñas de Google, blanca igual que la de info
+                  (antes compartía el mismo CARD_BG que toda la sección y
+                  solo la cita interna tenía fondo propio — ver contacto-
+                  recuperar-contraste-visual.md, punto 3). */}
               <div
-                className="relative flex flex-col justify-center gap-6 border-t p-8 sm:p-10 md:p-12 lg:border-l lg:border-t-0"
-                style={{ borderColor: MAP_BORDER }}
+                className="relative flex flex-col justify-center gap-6 rounded-[22px] bg-white p-8 sm:p-10 md:p-12"
+                style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-display text-[16px] font-semibold" style={{ color: NAVY }}>
@@ -391,8 +397,8 @@ function GoogleRating({ t }: { t: ReturnType<typeof useTranslations> }) {
       href={GOOGLE_PLACE_URL}
       target="_blank"
       rel="noreferrer"
-      className="group inline-flex w-fit items-center gap-3 rounded-2xl border bg-white px-4 py-3 transition hover:-translate-y-0.5"
-      style={{ borderColor: "rgba(11,47,99,0.1)" }}
+      className="group inline-flex w-fit items-center gap-3 rounded-2xl border px-4 py-3 transition hover:-translate-y-0.5"
+      style={{ borderColor: "rgba(11,47,99,0.1)", background: CARD_BG }}
     >
       <div className="relative inline-flex shrink-0">
         <div className="flex gap-0.5" style={{ color: "rgba(11,47,99,0.18)" }}>
@@ -462,13 +468,16 @@ function ReviewsCarousel() {
 
   return (
     <div className="mx-auto mt-10 max-w-[680px]">
-      {/* Contraste contra el CARD_BG beige que envuelve la sección (ver
-          fix-contraste-testimonios.md): blanco puro + sombra difusa +
-          borde sutil de refuerzo hacen que la tarjeta "flote" en vez de
-          perderse contra el fondo. */}
+      {/* Contraste contra la tarjeta blanca que ahora envuelve toda esta
+          columna (ver contacto-recuperar-contraste-visual.md — antes era
+          blanco contra el CARD_BG beige de la sección; con la columna de
+          reseñas ya blanca, blanco-sobre-blanco hubiera vuelto a perder la
+          cita contra su propio fondo). CARD_BG + sombra difusa + borde
+          sutil de refuerzo hacen que la tarjeta "flote" hacia adentro en
+          vez de perderse contra la tarjeta blanca. */}
       <div
-        className="relative overflow-hidden rounded-[24px] border border-black/[0.05] bg-white px-8 py-10 text-center sm:px-14 sm:py-12"
-        style={{ boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
+        className="relative overflow-hidden rounded-[24px] border border-black/[0.05] px-8 py-10 text-center sm:px-14 sm:py-12"
+        style={{ background: CARD_BG, boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
       >
         <Quote
           className="mx-auto h-9 w-9"
@@ -565,8 +574,8 @@ function InfoRow({
     return (
       <div className="flex flex-col gap-2.5">
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white"
-          style={{ border: "1px solid rgba(11,47,99,0.08)" }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: CARD_BG, border: "1px solid rgba(11,47,99,0.08)" }}
         >
           <Icon className="h-[18px] w-[18px]" style={{ color: NAVY }} />
         </span>
