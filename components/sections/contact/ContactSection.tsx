@@ -318,53 +318,61 @@ export default function ContactSection() {
               </div>
             </div>
 
-            {/* ---------- Tarjetas 2 y 3: mapa y reseñas, uno al lado del
-                otro (dos columnas iguales, cada una su propia tarjeta) ---------- */}
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:min-h-[440px] lg:grid-cols-2">
-              {/* Tarjeta 2: mapa. Border propio por los 4 lados (ver
-                  contacto-recuperar-contraste-visual.md, punto 2 — el mapa
-                  "liberty" recoloreado quedó casi blanco, sin un marco
-                  propio se perdía contra la tarjeta de reseñas de al lado y
-                  contra la bandeja beige de atrás) + su propio
-                  border-radius (ya no depende del overflow-hidden del
-                  contenedor único de antes). */}
-              <div
-                className="relative min-h-[360px] overflow-hidden rounded-[22px] lg:min-h-0"
-                style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
-              >
-                <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
-                  {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
-                  {/* Viñeta sutil para que el marco se sienta intencional aun si
-                      el mapa todavía está cargando teselas. */}
-                  <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
+            {/* ---------- Tarjeta 2: mapa, ahora a todo el ancho ----------
+                Ver contacto-testimonios-sin-card.md: las reseñas dejaron de
+                vivir en una tarjeta al costado del mapa (se veían forzadas
+                ahí, ver más abajo) — sin esa columna vecina, el mapa pasa a
+                ocupar el ancho completo de la bandeja en vez de compartirlo
+                a la mitad. Border propio por los 4 lados (ver contacto-
+                recuperar-contraste-visual.md, punto 2 — el mapa "liberty"
+                recoloreado quedó casi blanco) + su propio border-radius. */}
+            <div
+              className="relative mt-3 min-h-[360px] overflow-hidden rounded-[22px] sm:mt-4 lg:min-h-[440px]"
+              style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+            >
+              <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
+                {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
+                {/* Viñeta sutil para que el marco se sienta intencional aun si
+                    el mapa todavía está cargando teselas. */}
+                <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
 
-                  {/* Tarjeta flotante navy (ver reference/mapa-target.png,
-                      punto 3 — reemplaza la tarjeta blanca de la ronda
-                      anterior): título + dirección en navy, dos botones
-                      píldora del mismo tamaño (Google Maps / Waze) y un
-                      link secundario "Copiar ubicación". Recibe la sede
-                      activa (ver contacto-selector-sedes.md) para mostrar
-                      sus propios datos/coordenadas. */}
-                  <MapInfoCard t={t} site={activeSite} />
-                </div>
+                {/* Tarjeta flotante navy (ver reference/mapa-target.png,
+                    punto 3 — reemplaza la tarjeta blanca de la ronda
+                    anterior): título + dirección en navy, dos botones
+                    píldora del mismo tamaño (Google Maps / Waze) y un
+                    link secundario "Copiar ubicación". Recibe la sede
+                    activa (ver contacto-selector-sedes.md) para mostrar
+                    sus propios datos/coordenadas. */}
+                <MapInfoCard t={t} site={activeSite} />
               </div>
+            </div>
 
-              {/* Tarjeta 3: reseñas de Google, blanca igual que la de info
-                  (antes compartía el mismo CARD_BG que toda la sección y
-                  solo la cita interna tenía fondo propio — ver contacto-
-                  recuperar-contraste-visual.md, punto 3). */}
-              <div
-                className="relative flex flex-col justify-center gap-6 rounded-[22px] bg-white p-8 sm:p-10 md:p-12"
-                style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+            {/* ---------- Reseñas: franja propia, SIN tarjeta ----------
+                Ver contacto-testimonios-sin-card.md: la versión anterior
+                (tarjeta blanca angosta al costado del mapa) se veía forzada
+                — muy poco ancho para una cita grande, compitiendo con el
+                mapa por espacio. Ahora vive directo sobre el beige de la
+                bandeja (CARD_BG), como franja centrada de ancho completo
+                debajo del mapa, apoyada solo en tipografía/espaciado/
+                iconos: línea decorativa arriba, título + rating de Google,
+                comillas grandes, cita, autor y estrellas — sin ningún
+                contenedor blanco. */}
+            <div className="mx-auto mt-10 max-w-[640px] pt-2 text-center sm:mt-12">
+              <span
+                aria-hidden
+                className="mx-auto block h-px w-14"
+                style={{ background: "linear-gradient(90deg, transparent, rgba(11,47,99,0.28), transparent)" }}
+              />
+              <p
+                className="mt-6 font-display text-[16px] font-semibold"
+                style={{ color: NAVY }}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-display text-[16px] font-semibold" style={{ color: NAVY }}>
-                    {t("reviewsTitle")}
-                  </p>
-                  <GoogleRating t={t} />
-                </div>
-                <ReviewsCarousel />
+                {t("reviewsTitle")}
+              </p>
+              <div className="mt-4 flex justify-center">
+                <GoogleRating t={t} />
               </div>
+              <ReviewsCarousel />
             </div>
           </Reveal>
         </Container>
@@ -395,8 +403,8 @@ function GoogleRating({ t }: { t: ReturnType<typeof useTranslations> }) {
       href={GOOGLE_PLACE_URL}
       target="_blank"
       rel="noreferrer"
-      className="group inline-flex w-fit items-center gap-3 rounded-2xl border px-4 py-3 transition hover:-translate-y-0.5"
-      style={{ borderColor: "rgba(11,47,99,0.1)", background: CARD_BG }}
+      className="group inline-flex w-fit items-center gap-3 rounded-2xl border bg-white px-4 py-3 transition hover:-translate-y-0.5"
+      style={{ borderColor: "rgba(11,47,99,0.1)" }}
     >
       <div className="relative inline-flex shrink-0">
         <div className="flex gap-0.5" style={{ color: "rgba(11,47,99,0.18)" }}>
@@ -465,65 +473,63 @@ function ReviewsCarousel() {
   }, [index, reduceMotion]);
 
   return (
-    <div className="mx-auto mt-10 max-w-[680px]">
-      {/* Contraste contra la tarjeta blanca que ahora envuelve toda esta
-          columna (ver contacto-recuperar-contraste-visual.md — antes era
-          blanco contra el CARD_BG beige de la sección; con la columna de
-          reseñas ya blanca, blanco-sobre-blanco hubiera vuelto a perder la
-          cita contra su propio fondo). CARD_BG + sombra difusa + borde
-          sutil de refuerzo hacen que la tarjeta "flote" hacia adentro en
-          vez de perderse contra la tarjeta blanca. */}
-      <div
-        className="relative overflow-hidden rounded-[24px] border border-black/[0.05] px-8 py-10 text-center sm:px-14 sm:py-12"
-        style={{ background: CARD_BG, boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
-      >
-        <Quote
-          className="mx-auto h-9 w-9"
-          style={{ color: "rgba(11,47,99,0.16)" }}
-          fill="currentColor"
-          strokeWidth={0}
-          aria-hidden
-        />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={reduceMotion ? "static-review" : index}
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    // Sin card envolvente (ver contacto-testimonios-sin-card.md): la cita
+    // vivía antes en una tarjeta con fondo propio + sombra + borde — en el
+    // formato angosto de columna al lado del mapa se veía forzada. Ahora
+    // queda directo sobre el beige de la bandeja, apoyada solo en
+    // tipografía/espaciado: comillas grandes decorativas, cita grande en
+    // display italic, y una línea sutil de separación (border-t) antes de
+    // autor+estrellas en vez de un contenedor propio.
+    <div className="mx-auto mt-6">
+      <Quote
+        className="mx-auto h-12 w-12"
+        style={{ color: "rgba(11,47,99,0.14)" }}
+        fill="currentColor"
+        strokeWidth={0}
+        aria-hidden
+      />
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={reduceMotion ? "static-review" : index}
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <p
+            className="mx-auto -mt-2 max-w-[520px] font-display italic leading-snug"
+            style={{ fontSize: "clamp(22px, 2.6vw, 30px)", color: NAVY }}
           >
-            <p
-              className="mx-auto mt-4 max-w-[520px] font-display italic leading-snug"
-              style={{ fontSize: "clamp(21px, 2.4vw, 27px)", color: NAVY }}
+            &ldquo;{review.quote}&rdquo;
+          </p>
+          <div
+            className="mx-auto mt-6 flex w-fit items-center gap-3 border-t pt-5"
+            style={{ borderColor: "rgba(11,47,99,0.14)" }}
+          >
+            {/* Avatar con la inicial del autor: sin foto real, pero le da
+                a cada reseña un ancla visual propia en vez de ser solo
+                texto plano — mismo tratamiento navy sólido que el resto
+                de los acentos de la sección. */}
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
+              style={{ background: NAVY }}
+              aria-hidden
             >
-              &ldquo;{review.quote}&rdquo;
-            </p>
-            <div className="mt-6 flex items-center justify-center gap-3">
-              {/* Avatar con la inicial del autor: sin foto real, pero le da
-                  a cada reseña un ancla visual propia en vez de ser solo
-                  texto plano — mismo tratamiento navy sólido que el resto
-                  de los acentos de la sección. */}
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
-                style={{ background: NAVY }}
-                aria-hidden
-              >
-                {review.author.charAt(0)}
-              </span>
-              <div className="text-left">
-                <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
-                  {review.author}
-                </p>
-                <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
-                  {Array.from({ length: review.stars }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
-                  ))}
-                </div>
+              {review.author.charAt(0)}
+            </span>
+            <div className="text-left">
+              <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
+                {review.author}
+              </p>
+              <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
+                {Array.from({ length: review.stars }).map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+                ))}
               </div>
             </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
 
       {GOOGLE_REVIEWS.length > 1 && (
         <div className="mt-6 flex items-center justify-center gap-2">
