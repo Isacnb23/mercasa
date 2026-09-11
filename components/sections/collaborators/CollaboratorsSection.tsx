@@ -68,7 +68,14 @@ export default function CollaboratorsSection() {
     // (más corto verticalmente que el lg:grid-cols-4 de desktop), así que
     // forzar pantalla completa siempre dejaba un tramo largo de scroll
     // vacío entre Nosotros y esta sección.
-    <section id="colaboradores" className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden bg-white pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px] lg:min-h-dvh">
+    <section
+      id="colaboradores"
+      className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px] lg:min-h-dvh"
+      // Beige (ver reestructuracion-orden-secciones.md, ajuste de colores —
+      // segunda vuelta): antes blanco; la alternancia pedida es Logística
+      // blanco → Colaboradores beige → Contacto blanco (sin cambios).
+      style={{ background: "#F7F3EB" }}
+    >
       {/* Entrada (Logística → Colaboradores) ya la marca la curva inferior
           de Logística. Acá se agrega la salida hacia Productos. */}
       <SoftCurve position="bottom" flip />

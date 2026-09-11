@@ -62,18 +62,15 @@ export default function BrandsSection() {
     <section
       id="marcas"
       className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[48px] pt-[130px] sm:pb-[64px] sm:pt-[150px]"
-      // Mismo beige sólido de "Segmento de Mercado" (constante IVORY de
-      // CustomerClassSection.tsx, #F7F4EE) — ver unificar-fondo-marcas-y-
-      // boton-catalogo.md, problema 1: el degradado hacia blanco de la
-      // iteración anterior (transicion-fluida-boton-discreto.md) seguía
-      // leyéndose como un cambio de tono al hacer scroll; ahora ambas
-      // secciones comparten el mismo fondo plano, sin salto de color entre
-      // ellas. El límite con "Hablemos de negocios" (blanco) de más abajo
-      // sigue marcado por la curva decorativa de esta misma sección, igual
-      // que cualquier otro límite de sección del sitio (ver SoftCurve más
-      // abajo) — no es un caso distinto al de Colaboradores → Segmento de
-      // Mercado, que ya conviven así.
-      style={{ background: "#F7F4EE" }}
+      // Blanco (ver reestructuracion-orden-secciones.md, ajuste de colores):
+      // aunque Marcas vive dentro del mismo grupo que "Segmento de Mercado"
+      // (las dos las renderiza MarketSegmentSection.tsx, justo después del
+      // Hero), se pidió que alternara como una sección propia dentro de esa
+      // secuencia — Inicio blanco → Segmento beige → Marcas blanco →
+      // Nosotros beige → Logística blanco → Colaboradores beige → Contacto
+      // blanco (sin cambios) — en vez de compartir el mismo beige de
+      // Segmento de Mercado como antes.
+      style={{ background: "#FFFFFF" }}
     >
       {/* Seam de salida hacia Contacto. La entrada (Productos → Marcas) la
           marca la curva inferior de ProductsSection, no se duplica acá. */}

@@ -37,7 +37,12 @@ export default function LogisticsTimeline() {
       // valor que el resto de las secciones para un espaciado parejo en
       // todo el sitio.
       className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px]"
-      style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F7F3EB 100%)" }}
+      // Blanco sólido (ver reestructuracion-orden-secciones.md, ajuste de
+      // colores — segunda vuelta): antes era un degradado hacia el beige
+      // de Nosotros de arriba; la alternancia pedida es Nosotros beige →
+      // Logística blanco → Colaboradores beige, un color plano por sección
+      // en vez de una transición gradual entre dos.
+      style={{ background: "#FFFFFF" }}
     >
       {/* El seam Nosotros → Logística ya lo marca la curva inferior de
           Nosotros; acá solo se agrega la de salida hacia Colaboradores para
