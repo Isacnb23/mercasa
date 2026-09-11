@@ -313,7 +313,7 @@
     "increaseAria": "Increase quantity of {name}",
     "decreaseAria": "Decrease quantity of {name}",
     "removeAria": "Remove {name} from cart",
-    "checkoutHint": "No prices or online payments — an advisor confirms availability and pricing over WhatsApp.",
+    "checkoutHint": "Personalized attention over WhatsApp: an advisor confirms availability and prepares your quote.",
     "checkoutCta": "Send order via WhatsApp",
     "clearCta": "Clear cart",
     "whatsappIntro": "Hi, I'd like to place an order for the following products:",
