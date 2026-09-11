@@ -64,6 +64,12 @@ const BEIGE_MAIN = "#CDBB9F";
 const BEIGE_LIGHT = "#F1ECE4";
 const BORDER = "#DDE3E8";
 const IVORY = "#F7F4EE";
+// Fondo del panel "Catálogo general" (ver segmentos-familias-espaciado-
+// animacion-boton.md, cuarta ronda de feedback): un tono más tostado que
+// IVORY (el fondo de TODA la sección) — antes el panel usaba el mismo
+// IVORY que el fondo de atrás y se perdía por completo contra él, sin
+// ningún límite visual propio.
+const PANEL_BG = "#EFE6D3";
 
 // Resuelve cada chip de categoría (y el botón "Explorar productos") a dónde
 // tiene que abrir el catálogo: o bien una Familia completa, o una
@@ -379,20 +385,21 @@ export default function CustomerClassSection({
             salida y recién DESPUÉS entraba la siguiente, con blanco de por
             medio). Ahora la tarjeta es estática y foto/contenido animan
             cada una por su cuenta adentro. */}
-        {/* Cross-fade entre "segmento" y "catálogo general" (ver segmentos-
-            familias-espaciado-animacion-boton.md, problema 2): antes el
-            `isCatalogGeneral ? A : B` intercambiaba las dos ramas de forma
-            abrupta (son subárboles de DOM distintos, sin nada que las
-            anime). AnimatePresence con `key` propia por rama detecta el
-            cambio y anima ambos sentidos (entrar a "Ver catálogo completo" y
-            volver con "Volver a segmentos") con el mismo fade+slide sutil
-            que ya usa el contenido interno de la columna de segmento más
-            abajo. `mode="wait"`: la rama saliente termina de desvanecerse
-            antes de montar la entrante — evita que ambas convivan un
-            instante con distinto contenido/alto (aunque el alto mínimo por
-            breakpoint es el mismo en las dos, el contenido interno no lo
-            es). */}
-        <AnimatePresence mode="wait" initial={false}>
+        {/* Cross-fade real entre "segmento" y "catálogo general" (ver
+            segmentos-familias-espaciado-animacion-boton.md, problema 2 y
+            cuarta ronda de feedback: "mejorar la animación de entrada y
+            salida"): la primera versión usaba `mode="wait"` — la rama
+            saliente terminaba de desvanecerse del todo ANTES de montarse
+            la entrante, así que había un instante intermedio sin nada
+            (visible como un parpadeo/hueco). Este wrapper fijo (con el
+            mismo alto mínimo por breakpoint que antes tenían las dos
+            ramas por separado) + ambas ramas en `position: absolute
+            inset-0` deja que la entrante aparezca YA mientras la
+            saliente todavía se desvanece — exactamente el mismo patrón
+            que ya usa el crossfade de la foto de segmento más abajo
+            (AnimatePresence en modo "sync", el default, sin "wait"). */}
+        <div className="relative mx-auto mt-6 min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]">
+        <AnimatePresence initial={false}>
         {isCatalogGeneral ? (
           /* Panel "Catálogo general" (ver refactor-segmento-mercado-
              catalogo-general.md, punto 3): grilla de familias en versión
@@ -401,36 +408,33 @@ export default function CustomerClassSection({
              ProductExplorer (modo `compact`) con los mismos datos/lógica de
              familias que ya usaba la sección "Productos" original.
 
-             Altura mínima (ver catalogo-general-volver-y-altura-fija.md,
-             problema 2): mismos breakpoints de alto que el panel de
-             segmento de abajo (1000/840/920/700/640px, la suma real de su
-             foto + columna de contenido) para que alternar entre ambas
-             vistas no empuje el mural de marcas. Encabezado (link "Volver
-             a segmentos" + título + descripción) pegado arriba, NO
-             centrado (ver segmentos-familias-espaciado-animacion-boton.md,
-             problema 1 — centrar todo el bloque dejaba un hueco vacío
-             enorme entre el banner de arriba y el título, porque esta
-             grilla es mucho más corta que el alto fijo). Solo la grilla de
-             familias (más corta que el encabezado + su propio contenido)
-             se centra dentro del espacio restante vía el `flex-1
-             justify-center` de abajo, así el panel se siente lleno y
-             equilibrado en vez de con todo el peso arriba o abajo.
-             Fondo IVORY en vez de blanco (ver segmentos-familias-
-             espaciado-animacion-boton.md, tercera ronda de feedback):
-             blanco sobre blanco no dejaba distinguir las tarjetas de
-             familia del panel que las contiene — el mismo tono cálido que
-             ya usa el fondo de toda la sección les da contraste real. */
+             Encabezado (link "Volver a segmentos" + título + descripción)
+             pegado arriba, NO centrado (ver segmentos-familias-espaciado-
+             animacion-boton.md, problema 1 — centrar todo el bloque dejaba
+             un hueco vacío enorme entre el banner de arriba y el título,
+             porque esta grilla es mucho más corta que el alto fijo). Solo
+             la grilla de familias (más corta que el encabezado + su propio
+             contenido) se centra dentro del espacio restante vía el
+             `flex-1 justify-center` de abajo, así el panel se siente
+             lleno y equilibrado en vez de con todo el peso arriba o abajo.
+             Fondo PANEL_BG (ver cuarta ronda de feedback más arriba): un
+             tono más tostado que el IVORY del fondo de toda la sección,
+             para que el panel se distinga como su propio bloque en vez de
+             perderse contra lo de atrás — las tarjetas de familia adentro
+             siguen blancas con su borde dorado (ver ProductExplorer.tsx),
+             ahora con TRES niveles de contraste (fondo de sección → panel
+             → tarjeta) en vez de dos. */
           <motion.div
             key="catalog-general"
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="relative mx-auto mt-6 flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] p-6 sm:mt-8 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
-            style={{ background: IVORY, border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
+            className="absolute inset-0 flex flex-col overflow-hidden rounded-[30px] p-6 sm:p-8"
+            style={{ background: PANEL_BG, border: `1.5px solid ${BEIGE_MAIN}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
             {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
                 fija.md, problema 1): antes no había ninguna forma de salir
@@ -460,14 +464,14 @@ export default function CustomerClassSection({
         ) : (
         <motion.div
           key="segment"
-          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           id="customer-class-panel"
           role="tabpanel"
           aria-labelledby={`customer-class-tab-${activeSegment.key}`}
-          className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] grid-cols-1 overflow-hidden rounded-[30px] bg-white sm:mt-8 sm:min-h-[840px] md:min-h-[920px] md:grid-cols-[52%_48%] lg:min-h-[700px] xl:min-h-[640px]"
+          className="absolute inset-0 grid grid-cols-1 overflow-hidden rounded-[30px] bg-white md:grid-cols-[52%_48%]"
           style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
         >
           {/* Columna izquierda: fotografía real, sin overlay ni degradado —
@@ -659,6 +663,7 @@ export default function CustomerClassSection({
         </motion.div>
         )}
         </AnimatePresence>
+        </div>
       </Container>
 
       <SoftCurve position="bottom" flip />
