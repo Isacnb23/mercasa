@@ -125,12 +125,17 @@ export default function AboutSection() {
       className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px] lg:min-h-dvh"
       style={{ background: "#F7F3EB" }}
     >
-      {/* Degradado de salida hacia Logística (blanco), ver gradiente-
-          transiciones-secciones.md: reemplaza el corte plano entre fondos
-          por un fundido suave — la mitad de abajo la pone esta sección
-          (beige → transparente), la otra mitad la pone LogisticsTimeline en
-          su propio tope (blanco → transparente), sumando ~una franja
-          continua entre ambas. */}
+      {/* Degradados de entrada/salida (ver transiciones-fondo-difuminadas-
+          entre-secciones.md): reemplazan el corte plano entre fondos por un
+          fundido suave — entrada desde Marcas (blanco) arriba, salida hacia
+          Logística (blanco) abajo. Cada mitad del seam la completa la
+          sección que corresponde (la otra mitad la pone BrandsSection /
+          LogisticsTimeline en su propio borde). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, #FFFFFF, transparent)" }}
+      />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"

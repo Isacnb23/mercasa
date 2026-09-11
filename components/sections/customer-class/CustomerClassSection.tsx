@@ -245,6 +245,22 @@ export default function CustomerClassSection({
       className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-[36px] pt-[130px] sm:pb-[48px] sm:pt-[150px]"
       style={{ background: IVORY }}
     >
+      {/* Degradados de entrada/salida (ver transiciones-fondo-difuminadas-
+          entre-secciones.md): antes el corte contra el Hero (blanco) y
+          contra Marcas (blanco) era una línea neta apenas se notaba el
+          tono crema de esta sección — cada mitad del seam la completa la
+          sección que corresponde (mismo criterio que ya usan Nosotros/
+          Logística/Colaboradores/Contacto). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, #FFFFFF, transparent)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
+      />
       <Container className="relative z-10">
         {/* ---------- Encabezado centrado ---------- */}
         {/* Sin max-width acá (a diferencia del resto del sitio): "Customer

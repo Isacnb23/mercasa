@@ -72,11 +72,26 @@ export default function BrandsSection() {
       // Segmento de Mercado como antes.
       style={{ background: "#FFFFFF" }}
     >
+      {/* Degradados de entrada/salida (ver transiciones-fondo-difuminadas-
+          entre-secciones.md): el corte contra "Segmento de Mercado" (crema)
+          arriba y contra "Nosotros" (beige) abajo se veía como línea neta
+          aun con los mismos tonos casi iguales — cada mitad del seam la
+          completa la sección que corresponde. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, #F7F4EE, transparent)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-24 sm:h-32"
+        style={{ background: "linear-gradient(to bottom, transparent, #F7F3EB)" }}
+      />
       {/* Seam de salida hacia Contacto. La entrada (Productos → Marcas) la
           marca la curva inferior de ProductsSection, no se duplica acá. */}
       <SoftCurve position="bottom" flip />
 
-      <Container className="relative">
+      <Container className="relative z-10">
         {/* y={0}: título de la sección navegable (#marcas), ver
             fix-padding-secciones-raiz.md — mismo motivo que en LogisticsTimeline. */}
         <Reveal y={0} className="text-center">
