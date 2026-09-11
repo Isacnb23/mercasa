@@ -15,9 +15,19 @@ export const site = {
     comunicaciones: "servicio_al_cliente@grupointeca.com",
     rh: "reclutamiento@grupointeca.com",
   },
+  // Domicilio legal exacto (ver contacto-quitar-wrapper-y-direccion-
+  // legal.md, pedido de Don Bernal — parte legal/notarial): reemplaza la
+  // dirección descriptiva anterior ("Tejar de El Guarco, Cartago, Costa
+  // Rica" / "800 m sur del Parque Industrial de Cartago") por el domicilio
+  // oficial, en formato de oración (el original venía todo en mayúsculas)
+  // para no verse como un bloque de texto legal pegado — mismo
+  // contenido/orden de datos, solo capitalización ajustada al estilo
+  // tipográfico del resto del sitio. line1 = provincia/cantón, line2 =
+  // dirección exacta; coordenadas (lat/lng) NO cambian, el pin sigue
+  // apuntando al mismo punto real del CEDI.
   address: {
-    line1: "Tejar de El Guarco, Cartago, Costa Rica",
-    line2: "800 m sur del Parque Industrial de Cartago",
+    line1: "Provincia 03 Cartago, Cantón 08 El Guarco",
+    line2: "Carretera Interamericana Cartago, entre Avenida Treinta y Cuatro y Avenida Cincuenta y Dos, Tejar El Guarco",
     postalCode: "30801",
     mapQuery: "Tejar, El Guarco, Cartago, Costa Rica",
     // Coordenadas EXACTAS del CEDI. Este es el único punto que usan el pin del

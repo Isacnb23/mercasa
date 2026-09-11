@@ -193,30 +193,19 @@ export default function ContactSection() {
             </p>
           </Reveal>
 
-          {/* ---------- Bandeja beige + 3 tarjetas propias (info / mapa /
-              reseñas) ----------
-              Antes las 3 áreas compartían el mismo CARD_BG sin ningún
-              límite más que un border-b/border-l delgado (ver contacto-
-              recuperar-contraste-visual.md): con el mapa "liberty"
-              recoloreado casi blanco, todo el bloque se leía plano, un
-              único beige de punta a punta. Ahora CARD_BG queda como
-              "bandeja" de fondo (visible como margen entre tarjetas, ver
-              `p-3`/`gap-3` abajo) y cada bloque es su propia tarjeta blanca
-              flotante con sombra — mismo criterio que ya usa el panel de
-              Customer Class (PANEL_BG + tarjetas propias), sin volver al
-              corte duro de color que se había descartado antes. */}
+          {/* ---------- Fila 1: tarjeta de info (angosta) + mapa (resto del
+              ancho) ---------- Ver contacto-quitar-wrapper-y-direccion-
+              legal.md: sin wrapper beige envolviendo todo (ronda anterior,
+              contacto-rediseno-distribucion-referencia.md) — la referencia
+              real tiene el fondo de la sección en blanco, con la tarjeta de
+              info y el mapa como bloques independientes flotando sobre ese
+              blanco, no metidos dentro de otro card de color. `gap-3`/
+              `gap-4` entre ambos bloques ahora vive en el propio grid (ya
+              no hay padding de "bandeja" alrededor). */}
           <Reveal
-            className="relative mx-auto mt-14 max-w-[1380px] rounded-[30px] p-3 sm:p-4"
-            style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
+            className="relative mx-auto mt-14 grid max-w-[1380px] grid-cols-1 gap-3 sm:gap-4 lg:min-h-[560px] lg:grid-cols-[380px_1fr]"
           >
-            {/* ---------- Fila 1: tarjeta de info (angosta) + mapa (resto
-                del ancho) ---------- Ver contacto-rediseno-distribucion-
-                referencia.md: vuelve a la distribución de 2 columnas lado a
-                lado (info angosta / mapa ancho) en vez del bloque horizontal
-                de ancho completo de la ronda anterior — más parecida a la
-                referencia visual que le gustó a Isaac. */}
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:min-h-[560px] lg:grid-cols-[380px_1fr]">
-              {/* Tarjeta de info de contacto */}
+            {/* Tarjeta de info de contacto */}
               <div
                 className="flex flex-col gap-6 rounded-[22px] bg-white p-8"
                 style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
@@ -280,11 +269,15 @@ export default function ContactSection() {
                       {t(`sites.${activeSite.key}.sedeTitle`)}
                     </p>
 
-                    {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
-                        inconsistente.md): reserva altura para el caso más
-                        largo (CEDI Central, 3 líneas físicas) para que la
-                        tarjeta no cambie de tamaño al cambiar de sede. */}
-                    <InfoRow icon={MapPin} title={t("direccionLabel")} contentClassName="min-h-[3lh]">
+                    {/* min-h-[5lh] (ver fix-mapa-roto-y-tarjeta-
+                        inconsistente.md; subido de 3lh a 5lh en contacto-
+                        quitar-wrapper-y-direccion-legal.md — el domicilio
+                        legal de CEDI Central es bastante más largo que la
+                        dirección descriptiva anterior y ahora envuelve a
+                        más líneas) para que la tarjeta no cambie de tamaño
+                        al cambiar de sede (San Francisco tiene una
+                        dirección mucho más corta). */}
+                    <InfoRow icon={MapPin} title={t("direccionLabel")} contentClassName="min-h-[5lh]">
                       {activeSite.address.line1}
                       {activeSite.address.line2 && (
                         <>
@@ -388,54 +381,57 @@ export default function ContactSection() {
                   <MapActions t={t} site={activeSite} />
                 </div>
               </div>
+          </Reveal>
+
+          {/* ---------- Fila 2: reseñas, franja propia con fondo beige,
+              independiente del bloque de arriba ---------- Ver contacto-
+              quitar-wrapper-y-direccion-legal.md: esto YA vivía
+              conceptualmente bien resuelto en contacto-testimonios-sin-
+              card.md (sin card blanca alrededor de la cita) — lo único que
+              cambia acá es que deja de estar anidado dentro del mismo
+              wrapper/card que la info+mapa de arriba (ver Reveal anterior)
+              y pasa a ser su propio bloque, con su propio margen (`mt-*`)
+              en vez de compartir `gap` con la fila de arriba. Label lateral
+              (rotado 90°) + rating de Google a la izquierda, cita centrada,
+              flechas de navegación a la derecha (ver contacto-rediseno-
+              distribucion-referencia.md). REVIEWS_BG (beige) le da a la
+              franja su propio fondo, distinto del blanco de la sección y
+              de la tarjeta de info. */}
+          <Reveal
+            className="relative mx-auto mt-3 flex max-w-[1380px] flex-col items-center gap-6 rounded-[22px] p-8 text-center sm:mt-4 sm:p-10 md:p-12 lg:flex-row lg:items-center lg:gap-10 lg:text-left"
+            style={{ background: REVIEWS_BG }}
+          >
+            {/* Label lateral + rating: rotado 90° en desktop (columna
+                angosta a la izquierda, como en la referencia); en mobile
+                se acuesta horizontal arriba de la cita. */}
+            <div className="flex shrink-0 flex-col items-center gap-4 lg:h-full lg:items-start lg:justify-center">
+              {/* Label vertical en desktop (columna angosta a la
+                  izquierda, como en la referencia) — texto girado con
+                  `writing-mode` en vez de una imagen o SVG, así se sigue
+                  traduciendo como cualquier otro string. En mobile se
+                  acuesta horizontal arriba de la cita (elemento
+                  duplicado + `hidden`/`lg:hidden`, más simple y robusto
+                  que alternar `writing-mode` por breakpoint). */}
+              <p
+                className="hidden text-[12px] font-bold uppercase lg:block lg:[writing-mode:vertical-rl] lg:rotate-180"
+                style={{ letterSpacing: "0.18em", color: NAVY }}
+              >
+                {t("reviewsTitle")}
+              </p>
+              <p
+                className="text-[12px] font-bold uppercase lg:hidden"
+                style={{ letterSpacing: "0.18em", color: NAVY }}
+              >
+                {t("reviewsTitle")}
+              </p>
+              <GoogleRating t={t} />
             </div>
 
-            {/* ---------- Fila 2: reseñas, franja propia con fondo beige
-                distinto, SIN card blanca ---------- Ver contacto-rediseno-
-                distribucion-referencia.md: label lateral (rotado 90°) +
-                rating de Google a la izquierda, cita centrada, flechas de
-                navegación a la derecha — reemplaza el bloque centrado y
-                apilado de la ronda anterior (contacto-testimonios-sin-
-                card.md, que se mantiene en cuanto a "sin card blanca", solo
-                cambia la distribución). REVIEWS_BG (beige más profundo que
-                CARD_BG) le da a la franja su propio fondo, distinto del
-                blanco de la tarjeta de info y del CARD_BG de la bandeja. */}
-            <div
-              className="mt-3 flex flex-col items-center gap-6 rounded-[22px] p-8 text-center sm:mt-4 sm:p-10 md:p-12 lg:flex-row lg:items-center lg:gap-10 lg:text-left"
-              style={{ background: REVIEWS_BG }}
-            >
-              {/* Label lateral + rating: rotado 90° en desktop (columna
-                  angosta a la izquierda, como en la referencia); en mobile
-                  se acuesta horizontal arriba de la cita. */}
-              <div className="flex shrink-0 flex-col items-center gap-4 lg:h-full lg:items-start lg:justify-center">
-                {/* Label vertical en desktop (columna angosta a la
-                    izquierda, como en la referencia) — texto girado con
-                    `writing-mode` en vez de una imagen o SVG, así se sigue
-                    traduciendo como cualquier otro string. En mobile se
-                    acuesta horizontal arriba de la cita (elemento
-                    duplicado + `hidden`/`lg:hidden`, más simple y robusto
-                    que alternar `writing-mode` por breakpoint). */}
-                <p
-                  className="hidden text-[12px] font-bold uppercase lg:block lg:[writing-mode:vertical-rl] lg:rotate-180"
-                  style={{ letterSpacing: "0.18em", color: NAVY }}
-                >
-                  {t("reviewsTitle")}
-                </p>
-                <p
-                  className="text-[12px] font-bold uppercase lg:hidden"
-                  style={{ letterSpacing: "0.18em", color: NAVY }}
-                >
-                  {t("reviewsTitle")}
-                </p>
-                <GoogleRating t={t} />
-              </div>
-
-              {/* Cita + autor, centrado, con las flechas de navegación al
-                  costado en vez de puntos (ver contacto-rediseno-
-                  distribucion-referencia.md). */}
-              <div className="min-w-0 flex-1">
-                <ReviewsCarousel t={t} />
-              </div>
+            {/* Cita + autor, centrado, con las flechas de navegación al
+                costado en vez de puntos (ver contacto-rediseno-
+                distribucion-referencia.md). */}
+            <div className="min-w-0 flex-1">
+              <ReviewsCarousel t={t} />
             </div>
           </Reveal>
         </Container>
