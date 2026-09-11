@@ -117,14 +117,17 @@ export function resolveChipTarget(families: HierarchyNode[], categoryKey: string
 }
 
 /**
- * "Customer Class" — sección independiente y comercial, ubicada antes de
- * "Hablemos de negocios" (ver rediseno-customer-class-spec-completo.md).
- * Reemplaza por completo el intento anterior (BusinessSegments.tsx, panel
- * navy sidebar+resultado dentro de la tarjeta de Contacto) — ya no vive
- * dentro de esa sección, aunque el estado del segmento activo sigue viviendo
- * en el padre (ContactSection, que ahora renderiza esta sección + la suya
- * propia como dos <section> hermanas) para no perder la contextualización
- * del WhatsApp de cierre.
+ * "Customer Class" — sección independiente y comercial. Reemplaza por
+ * completo el intento anterior (BusinessSegments.tsx, panel navy
+ * sidebar+resultado dentro de la tarjeta de Contacto) — ya no vive dentro
+ * de esa sección. Renderizada por MarketSegmentSection.tsx (junto con
+ * BrandsSection y el modal de catálogo), ubicada justo después del Hero
+ * (ver reestructuracion-orden-secciones.md — antes vivía pegada a
+ * "Hablemos de negocios", pero el equipo la sentía "muy abajo" en la
+ * página). El segmento activo se comparte con "Hablemos de negocios" (para
+ * no perder la contextualización del WhatsApp de cierre) vía
+ * ActiveSegmentContext en vez de un simple prop, ya que esas dos secciones
+ * ya no son vecinas en el DOM.
  */
 export default function CustomerClassSection({
   activeKey,
@@ -140,8 +143,8 @@ export default function CustomerClassSection({
   /** Familias reales de MercasaVIP (ver refactor-segmento-mercado-catalogo-
    * general.md, punto 3) — usadas por la grilla chica de "Catálogo general",
    * la 8va opción del selector de arriba. Mismos datos que ya recibe
-   * ContactSection (fetch cacheado en ContactSectionLoader), no se duplica
-   * el fetch acá. */
+   * MarketSegmentSection (fetch cacheado en MarketSegmentSectionLoader), no
+   * se duplica el fetch acá. */
   families?: HierarchyNode[];
 }) {
   const t = useTranslations("CustomerClass");

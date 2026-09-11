@@ -82,11 +82,14 @@ export const contactSites: ContactSite[] = [
 // CustomerClassSection (ver navbar-customer-class.md) — ahora esa sección
 // tiene su propio ítem ("customerClass" → id="customer-class") así que
 // "Contacto" ya puede apuntar directo a su propia sección.
+// Orden actualizado (ver reestructuracion-orden-secciones.md): "Segmento de
+// Mercado" pasó a ser la 2da sección de la página (justo después del Hero,
+// pedido del equipo) — el nav refleja el mismo orden visual real.
 export const navLinks = [
   { href: "#inicio", key: "inicio" },
+  { href: "#customer-class", key: "customerClass" },
   { href: "#nosotros", key: "nosotros" },
   { href: "#logistica", key: "logistica" },
-  { href: "#customer-class", key: "customerClass" },
   { href: "#hablemos-de-negocios", key: "contacto" },
 ];
 

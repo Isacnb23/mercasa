@@ -9,27 +9,10 @@ import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
 import WhatsAppIcon from "../../ui/WhatsAppIcon";
-import CustomerClassSection, { resolveChipTarget } from "../customer-class/CustomerClassSection";
-import BrandsSection from "../brands/BrandsSection";
-import ProductCatalogModal from "../../modals/product-catalog/ProductCatalogModal";
+import { useActiveSegment } from "../customer-class/ActiveSegmentContext";
 import { businessSegments, CATALOG_GENERAL_KEY, contactSites, site } from "@/lib/data";
 import { buildWhatsappHref, cn } from "@/lib/utils";
-import type { HierarchyNode } from "@/lib/product-types";
 import type { ContactSite } from "@/lib/data";
-
-// Busca el nodo real de categoría (sub-familia -> categoría) dentro de una
-// Familia, a partir del id resuelto por `resolveChipTarget` — necesario para
-// el modo filtrado de "Explorar productos" (ver
-// customer-class-animacion-filtro.md, punto 2), que necesita el nodo
-// HierarchyNode completo (con `.products`), no solo el id.
-function findCategoryById(family: HierarchyNode, categoryId: string): HierarchyNode | null {
-  for (const subFamily of family.children) {
-    for (const category of subFamily.children) {
-      if (category.id === categoryId) return category;
-    }
-  }
-  return null;
-}
 
 // Réplica exacta de la referencia (ver rediseno-exacto-hablemos-de-
 // negocios.md) — reemplaza por completo el panel navy del rediseño anterior
@@ -63,15 +46,16 @@ const ContactMap = dynamic(() => import("./ContactMap"), {
  * impreso, a juego con el resto de la sección en vez de ser el único
  * contraste oscuro.
  */
-export default function ContactSection({ families = [] }: { families?: HierarchyNode[] }) {
+export default function ContactSection() {
   const t = useTranslations("Contact");
 
-  // Único estado de segmento para las DOS secciones (Customer Class +
-  // Hablemos de negocios, ver rediseno-customer-class-spec-completo.md):
-  // aunque ahora son dos <section> independientes en el DOM, el estado
-  // sigue viviendo acá arriba para no perder la contextualización del
-  // WhatsApp de cierre con el segmento elegido en Customer Class.
-  const [activeSegmentKey, setActiveSegmentKey] = useState("supermercados");
+  // Segmento activo elegido en "Segmento de Mercado" (ver
+  // reestructuracion-orden-secciones.md): esa sección ya no es vecina de
+  // esta — vive justo después del Hero — así que el estado compartido pasó
+  // de un simple useState acá arriba a ActiveSegmentContext. Solo se lee
+  // acá para contextualizar el WhatsApp de cierre de abajo con el segmento
+  // que el usuario eligió más arriba en la página.
+  const { activeSegmentKey } = useActiveSegment();
   const isCatalogGeneral = activeSegmentKey === CATALOG_GENERAL_KEY;
   const activeSegment = businessSegments.find((seg) => seg.key === activeSegmentKey) ?? businessSegments[0];
   // "Catálogo general" no es un segmento de cliente real (ver refactor-
@@ -91,87 +75,6 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
   const [activeSiteKey, setActiveSiteKey] = useState(contactSites[0].key);
   const activeSite = contactSites.find((s) => s.key === activeSiteKey) ?? contactSites[0];
   const reduceMotion = useReducedMotion();
-
-  // Catálogo abierto desde un chip de "categorías" o el botón "Explorar
-  // productos" de Customer Class (ver customer-class-chips-reales.md y
-  // rediseno-customer-class-spec-completo.md) — mismo patrón de
-  // ProductExplorer (family+categoryId en vez de un booleano "open"):
-  // `catalogFamily` es null cuando no hay ninguna abierta, así que
-  // ProductCatalogModal se desmonta por completo al cerrar en vez de solo
-  // ocultarse.
-  const [catalogFamilyId, setCatalogFamilyId] = useState<string | null>(null);
-  const [catalogCategoryId, setCatalogCategoryId] = useState<string | undefined>(undefined);
-  // Modo filtrado de "Explorar productos" (ver
-  // customer-class-animacion-filtro.md, punto 2) — lista de categorías
-  // reales (con su propia Familia, que puede ser distinta por entrada) a
-  // mostrar TODAS juntas en el catálogo, además del modo de una sola
-  // categoría de arriba que ya usan los chips individuales (sin tocar ese
-  // camino). Vacío/null = no está en modo filtrado.
-  const [catalogFilter, setCatalogFilter] = useState<{ category: HierarchyNode }[] | null>(null);
-  const [catalogFilterTitle, setCatalogFilterTitle] = useState<string | undefined>(undefined);
-  // `key` del segmento activo cuando el catálogo se abrió desde "Explorar
-  // productos" (ver catalogo-portada-por-segmento.md) — decide la portada
-  // del flipbook (ver SEGMENT_COVER_PHOTOS en ProductCatalogModal). null en
-  // cualquier otro camino de apertura (chips individuales, ProductExplorer)
-  // para que esos sigan mostrando la portada genérica de siempre.
-  const [catalogSegmentId, setCatalogSegmentId] = useState<string | null>(null);
-  const catalogFamily = families.find((f) => f.id === catalogFamilyId) ?? null;
-  const closeCatalog = () => {
-    setCatalogFamilyId(null);
-    setCatalogCategoryId(undefined);
-    setCatalogFilter(null);
-    setCatalogFilterTitle(undefined);
-    setCatalogSegmentId(null);
-  };
-
-  // Resuelve el chip/categoría clickeado (ver resolveChipTarget en
-  // CustomerClassSection.tsx) contra los datos reales de MercasaVIP y abre
-  // el catálogo posicionado ahí. Si `families` todavía no llegó (fetch en
-  // curso o falló) o el slug no matchea nada real, no hace nada — el chip
-  // queda igual de clickeable, solo que esta vez no encuentra destino (no
-  // vale la pena un estado de error visible para un caso tan puntual). Modo
-  // de una sola categoría — SIN cambios (ver customer-class-animacion-
-  // filtro.md: el filtro multi-Familia de abajo es exclusivo de "Explorar
-  // productos", este camino se queda intacto).
-  const handleSelectCategory = (categoryKey: string) => {
-    const resolved = resolveChipTarget(families, categoryKey);
-    if (!resolved) return;
-    setCatalogFilter(null);
-    setCatalogFilterTitle(undefined);
-    setCatalogSegmentId(null);
-    setCatalogFamilyId(resolved.familyId);
-    setCatalogCategoryId(resolved.categoryId);
-  };
-
-  // Botón "Explorar productos" del panel de Customer Class (ver
-  // customer-class-animacion-filtro.md, punto 2): antes abría solo la
-  // PRIMERA categoría del segmento (vía handleSelectCategory) — ahora abre
-  // el catálogo ya filtrado a TODAS las categorías disponibles de ese
-  // segmento, que en la práctica cruzan varias Familias distintas (ej. las
-  // 5 de "Supermercados y cadenas" viven en 4 Familias). Usa el nuevo modo
-  // filtrado de ProductCatalogModal (aditivo — no toca el modo de una sola
-  // categoría que siguen usando los chips y ProductExplorer).
-  const handleExploreProducts = () => {
-    const resolved = activeSegment.categories
-      .map((categoryKey) => {
-        const target = resolveChipTarget(families, categoryKey);
-        if (!target || !target.categoryId) return null;
-        const family = families.find((f) => f.id === target.familyId);
-        if (!family) return null;
-        const category = findCategoryById(family, target.categoryId);
-        if (!category) return null;
-        return { family, category };
-      })
-      .filter((entry): entry is { family: HierarchyNode; category: HierarchyNode } => entry !== null);
-
-    if (resolved.length === 0) return;
-
-    setCatalogCategoryId(undefined);
-    setCatalogFamilyId(resolved[0].family.id);
-    setCatalogFilter(resolved.map(({ category }) => ({ category })));
-    setCatalogFilterTitle(t(`segments.${activeSegment.key}.label`));
-    setCatalogSegmentId(activeSegment.key);
-  };
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
   // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
@@ -201,44 +104,6 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
 
   return (
     <>
-      {/* Customer Class ahora es su propia sección independiente, ubicada
-          antes de "Hablemos de negocios" (ver
-          rediseno-customer-class-spec-completo.md — reemplaza por completo
-          el módulo anterior de dos columnas dentro de esta tarjeta). El
-          estado del segmento activo se queda acá arriba (ver comentario en
-          los hooks) para que el WhatsApp de cierre de abajo siga
-          contextualizado. */}
-      <CustomerClassSection
-        activeKey={activeSegmentKey}
-        onSelect={setActiveSegmentKey}
-        onSelectCategory={handleSelectCategory}
-        onExploreProducts={handleExploreProducts}
-        families={families}
-      />
-
-      {/* Mural de marcas reubicado acá (ver marcas-orden-y-catalogo-general-
-          banner.md, cambio 1): ahora que "Productos" ya no existe como
-          sección propia, va justo después de "Segmento de Mercado" en vez de
-          después de Productos. Vive dentro de ContactSection (en vez de
-          quedar como hermano en page.tsx) porque Customer Class y "Hablemos
-          de negocios" son dos <section> que ya renderiza este mismo
-          componente — es la única forma de intercalar Marcas entre ambas sin
-          romper el estado compartido (activeSegmentKey, etc.) que vive acá
-          arriba. */}
-      <BrandsSection />
-
-      {catalogFamily && (
-        <ProductCatalogModal
-          family={catalogFamily}
-          allFamilies={families}
-          initialCategoryId={catalogCategoryId}
-          filterCategories={catalogFilter ?? undefined}
-          filterTitle={catalogFilterTitle}
-          segmentId={catalogSegmentId ?? undefined}
-          onClose={closeCatalog}
-        />
-      )}
-
       <section
         id="hablemos-de-negocios"
         // pt separado de pb y subido a 130/150px (ver header-spacing-fix.md):
@@ -249,20 +114,19 @@ export default function ContactSection({ families = [] }: { families?: Hierarchy
         className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-24 pt-[130px] md:pb-28 md:pt-[150px]"
         style={{ background: "#FFFFFF" }}
       >
-        {/* El seam Customer Class → Contacto ya lo marca la curva inferior de
-            CustomerClassSection; acá solo se agrega la de salida hacia el
-            Footer (que cierra en un tono distinto, #F3F5F7) para no
-            duplicar el mismo trazo. Fondo blanco (ver
-            ajustes-customer-class-4-puntos.md, punto 4): alterna con el
-            beige de Customer Class arriba — antes ambas secciones eran
-            beige y se sentían pegadas/mezcladas. id="hablemos-de-negocios" es
-            el target directo del ítem "Contacto" del nav (ver
-            navbar-customer-class.md — antes "Contacto" apuntaba a
-            CustomerClassSection, que ahora tiene su propio ítem con id
-            "customer-class"). El mismo id también lo usa el CTA "Contactar
-            sobre..." de CustomerClassSection (ver customer-class-fixes.md,
-            punto 4) para bajar el usuario hasta el WhatsApp ya personalizado
-            con el segmento elegido arriba. */}
+        {/* Esta curva solo marca la salida hacia el Footer (que cierra en un
+            tono distinto, #F3F5F7). "Segmento de Mercado" (CustomerClassSection)
+            y "Marcas" ya NO son las secciones inmediatamente anteriores acá
+            arriba — viven justo después del Hero (ver
+            reestructuracion-orden-secciones.md, pedido del equipo de que
+            "Segmento de Mercado" no quedara tan abajo en la página); ahora
+            "Colaboradores" es la sección previa. El segmento activo elegido
+            allá arriba sigue llegando hasta acá vía ActiveSegmentContext
+            (ver hooks arriba) para personalizar el WhatsApp de cierre.
+            id="hablemos-de-negocios" es el target directo del ítem
+            "Contacto" del nav (ver navbar-customer-class.md — antes
+            "Contacto" apuntaba a CustomerClassSection, que ahora tiene su
+            propio ítem con id "customer-class"). */}
         <SoftCurve position="bottom" flip />
 
         <Container className="relative z-10">
