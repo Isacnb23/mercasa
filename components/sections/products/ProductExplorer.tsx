@@ -60,7 +60,12 @@ export default function ProductExplorer({
         {catalogFamily && (
           <ProductCatalogModal family={catalogFamily} allFamilies={families} onClose={closeCatalog} />
         )}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {/* 3 columnas fijas desde `sm` (antes 6 en una sola fila desde `lg`,
+            ver segmentos-familias-espaciado-animacion-boton.md, segunda
+            ronda de feedback: con 6 familias reales se veían "chiquitas" en
+            una sola fila) — con las 6 familias actuales da 2 filas de 3,
+            tarjetas bastante más grandes que antes. */}
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
           {families.map((family, i) => (
             <Reveal key={family.id} delay={i * 0.06} className="h-full">
               <FamilyCard family={family} onOpenCatalog={() => openCatalog(family.id)} compact />
@@ -170,7 +175,7 @@ function FamilyCard({
         onBlur={() => setIsActive(false)}
         onClick={onOpenCatalog}
         aria-label={t("catalog.openFamilyButton", { familyName: family.name })}
-        className="flex h-full w-full flex-col items-center gap-3 rounded-2xl border px-4 py-6 text-center transition duration-200 hover:-translate-y-1"
+        className="flex h-full w-full flex-col items-center gap-3.5 rounded-2xl border px-5 py-8 text-center transition duration-200 hover:-translate-y-1"
         style={{
           background: isActive ? FEATURED_BG : "#ffffff",
           borderColor: isActive ? NAVY : CARD_BORDER,
@@ -178,28 +183,28 @@ function FamilyCard({
         }}
       >
         <span
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full transition-colors duration-200"
           style={{ background: isActive ? color.iconBgActive : color.iconBg }}
         >
-          <Icon className="h-6 w-6" strokeWidth={1.5} style={{ color: isActive ? color.accent : NAVY }} aria-hidden />
+          <Icon className="h-7 w-7" strokeWidth={1.5} style={{ color: isActive ? color.accent : NAVY }} aria-hidden />
         </span>
         <div>
-          <p className="font-display text-[15px] font-bold leading-tight" style={{ color: NAVY }}>
+          <p className="font-display text-[17px] font-bold leading-tight" style={{ color: NAVY }}>
             {family.name}
           </p>
-          <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
+          <p className="mt-1.5 text-[13px]" style={{ color: MUTED }}>
             {t("productsCount", { count: family.itemCount })}
           </p>
         </div>
         <span
-          className="mt-1 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition"
+          className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition"
           style={
             isActive
               ? { background: NAVY, color: "#ffffff" }
               : { background: "#ffffff", color: NAVY, border: `1.5px solid ${NAVY}` }
           }
         >
-          <BookOpen className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
+          <BookOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
           {t("viewCatalogCta")}
         </span>
       </button>

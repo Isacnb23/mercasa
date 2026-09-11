@@ -301,10 +301,12 @@ export default function CustomerClassSection({
             feedback de seguimiento): navy sólido en vez de degradado (se
             sentía "pesado" con el brillo diagonal) + acento beige arriba
             como el de las tarjetas de segmento activas, para que se lea
-            como parte de la misma familia visual. CTA pasa de outline
-            fantasma a píldora sólida beige con texto navy — un botón real,
-            no un texto con caja. Más `mt`/`p` para que respire más separado
-            del selector de arriba. */}
+            como parte de la misma familia visual. Más `mt`/`p` para que
+            respire más separado del selector de arriba. Sin CTA propio
+            aparte (ver comentario más abajo, segunda ronda de feedback):
+            la tarjeta ENTERA es el botón — un chip/píldora adentro se leía
+            como "un botón dentro de la tarjeta" en vez de la tarjeta misma
+            siendo clickeable. */}
         <button
           type="button"
           role="tab"
@@ -312,7 +314,7 @@ export default function CustomerClassSection({
           aria-selected={isCatalogGeneral}
           aria-controls="customer-class-panel"
           onClick={() => onSelect(CATALOG_GENERAL_KEY)}
-          className="group relative mx-auto mt-8 flex w-full max-w-[1280px] flex-col items-start gap-5 overflow-hidden rounded-[28px] p-7 text-left transition duration-300 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-8"
+          className="group relative mx-auto mt-8 flex w-full max-w-[1280px] items-center gap-5 overflow-hidden rounded-[28px] p-7 text-left transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:gap-6 sm:p-8"
           style={{
             background: NAVY,
             boxShadow: isCatalogGeneral
@@ -326,39 +328,39 @@ export default function CustomerClassSection({
             className="absolute inset-x-8 top-0 h-[3px] rounded-full"
             style={{ background: BEIGE_MAIN }}
           />
-          <div className="flex items-center gap-4 sm:gap-5">
-            <span
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
-              style={{ background: IVORY }}
-            >
-              <LayoutGrid className="h-7 w-7" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
-            </span>
-            <div>
-              <p className="font-display text-[19px] font-semibold text-white sm:text-[22px]">
-                {t("catalogGeneral")}
-              </p>
-              <p className="mt-1 max-w-[420px] text-[14px] leading-[1.5]" style={{ color: "#C6D2E2" }}>
-                {t("catalogGeneralBannerDescription")}
-              </p>
-            </div>
-          </div>
-
-          {/* CTA como botón sólido real (ver segmentos-familias-espaciado-
-              animacion-boton.md, feedback de seguimiento): la versión
-              anterior (outline fantasma sobre el navy) seguía sin leerse
-              como botón — beige sólido + texto navy da el contraste que le
-              faltaba, mismo tratamiento de "botón secundario claro" que ya
-              usa el resto del sitio sobre fondos navy. `w-fit` fijo (sin
-              `w-full` en mobile): al ser hijo de un flex-col con
-              `items-start`, un ancho automático ya lo deja pegado a la
-              izquierda del tamaño de su propio contenido. */}
           <span
-            className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-bold transition duration-300 group-hover:gap-2.5 group-hover:brightness-105"
-            style={{ color: NAVY, background: BEIGE_MAIN }}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+            style={{ background: IVORY }}
+          >
+            <LayoutGrid className="h-7 w-7" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
+          </span>
+          <span className="flex-1">
+            <span className="block font-display text-[19px] font-semibold text-white sm:text-[22px]">
+              {t("catalogGeneral")}
+            </span>
+            <span className="mt-1 block max-w-[420px] text-[14px] leading-[1.5]" style={{ color: "#C6D2E2" }}>
+              {t("catalogGeneralBannerDescription")}
+            </span>
+          </span>
+
+          {/* Ya no hay un chip/píldora separado adentro (ver segmentos-
+              familias-espaciado-animacion-boton.md, segunda ronda de
+              feedback: "que todo sea el botón, no un botón dentro del
+              card") — el texto del CTA se suelta directo sobre el navy,
+              solo con la flecha como acento, y toda la tarjeta ya
+              responde al hover (lift + brillo, ver className de arriba). */}
+          <span
+            className="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-bold transition duration-300 group-hover:gap-2.5 sm:inline-flex"
+            style={{ color: BEIGE_MAIN }}
           >
             {t("catalogGeneralCta")}
-            <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
           </span>
+          <ArrowRight
+            className="h-5 w-5 shrink-0 transition duration-300 group-hover:translate-x-1 sm:hidden"
+            style={{ color: BEIGE_MAIN }}
+            aria-hidden
+          />
         </button>
 
         {/* ---------- Panel principal ---------- */}
