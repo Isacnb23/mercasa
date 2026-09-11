@@ -348,38 +348,7 @@ export default function ContactSection() {
             >
               {t("reviewsTitle")}
             </h3>
-            <div className="mx-auto mt-10 grid max-w-[880px] grid-cols-1 gap-6 md:grid-cols-2">
-              {GOOGLE_REVIEWS.map((review) => (
-                <div
-                  key={review.author}
-                  // Contraste contra el CARD_BG beige que envuelve la sección
-                  // (ver fix-contraste-testimonios.md): el blanco puro +
-                  // sombra más difusa/opaca que antes (era 0.08, casi
-                  // invisible sobre el beige) + borde sutil de refuerzo hacen
-                  // que la tarjeta "flote" en vez de perderse contra el fondo.
-                  className="rounded-[24px] border border-black/[0.05] bg-white p-8 text-left"
-                  style={{ boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
-                >
-                  <Quote className="h-8 w-8" style={{ color: "rgba(11,47,99,0.22)" }} fill="currentColor" strokeWidth={0} />
-                  <p
-                    className="mt-3 font-display italic leading-snug"
-                    style={{ fontSize: "clamp(20px, 2vw, 24px)", color: NAVY }}
-                  >
-                    &ldquo;{review.quote}&rdquo;
-                  </p>
-                  <div className="mt-5 flex items-center justify-between">
-                    <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
-                      — {review.author}
-                    </p>
-                    <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
-                      {Array.from({ length: review.stars }).map((_, i) => (
-                        <Star key={i} className="h-4 w-4" fill="currentColor" strokeWidth={0} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ReviewsCarousel />
           </Reveal>
         </Container>
       </section>
@@ -443,14 +412,117 @@ function GoogleRating({ t }: { t: ReturnType<typeof useTranslations> }) {
 
 // Reseñas reales de Google con nombre de autor (ver google-comentarios-
 // reales.md) — reemplaza el enfoque anterior (cita genérica "Very good" sin
-// nombre, de la API limitada a 5 resultados) por dos citas más creíbles que
-// Isaac encontró revisando la ficha real de Google Maps directamente. Texto
+// nombre, de la API limitada a 5 resultados) por citas más creíbles
+// encontradas revisando la ficha real de Google Maps directamente. Texto
 // de la cita NUNCA se traduce (es lo que escribió el cliente real en
-// español) — solo el título del apartado tiene traducción ES/EN.
+// español) — solo el título del apartado tiene traducción ES/EN. Solo 2
+// por ahora (ver mural-reviews-carousel.md, feedback de seguimiento: "traé
+// varias más de Google, buenas") — agregar más acá cuando se confirme el
+// texto real de otras reseñas de la ficha; el carrusel de abajo ya soporta
+// cualquier cantidad sin cambios.
 const GOOGLE_REVIEWS = [
   { quote: "Excelente mercadería", author: "René Calderón", stars: 5 },
   { quote: "Muy bueno", author: "Marcelo G.", stars: 5 },
 ];
+
+// Carrusel de reseñas (ver mural-reviews-carousel.md): reemplaza la grilla
+// estática de 2 tarjetas — con más reseñas reales (agregadas arriba) una
+// grilla se vuelve angosta/apretada; mostrar UNA a la vez, grande, con
+// crossfade automático + puntos de navegación abajo escala a cualquier
+// cantidad sin volver a tocar el layout. `useEffect` reprograma el
+// temporizador cada vez que cambia el índice (por auto-avance o click en
+// un punto), así un click manual no compite con el siguiente auto-avance.
+const REVIEW_ROTATE_MS = 6000;
+
+function ReviewsCarousel() {
+  const [index, setIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+  const review = GOOGLE_REVIEWS[index];
+
+  useEffect(() => {
+    if (reduceMotion || GOOGLE_REVIEWS.length <= 1) return;
+    const id = window.setTimeout(() => {
+      setIndex((i) => (i + 1) % GOOGLE_REVIEWS.length);
+    }, REVIEW_ROTATE_MS);
+    return () => window.clearTimeout(id);
+  }, [index, reduceMotion]);
+
+  return (
+    <div className="mx-auto mt-10 max-w-[680px]">
+      {/* Contraste contra el CARD_BG beige que envuelve la sección (ver
+          fix-contraste-testimonios.md): blanco puro + sombra difusa +
+          borde sutil de refuerzo hacen que la tarjeta "flote" en vez de
+          perderse contra el fondo. */}
+      <div
+        className="relative overflow-hidden rounded-[24px] border border-black/[0.05] bg-white px-8 py-10 text-center sm:px-14 sm:py-12"
+        style={{ boxShadow: "0 20px 48px rgba(16,37,63,0.18)" }}
+      >
+        <Quote
+          className="mx-auto h-9 w-9"
+          style={{ color: "rgba(11,47,99,0.16)" }}
+          fill="currentColor"
+          strokeWidth={0}
+          aria-hidden
+        />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={reduceMotion ? "static-review" : index}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <p
+              className="mx-auto mt-4 max-w-[520px] font-display italic leading-snug"
+              style={{ fontSize: "clamp(21px, 2.4vw, 27px)", color: NAVY }}
+            >
+              &ldquo;{review.quote}&rdquo;
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              {/* Avatar con la inicial del autor: sin foto real, pero le da
+                  a cada reseña un ancla visual propia en vez de ser solo
+                  texto plano — mismo tratamiento navy sólido que el resto
+                  de los acentos de la sección. */}
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
+                style={{ background: NAVY }}
+                aria-hidden
+              >
+                {review.author.charAt(0)}
+              </span>
+              <div className="text-left">
+                <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
+                  {review.author}
+                </p>
+                <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
+                  {Array.from({ length: review.stars }).map((_, i) => (
+                    <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {GOOGLE_REVIEWS.length > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {GOOGLE_REVIEWS.map((r, i) => (
+            <button
+              key={r.author}
+              type="button"
+              aria-label={`Reseña ${i + 1} de ${GOOGLE_REVIEWS.length}`}
+              aria-current={i === index}
+              onClick={() => setIndex(i)}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{ width: i === index ? 22 : 8, background: i === index ? NAVY : "rgba(11,47,99,0.22)" }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function InfoRow({
   icon: Icon,
