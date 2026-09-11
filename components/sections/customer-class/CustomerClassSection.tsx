@@ -296,7 +296,15 @@ export default function CustomerClassSection({
             una 8va opción disputando espacio visual con las 7 de segmento.
             Mismo comportamiento funcional que antes (abre el mismo panel de
             familias vía ProductExplorer más abajo), solo cambia el
-            disparador visual. */}
+            disparador visual.
+            Redisño (ver segmentos-familias-espaciado-animacion-boton.md,
+            feedback de seguimiento): navy sólido en vez de degradado (se
+            sentía "pesado" con el brillo diagonal) + acento beige arriba
+            como el de las tarjetas de segmento activas, para que se lea
+            como parte de la misma familia visual. CTA pasa de outline
+            fantasma a píldora sólida beige con texto navy — un botón real,
+            no un texto con caja. Más `mt`/`p` para que respire más separado
+            del selector de arriba. */}
         <button
           type="button"
           role="tab"
@@ -304,15 +312,20 @@ export default function CustomerClassSection({
           aria-selected={isCatalogGeneral}
           aria-controls="customer-class-panel"
           onClick={() => onSelect(CATALOG_GENERAL_KEY)}
-          className="group relative mx-auto mt-5 flex w-full max-w-[1280px] flex-col items-start gap-5 overflow-hidden rounded-[24px] p-6 text-left transition duration-300 hover:brightness-110 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7"
+          className="group relative mx-auto mt-8 flex w-full max-w-[1280px] flex-col items-start gap-5 overflow-hidden rounded-[28px] p-7 text-left transition duration-300 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-8"
           style={{
-            background: `linear-gradient(120deg, ${NAVY} 0%, #0E3E7A 100%)`,
+            background: NAVY,
             boxShadow: isCatalogGeneral
               ? "0 16px 36px -8px rgba(11,49,94,0.45)"
               : "0 12px 28px -10px rgba(11,49,94,0.32)",
             border: isCatalogGeneral ? `1.5px solid ${BEIGE_MAIN}` : "1.5px solid transparent",
           }}
         >
+          <span
+            aria-hidden
+            className="absolute inset-x-8 top-0 h-[3px] rounded-full"
+            style={{ background: BEIGE_MAIN }}
+          />
           <div className="flex items-center gap-4 sm:gap-5">
             <span
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
@@ -330,22 +343,21 @@ export default function CustomerClassSection({
             </div>
           </div>
 
-          {/* CTA en forma de botón discreto (ver segmentos-familias-
-              espaciado-animacion-boton.md, problema 3): el subrayado de
-              antes se leía como link de texto, no como algo clickeable —
-              outline sutil + fondo semitransparente + rounded-full lo lee
-              como botón real sin competir con el ícono/título/descripción
-              del banner (ya se había descartado la píldora dorada grande
-              original, ver transicion-fluida-boton-discreto.md). `w-fit`
-              fijo (sin `w-full` en mobile): al ser hijo de un flex-col con
+          {/* CTA como botón sólido real (ver segmentos-familias-espaciado-
+              animacion-boton.md, feedback de seguimiento): la versión
+              anterior (outline fantasma sobre el navy) seguía sin leerse
+              como botón — beige sólido + texto navy da el contraste que le
+              faltaba, mismo tratamiento de "botón secundario claro" que ya
+              usa el resto del sitio sobre fondos navy. `w-fit` fijo (sin
+              `w-full` en mobile): al ser hijo de un flex-col con
               `items-start`, un ancho automático ya lo deja pegado a la
               izquierda del tamaño de su propio contenido. */}
           <span
-            className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition duration-300 group-hover:gap-2.5 group-hover:bg-white/10"
-            style={{ color: BEIGE_MAIN, border: "1px solid rgba(205,187,159,0.55)", background: "rgba(255,255,255,0.05)" }}
+            className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-bold transition duration-300 group-hover:gap-2.5 group-hover:brightness-105"
+            style={{ color: NAVY, background: BEIGE_MAIN }}
           >
             {t("catalogGeneralCta")}
-            <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </span>
         </button>
 
@@ -410,7 +422,7 @@ export default function CustomerClassSection({
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="relative mx-auto flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] bg-white p-6 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
+            className="relative mx-auto mt-6 flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] bg-white p-6 sm:mt-8 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
             style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
             {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
@@ -448,7 +460,7 @@ export default function CustomerClassSection({
           id="customer-class-panel"
           role="tabpanel"
           aria-labelledby={`customer-class-tab-${activeSegment.key}`}
-          className="relative mx-auto grid min-h-[1000px] max-w-[1280px] grid-cols-1 overflow-hidden rounded-[30px] bg-white sm:min-h-[840px] md:min-h-[920px] md:grid-cols-[52%_48%] lg:min-h-[700px] xl:min-h-[640px]"
+          className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] grid-cols-1 overflow-hidden rounded-[30px] bg-white sm:mt-8 sm:min-h-[840px] md:min-h-[920px] md:grid-cols-[52%_48%] lg:min-h-[700px] xl:min-h-[640px]"
           style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
         >
           {/* Columna izquierda: fotografía real, sin overlay ni degradado —
