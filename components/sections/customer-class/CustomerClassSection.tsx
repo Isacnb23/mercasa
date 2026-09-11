@@ -330,20 +330,19 @@ export default function CustomerClassSection({
             </div>
           </div>
 
-          {/* CTA aligerado (ver transicion-fluida-boton-discreto.md y
-              unificar-fondo-marcas-y-boton-catalogo.md, problema 2): antes
-              era una píldora sólida dorada grande, que competía
-              visualmente con el ícono/título/descripción del banner —
-              ahora es solo texto + flecha, con un subrayado sutil en vez de
-              relleno, para que siga siendo claramente clickeable sin ser el
-              foco. `w-fit` fijo (sin `w-full` en mobile): al ser hijo de un
-              flex-col con `items-start`, un ancho automático ya lo deja
-              pegado a la izquierda del tamaño de su propio contenido —
-              forzarlo a 100% en mobile lo estiraba a todo el ancho del
-              banner y se veía tan grande como la píldora que reemplazó. */}
+          {/* CTA en forma de botón discreto (ver segmentos-familias-
+              espaciado-animacion-boton.md, problema 3): el subrayado de
+              antes se leía como link de texto, no como algo clickeable —
+              outline sutil + fondo semitransparente + rounded-full lo lee
+              como botón real sin competir con el ícono/título/descripción
+              del banner (ya se había descartado la píldora dorada grande
+              original, ver transicion-fluida-boton-discreto.md). `w-fit`
+              fijo (sin `w-full` en mobile): al ser hijo de un flex-col con
+              `items-start`, un ancho automático ya lo deja pegado a la
+              izquierda del tamaño de su propio contenido. */}
           <span
-            className="inline-flex w-fit shrink-0 items-center gap-1.5 border-b pb-0.5 text-[12.5px] font-medium transition duration-300 group-hover:gap-2.5"
-            style={{ color: BEIGE_MAIN, borderColor: "rgba(205,187,159,0.55)" }}
+            className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition duration-300 group-hover:gap-2.5 group-hover:bg-white/10"
+            style={{ color: BEIGE_MAIN, border: "1px solid rgba(205,187,159,0.55)", background: "rgba(255,255,255,0.05)" }}
           >
             {t("catalogGeneralCta")}
             <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
@@ -366,6 +365,20 @@ export default function CustomerClassSection({
             salida y recién DESPUÉS entraba la siguiente, con blanco de por
             medio). Ahora la tarjeta es estática y foto/contenido animan
             cada una por su cuenta adentro. */}
+        {/* Cross-fade entre "segmento" y "catálogo general" (ver segmentos-
+            familias-espaciado-animacion-boton.md, problema 2): antes el
+            `isCatalogGeneral ? A : B` intercambiaba las dos ramas de forma
+            abrupta (son subárboles de DOM distintos, sin nada que las
+            anime). AnimatePresence con `key` propia por rama detecta el
+            cambio y anima ambos sentidos (entrar a "Ver catálogo completo" y
+            volver con "Volver a segmentos") con el mismo fade+slide sutil
+            que ya usa el contenido interno de la columna de segmento más
+            abajo. `mode="wait"`: la rama saliente termina de desvanecerse
+            antes de montar la entrante — evita que ambas convivan un
+            instante con distinto contenido/alto (aunque el alto mínimo por
+            breakpoint es el mismo en las dos, el contenido interno no lo
+            es). */}
+        <AnimatePresence mode="wait" initial={false}>
         {isCatalogGeneral ? (
           /* Panel "Catálogo general" (ver refactor-segmento-mercado-
              catalogo-general.md, punto 3): grilla de familias en versión
@@ -374,19 +387,30 @@ export default function CustomerClassSection({
              ProductExplorer (modo `compact`) con los mismos datos/lógica de
              familias que ya usaba la sección "Productos" original.
 
-             Altura mínima + centrado vertical (ver catalogo-general-volver-
-             y-altura-fija.md, problema 2): mismos breakpoints de alto que
-             el panel de segmento de abajo (1000/840/920/700/640px, la suma
-             real de su foto + columna de contenido) para que alternar entre
-             ambas vistas no empuje el mural de marcas — como esta grilla de
-             familias es más corta que el panel de segmento, se centra
-             verticalmente (`flex flex-col justify-center`) en vez de
-             quedar pegada arriba con un hueco abajo. */
-          <div
+             Altura mínima (ver catalogo-general-volver-y-altura-fija.md,
+             problema 2): mismos breakpoints de alto que el panel de
+             segmento de abajo (1000/840/920/700/640px, la suma real de su
+             foto + columna de contenido) para que alternar entre ambas
+             vistas no empuje el mural de marcas. Encabezado (link "Volver
+             a segmentos" + título + descripción) pegado arriba, NO
+             centrado (ver segmentos-familias-espaciado-animacion-boton.md,
+             problema 1 — centrar todo el bloque dejaba un hueco vacío
+             enorme entre el banner de arriba y el título, porque esta
+             grilla es mucho más corta que el alto fijo). Solo la grilla de
+             familias (más corta que el encabezado + su propio contenido)
+             se centra dentro del espacio restante vía el `flex-1
+             justify-center` de abajo, así el panel se siente lleno y
+             equilibrado en vez de con todo el peso arriba o abajo. */
+          <motion.div
+            key="catalog-general"
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             id="customer-class-panel"
             role="tabpanel"
             aria-labelledby="customer-class-tab-catalog-general"
-            className="relative mx-auto flex min-h-[1000px] max-w-[1280px] flex-col justify-center overflow-hidden rounded-[30px] bg-white p-6 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
+            className="relative mx-auto flex min-h-[1000px] max-w-[1280px] flex-col overflow-hidden rounded-[30px] bg-white p-6 sm:min-h-[840px] sm:p-8 md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
             style={{ border: `1px solid ${BORDER}`, boxShadow: "0 40px 80px -20px rgba(11,49,94,0.14)" }}
           >
             {/* "Volver a segmentos" (ver catalogo-general-volver-y-altura-
@@ -410,12 +434,17 @@ export default function CustomerClassSection({
             <p className="mt-2 max-w-[560px] text-[14.5px] leading-[1.6]" style={{ color: TEXT_SECONDARY }}>
               {t("catalogGeneralDescription")}
             </p>
-            <div className="mt-6">
+            <div className="mt-8 flex flex-1 flex-col justify-center">
               <ProductExplorer families={families} compact />
             </div>
-          </div>
+          </motion.div>
         ) : (
-        <div
+        <motion.div
+          key="segment"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           id="customer-class-panel"
           role="tabpanel"
           aria-labelledby={`customer-class-tab-${activeSegment.key}`}
@@ -608,8 +637,9 @@ export default function CustomerClassSection({
               </motion.div>
             </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
         )}
+        </AnimatePresence>
       </Container>
 
       <SoftCurve position="bottom" flip />
