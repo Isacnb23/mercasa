@@ -414,6 +414,7 @@
         "mapCardTitle": "Grupo Inteca · San Francisco"
       }
     },
+    "direccionLabel": "Address",
     "telefonoTitle": "Main phone line",
     "correosTitle": "Official emails",
     "correosRh": "(HR)",
@@ -428,7 +429,9 @@
     "copiedFeedback": "Copied!",
     "googleRatingReviews": "reviews on Google",
     "googleRatingCta": "See reviews on Google",
-    "reviewsTitle": "What our clients say"
+    "reviewsTitle": "What our clients say",
+    "reviewsPrev": "Previous review",
+    "reviewsNext": "Next review"
   },
   "ContactMap": {
     "sites": {

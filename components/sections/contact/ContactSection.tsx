@@ -4,7 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Clock, Copy, ExternalLink, Mail, MapPin, Navigation, Phone, Quote, Star } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Copy,
+  ExternalLink,
+  Mail,
+  MapPin,
+  Navigation,
+  Phone,
+  Quote,
+  Star,
+} from "lucide-react";
 import Container from "../../ui/Container";
 import Reveal from "../../ui/Reveal";
 import SoftCurve from "../../ui/SoftCurve";
@@ -32,6 +45,12 @@ const MAP_NAVY = "#0B315E";
 // (CustomerClassSection.tsx, su propia constante BORDER) para no inventar
 // un valor nuevo.
 const MAP_BORDER = "#DDE3E8";
+// Fondo propio de la franja de reseñas (ver contacto-rediseno-distribucion-
+// referencia.md): distinto/contrastado del CARD_BG de la bandeja y del
+// blanco de la tarjeta de info — un beige más cálido/profundo (mismo tono
+// que BEIGE_LIGHT en CustomerClassSection.tsx) para que la franja se lea
+// como su propia zona sin necesitar una card blanca alrededor de la cita.
+const REVIEWS_BG = "#F1ECE4";
 
 const ContactMap = dynamic(() => import("./ContactMap"), {
   ssr: false,
@@ -75,6 +94,19 @@ export default function ContactSection() {
   const [activeSiteKey, setActiveSiteKey] = useState(contactSites[0].key);
   const activeSite = contactSites.find((s) => s.key === activeSiteKey) ?? contactSites[0];
   const reduceMotion = useReducedMotion();
+
+  // "Copiar ubicación" vive ahora junto a la dirección en la tarjeta de
+  // info (ver contacto-rediseno-distribucion-referencia.md) — antes era
+  // parte de la card flotante sobre el mapa, que la nueva referencia
+  // reemplaza por botones flotantes simples de Google Maps/Waze sin texto
+  // de dirección propio (la dirección ya vive acá, no hace falta
+  // repetirla sobre el mapa).
+  const [locationCopied, setLocationCopied] = useState(false);
+  const handleCopyLocation = async () => {
+    await navigator.clipboard.writeText(`${activeSite.address.lat}, ${activeSite.address.lng}`);
+    setLocationCopied(true);
+    window.setTimeout(() => setLocationCopied(false), 1800);
+  };
 
   // El mapa (MapLibre GL + capa 3D) es el chunk más pesado de la sección.
   // `dynamic(..., { ssr: false })` ya lo saca del bundle inicial, pero por sí
@@ -177,13 +209,19 @@ export default function ContactSection() {
             className="relative mx-auto mt-14 max-w-[1380px] rounded-[30px] p-3 sm:p-4"
             style={{ background: CARD_BG, boxShadow: "0 30px 70px rgba(16,37,63,0.14)" }}
           >
-            {/* ---------- Tarjeta 1: info de contacto ---------- */}
-            <div
-              className="rounded-[22px] bg-white p-8 sm:p-10 md:p-12"
-              style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
-            >
-              <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-14">
-                <div className="max-w-[380px] shrink-0">
+            {/* ---------- Fila 1: tarjeta de info (angosta) + mapa (resto
+                del ancho) ---------- Ver contacto-rediseno-distribucion-
+                referencia.md: vuelve a la distribución de 2 columnas lado a
+                lado (info angosta / mapa ancho) en vez del bloque horizontal
+                de ancho completo de la ronda anterior — más parecida a la
+                referencia visual que le gustó a Isaac. */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:min-h-[560px] lg:grid-cols-[380px_1fr]">
+              {/* Tarjeta de info de contacto */}
+              <div
+                className="flex flex-col gap-6 rounded-[22px] bg-white p-8"
+                style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+              >
+                <div>
                   <span
                     className="text-[12px] font-bold uppercase"
                     style={{ letterSpacing: "0.18em", color: NAVY }}
@@ -192,187 +230,212 @@ export default function ContactSection() {
                   </span>
                   <h3
                     className="mt-3 font-display"
-                    style={{ fontSize: "clamp(24px, 2.4vw, 32px)", lineHeight: 1.2, fontWeight: 700, color: NAVY }}
+                    style={{ fontSize: "clamp(22px, 2vw, 28px)", lineHeight: 1.2, fontWeight: 700, color: NAVY }}
                   >
                     {t("infoTitle")}
                   </h3>
-                  <p className="mt-3 text-[16px] leading-[1.6]" style={{ color: "#5C6B7D" }}>
-                    {t("infoDescription")}
-                  </p>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-6">
-                  {/* Selector de sedes: dos pills, mismo criterio visual que
-                      el toggle ES/EN (LocaleSwitcher.tsx) pero en la paleta
-                      navy de esta sección. */}
-                  <div
-                    role="tablist"
-                    aria-label={t("sitesSelectorLabel")}
-                    className="inline-flex w-fit items-center gap-1 rounded-full border p-1"
-                    style={{ borderColor: "rgba(11,47,99,0.14)", background: "rgba(11,47,99,0.04)" }}
-                  >
-                    {contactSites.map((s) => {
-                      const isActive = s.key === activeSiteKey;
-                      return (
-                        <button
-                          key={s.key}
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          onClick={() => setActiveSiteKey(s.key)}
-                          className="rounded-full px-4 py-2 text-[15px] font-semibold transition"
-                          style={{ color: isActive ? "#ffffff" : NAVY, background: isActive ? NAVY : "transparent" }}
-                        >
-                          {t(`sites.${s.key}.tabLabel`)}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Info horizontal: sede/teléfono/correos/horario uno al
-                      lado del otro (antes apilados con border-b entre cada
-                      uno) — misma info, ahora en franja en vez de columna. */}
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.div
-                        key={reduceMotion ? "static-sede" : activeSite.key}
-                        initial={reduceMotion ? false : { opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={reduceMotion ? undefined : { opacity: 0 }}
-                        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                {/* Selector de sedes: dos pills, mismo criterio visual que
+                    el toggle ES/EN (LocaleSwitcher.tsx) pero en la paleta
+                    navy de esta sección. */}
+                <div
+                  role="tablist"
+                  aria-label={t("sitesSelectorLabel")}
+                  className="inline-flex w-fit items-center gap-1 rounded-full border p-1"
+                  style={{ borderColor: "rgba(11,47,99,0.14)", background: "rgba(11,47,99,0.04)" }}
+                >
+                  {contactSites.map((s) => {
+                    const isActive = s.key === activeSiteKey;
+                    return (
+                      <button
+                        key={s.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => setActiveSiteKey(s.key)}
+                        className="rounded-full px-4 py-2 text-[15px] font-semibold transition"
+                        style={{ color: isActive ? "#ffffff" : NAVY, background: isActive ? NAVY : "transparent" }}
                       >
-                        {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
-                            inconsistente.md): reserva altura para el caso más
-                            largo (CEDI Central, 3 líneas físicas — dirección +
-                            línea 2 + código postal) para que la franja no
-                            cambie de tamaño cuando San Francisco, con menos
-                            datos, deja el resto del espacio vacío en vez de
-                            inventar un line2/CP falso solo para rellenar. */}
-                        <InfoRow
-                          icon={MapPin}
-                          title={t(`sites.${activeSite.key}.sedeTitle`)}
-                          contentClassName="min-h-[3lh]"
-                          horizontal
-                        >
-                          {activeSite.address.line1}
-                          {activeSite.address.line2 && (
-                            <>
-                              <br />
-                              {activeSite.address.line2}
-                              {activeSite.address.postalCode ? ` · CP ${activeSite.address.postalCode}` : ""}
-                            </>
-                          )}
-                        </InfoRow>
-                      </motion.div>
-                    </AnimatePresence>
-                    <InfoRow icon={Phone} title={t("telefonoTitle")} horizontal>
-                      <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
-                        {site.phone}
-                      </a>
-                    </InfoRow>
-                    <InfoRow icon={Mail} title={t("correosTitle")} horizontal>
-                      <a href={`mailto:${site.emails.comunicaciones}`} className="transition hover:text-[#075FD8]">
-                        {site.emails.comunicaciones}
-                      </a>
-                      <br />
-                      <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
-                        {site.emails.rh}
-                      </a>{" "}
-                      {t("correosRh")}
-                    </InfoRow>
-                    <InfoRow icon={Clock} title={t("horarioTitle")} horizontal>
-                      {t("horarioWeekdays")}
-                      <br />
-                      {t("horarioSaturday")}
-                    </InfoRow>
-                  </div>
+                        {t(`sites.${s.key}.tabLabel`)}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  {/* Dos botones en fila: WhatsApp sólido navy, Llamar ahora
-                      con borde navy — ambos tipo píldora. Ancho fijo en vez
-                      de flex-1 (antes ocupaban toda la columna angosta):
-                      acá la franja es mucho más ancha, flex-1 los hubiera
-                      estirado de más. */}
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <motion.a
-                      href={whatsappHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      whileTap={{ scale: 0.97 }}
-                      className="inline-flex h-[50px] items-center justify-center gap-2.5 rounded-full px-6 text-base font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:w-[230px]"
-                      style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
-                    >
-                      <WhatsAppIcon className="h-[18px] w-[18px]" />
-                      {t("whatsappCta")}
-                    </motion.a>
-                    <motion.a
-                      href={site.phoneHref}
-                      whileTap={{ scale: 0.97 }}
-                      className="inline-flex h-[50px] items-center justify-center gap-2.5 rounded-full bg-white px-6 text-base font-semibold transition duration-300 hover:-translate-y-0.5 hover:bg-[rgba(11,47,99,0.04)] sm:w-[230px]"
-                      style={{ border: `1.5px solid ${NAVY}`, color: NAVY }}
-                    >
-                      <Phone className="h-4 w-4" />
-                      {t("callCta")}
-                    </motion.a>
-                  </div>
+                {/* Nombre de la sede como sub-encabezado propio (ver
+                    contacto-rediseno-distribucion-referencia.md) — antes
+                    era el título del ítem de dirección; en la referencia
+                    va aparte, arriba de los datos. */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={reduceMotion ? "static-sede" : activeSite.key}
+                    initial={reduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={reduceMotion ? undefined : { opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col gap-5"
+                  >
+                    <p className="font-display text-[17px] font-bold" style={{ color: NAVY }}>
+                      {t(`sites.${activeSite.key}.sedeTitle`)}
+                    </p>
+
+                    {/* min-h-[3lh] (ver fix-mapa-roto-y-tarjeta-
+                        inconsistente.md): reserva altura para el caso más
+                        largo (CEDI Central, 3 líneas físicas) para que la
+                        tarjeta no cambie de tamaño al cambiar de sede. */}
+                    <InfoRow icon={MapPin} title={t("direccionLabel")} contentClassName="min-h-[3lh]">
+                      {activeSite.address.line1}
+                      {activeSite.address.line2 && (
+                        <>
+                          <br />
+                          {activeSite.address.line2}
+                          {activeSite.address.postalCode ? ` · CP ${activeSite.address.postalCode}` : ""}
+                        </>
+                      )}
+                      <br />
+                      <button
+                        type="button"
+                        onClick={handleCopyLocation}
+                        className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-medium transition hover:opacity-70"
+                        style={{ color: "#075FD8" }}
+                      >
+                        <Copy className="h-3 w-3" />
+                        {locationCopied ? t("copiedFeedback") : t("copyLocation")}
+                      </button>
+                    </InfoRow>
+                  </motion.div>
+                </AnimatePresence>
+
+                <InfoRow icon={Phone} title={t("telefonoTitle")}>
+                  <a href={site.phoneHref} className="transition hover:text-[#075FD8]">
+                    {site.phone}
+                  </a>
+                </InfoRow>
+                <InfoRow icon={Mail} title={t("correosTitle")}>
+                  <a href={`mailto:${site.emails.comunicaciones}`} className="transition hover:text-[#075FD8]">
+                    {site.emails.comunicaciones}
+                  </a>
+                  <br />
+                  <a href={`mailto:${site.emails.rh}`} className="transition hover:text-[#075FD8]">
+                    {site.emails.rh}
+                  </a>{" "}
+                  {t("correosRh")}
+                </InfoRow>
+                <InfoRow icon={Clock} title={t("horarioTitle")} last>
+                  {t("horarioWeekdays")}
+                  <br />
+                  {t("horarioSaturday")}
+                </InfoRow>
+
+                {/* WhatsApp: ancho completo del bloque, con flecha a la
+                    derecha (ver contacto-rediseno-distribucion-
+                    referencia.md) — antes compartía fila 50/50 con "Llamar
+                    ahora"; acá ese botón baja de categoría a link discreto,
+                    así que WhatsApp puede tomar todo el ancho. */}
+                <motion.a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  whileTap={{ scale: 0.97 }}
+                  className="mt-1 inline-flex h-[52px] w-full items-center justify-between rounded-full px-6 text-base font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
+                  style={{ background: NAVY, boxShadow: "0 12px 28px rgba(11,47,99,0.28)" }}
+                >
+                  <span className="inline-flex items-center gap-2.5">
+                    <WhatsAppIcon className="h-[18px] w-[18px]" />
+                    {t("whatsappCta")}
+                  </span>
+                  <ArrowRight className="h-4 w-4" />
+                </motion.a>
+
+                {/* "Llamar ahora": link discreto (ícono + texto + flecha),
+                    NO botón outline grande — a propósito con menos peso
+                    visual que WhatsApp, ver referencia. */}
+                <a
+                  href={site.phoneHref}
+                  className="group -mt-2 inline-flex w-fit items-center gap-2 text-[15px] font-semibold transition hover:opacity-75"
+                  style={{ color: NAVY }}
+                >
+                  <Phone className="h-4 w-4" />
+                  {t("callCta")}
+                  <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                </a>
+              </div>
+
+              {/* Mapa: ocupa el resto del ancho (ver contacto-rediseno-
+                  distribucion-referencia.md). Border propio por los 4 lados
+                  (ver contacto-recuperar-contraste-visual.md, punto 2 — el
+                  mapa "liberty" recoloreado quedó casi blanco) + su propio
+                  border-radius. */}
+              <div
+                className="relative min-h-[360px] overflow-hidden rounded-[22px] lg:min-h-0"
+                style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+              >
+                <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
+                  {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
+                  {/* Viñeta sutil para que el marco se sienta intencional aun si
+                      el mapa todavía está cargando teselas. */}
+                  <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
+
+                  {/* Botones flotantes Google Maps / Waze en la esquina
+                      inferior DERECHA (ver contacto-rediseno-distribucion-
+                      referencia.md — reemplaza la card navy con título +
+                      dirección + botones que vivía abajo a la izquierda; la
+                      dirección ya se muestra en la tarjeta de info de al
+                      lado, no hace falta repetirla acá). Recibe la sede
+                      activa (ver contacto-selector-sedes.md) para las
+                      coordenadas correctas. */}
+                  <MapActions t={t} site={activeSite} />
                 </div>
               </div>
             </div>
 
-            {/* ---------- Tarjeta 2: mapa, ahora a todo el ancho ----------
-                Ver contacto-testimonios-sin-card.md: las reseñas dejaron de
-                vivir en una tarjeta al costado del mapa (se veían forzadas
-                ahí, ver más abajo) — sin esa columna vecina, el mapa pasa a
-                ocupar el ancho completo de la bandeja en vez de compartirlo
-                a la mitad. Border propio por los 4 lados (ver contacto-
-                recuperar-contraste-visual.md, punto 2 — el mapa "liberty"
-                recoloreado quedó casi blanco) + su propio border-radius. */}
+            {/* ---------- Fila 2: reseñas, franja propia con fondo beige
+                distinto, SIN card blanca ---------- Ver contacto-rediseno-
+                distribucion-referencia.md: label lateral (rotado 90°) +
+                rating de Google a la izquierda, cita centrada, flechas de
+                navegación a la derecha — reemplaza el bloque centrado y
+                apilado de la ronda anterior (contacto-testimonios-sin-
+                card.md, que se mantiene en cuanto a "sin card blanca", solo
+                cambia la distribución). REVIEWS_BG (beige más profundo que
+                CARD_BG) le da a la franja su propio fondo, distinto del
+                blanco de la tarjeta de info y del CARD_BG de la bandeja. */}
             <div
-              className="relative mt-3 min-h-[360px] overflow-hidden rounded-[22px] sm:mt-4 lg:min-h-[440px]"
-              style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
+              className="mt-3 flex flex-col items-center gap-6 rounded-[22px] p-8 text-center sm:mt-4 sm:p-10 md:p-12 lg:flex-row lg:items-center lg:gap-10 lg:text-left"
+              style={{ background: REVIEWS_BG }}
             >
-              <div ref={mapHostRef} className="absolute inset-0 bg-[#F2F3F0]">
-                {mapInView ? <ContactMap site={activeSite} /> : <div className="absolute inset-0 bg-[#F2F3F0]" />}
-                {/* Viñeta sutil para que el marco se sienta intencional aun si
-                    el mapa todavía está cargando teselas. */}
-                <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_40px_12px_rgba(16,37,63,0.06)]" />
-
-                {/* Tarjeta flotante navy (ver reference/mapa-target.png,
-                    punto 3 — reemplaza la tarjeta blanca de la ronda
-                    anterior): título + dirección en navy, dos botones
-                    píldora del mismo tamaño (Google Maps / Waze) y un
-                    link secundario "Copiar ubicación". Recibe la sede
-                    activa (ver contacto-selector-sedes.md) para mostrar
-                    sus propios datos/coordenadas. */}
-                <MapInfoCard t={t} site={activeSite} />
-              </div>
-            </div>
-
-            {/* ---------- Reseñas: franja propia, SIN tarjeta ----------
-                Ver contacto-testimonios-sin-card.md: la versión anterior
-                (tarjeta blanca angosta al costado del mapa) se veía forzada
-                — muy poco ancho para una cita grande, compitiendo con el
-                mapa por espacio. Ahora vive directo sobre el beige de la
-                bandeja (CARD_BG), como franja centrada de ancho completo
-                debajo del mapa, apoyada solo en tipografía/espaciado/
-                iconos: línea decorativa arriba, título + rating de Google,
-                comillas grandes, cita, autor y estrellas — sin ningún
-                contenedor blanco. */}
-            <div className="mx-auto mt-10 max-w-[640px] pt-2 text-center sm:mt-12">
-              <span
-                aria-hidden
-                className="mx-auto block h-px w-14"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(11,47,99,0.28), transparent)" }}
-              />
-              <p
-                className="mt-6 font-display text-[16px] font-semibold"
-                style={{ color: NAVY }}
-              >
-                {t("reviewsTitle")}
-              </p>
-              <div className="mt-4 flex justify-center">
+              {/* Label lateral + rating: rotado 90° en desktop (columna
+                  angosta a la izquierda, como en la referencia); en mobile
+                  se acuesta horizontal arriba de la cita. */}
+              <div className="flex shrink-0 flex-col items-center gap-4 lg:h-full lg:items-start lg:justify-center">
+                {/* Label vertical en desktop (columna angosta a la
+                    izquierda, como en la referencia) — texto girado con
+                    `writing-mode` en vez de una imagen o SVG, así se sigue
+                    traduciendo como cualquier otro string. En mobile se
+                    acuesta horizontal arriba de la cita (elemento
+                    duplicado + `hidden`/`lg:hidden`, más simple y robusto
+                    que alternar `writing-mode` por breakpoint). */}
+                <p
+                  className="hidden text-[12px] font-bold uppercase lg:block lg:[writing-mode:vertical-rl] lg:rotate-180"
+                  style={{ letterSpacing: "0.18em", color: NAVY }}
+                >
+                  {t("reviewsTitle")}
+                </p>
+                <p
+                  className="text-[12px] font-bold uppercase lg:hidden"
+                  style={{ letterSpacing: "0.18em", color: NAVY }}
+                >
+                  {t("reviewsTitle")}
+                </p>
                 <GoogleRating t={t} />
               </div>
-              <ReviewsCarousel />
+
+              {/* Cita + autor, centrado, con las flechas de navegación al
+                  costado en vez de puntos (ver contacto-rediseno-
+                  distribucion-referencia.md). */}
+              <div className="min-w-0 flex-1">
+                <ReviewsCarousel t={t} />
+              </div>
             </div>
           </Reveal>
         </Container>
@@ -453,13 +516,13 @@ const GOOGLE_REVIEWS = [
 // Carrusel de reseñas (ver mural-reviews-carousel.md): reemplaza la grilla
 // estática de 2 tarjetas — con más reseñas reales (agregadas arriba) una
 // grilla se vuelve angosta/apretada; mostrar UNA a la vez, grande, con
-// crossfade automático + puntos de navegación abajo escala a cualquier
-// cantidad sin volver a tocar el layout. `useEffect` reprograma el
-// temporizador cada vez que cambia el índice (por auto-avance o click en
-// un punto), así un click manual no compite con el siguiente auto-avance.
+// crossfade automático escala a cualquier cantidad sin volver a tocar el
+// layout. `useEffect` reprograma el temporizador cada vez que cambia el
+// índice (por auto-avance o click en una flecha), así un click manual no
+// compite con el siguiente auto-avance.
 const REVIEW_ROTATE_MS = 6000;
 
-function ReviewsCarousel() {
+function ReviewsCarousel({ t }: { t: ReturnType<typeof useTranslations> }) {
   const [index, setIndex] = useState(0);
   const reduceMotion = useReducedMotion();
   const review = GOOGLE_REVIEWS[index];
@@ -472,78 +535,92 @@ function ReviewsCarousel() {
     return () => window.clearTimeout(id);
   }, [index, reduceMotion]);
 
+  const goPrev = () => setIndex((i) => (i - 1 + GOOGLE_REVIEWS.length) % GOOGLE_REVIEWS.length);
+  const goNext = () => setIndex((i) => (i + 1) % GOOGLE_REVIEWS.length);
+
   return (
-    // Sin card envolvente (ver contacto-testimonios-sin-card.md): la cita
-    // vivía antes en una tarjeta con fondo propio + sombra + borde — en el
-    // formato angosto de columna al lado del mapa se veía forzada. Ahora
-    // queda directo sobre el beige de la bandeja, apoyada solo en
-    // tipografía/espaciado: comillas grandes decorativas, cita grande en
-    // display italic, y una línea sutil de separación (border-t) antes de
-    // autor+estrellas en vez de un contenedor propio.
-    <div className="mx-auto mt-6">
-      <Quote
-        className="mx-auto h-12 w-12"
-        style={{ color: "rgba(11,47,99,0.14)" }}
-        fill="currentColor"
-        strokeWidth={0}
-        aria-hidden
-      />
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={reduceMotion ? "static-review" : index}
-          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <p
-            className="mx-auto -mt-2 max-w-[520px] font-display italic leading-snug"
-            style={{ fontSize: "clamp(22px, 2.6vw, 30px)", color: NAVY }}
+    // Sin card envolvente (ver contacto-testimonios-sin-card.md, mantenido
+    // en contacto-rediseno-distribucion-referencia.md): apoyada solo en
+    // tipografía/espaciado — comillas grandes decorativas, cita en display
+    // italic, línea sutil (border-t) antes de autor+estrellas. Alineación a
+    // la izquierda en desktop (mx-0, ver referencia: label a la izquierda,
+    // cita al lado, flechas a la derecha) y centrada en mobile (mx-auto,
+    // heredando el text-center del contenedor padre en esa franja). Flechas
+    // ← → reemplazan los puntos de la ronda anterior (ver referencia,
+    // punto "Flechas de navegación a la derecha para pasar entre reseñas").
+    <div className="flex w-full flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="min-w-0 flex-1">
+        <Quote
+          className="mx-auto h-10 w-10 lg:mx-0"
+          style={{ color: "rgba(11,47,99,0.16)" }}
+          fill="currentColor"
+          strokeWidth={0}
+          aria-hidden
+        />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={reduceMotion ? "static-review" : index}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
-            &ldquo;{review.quote}&rdquo;
-          </p>
-          <div
-            className="mx-auto mt-6 flex w-fit items-center gap-3 border-t pt-5"
-            style={{ borderColor: "rgba(11,47,99,0.14)" }}
-          >
-            {/* Avatar con la inicial del autor: sin foto real, pero le da
-                a cada reseña un ancla visual propia en vez de ser solo
-                texto plano — mismo tratamiento navy sólido que el resto
-                de los acentos de la sección. */}
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
-              style={{ background: NAVY }}
-              aria-hidden
+            <p
+              className="mx-auto -mt-1 max-w-[480px] font-display italic leading-snug lg:mx-0"
+              style={{ fontSize: "clamp(20px, 2.2vw, 26px)", color: NAVY }}
             >
-              {review.author.charAt(0)}
-            </span>
-            <div className="text-left">
-              <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
-                {review.author}
-              </p>
-              <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
-                {Array.from({ length: review.stars }).map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
-                ))}
+              &ldquo;{review.quote}&rdquo;
+            </p>
+            <div
+              className="mx-auto mt-5 flex w-fit items-center gap-3 border-t pt-4 lg:mx-0"
+              style={{ borderColor: "rgba(11,47,99,0.16)" }}
+            >
+              {/* Avatar con la inicial del autor: sin foto real, pero le da
+                  a cada reseña un ancla visual propia en vez de ser solo
+                  texto plano — mismo tratamiento navy sólido que el resto
+                  de los acentos de la sección. */}
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white"
+                style={{ background: NAVY }}
+                aria-hidden
+              >
+                {review.author.charAt(0)}
+              </span>
+              <div className="text-left">
+                <p className="text-[15px] font-semibold" style={{ color: NAVY }}>
+                  {review.author}
+                </p>
+                <div className="flex gap-0.5" style={{ color: "#F5B400" }}>
+                  {Array.from({ length: review.stars }).map((_, i) => (
+                    <Star key={i} className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {GOOGLE_REVIEWS.length > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-2">
-          {GOOGLE_REVIEWS.map((r, i) => (
-            <button
-              key={r.author}
-              type="button"
-              aria-label={`Reseña ${i + 1} de ${GOOGLE_REVIEWS.length}`}
-              aria-current={i === index}
-              onClick={() => setIndex(i)}
-              className="h-2 rounded-full transition-all duration-300"
-              style={{ width: i === index ? 22 : 8, background: i === index ? NAVY : "rgba(11,47,99,0.22)" }}
-            />
-          ))}
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label={t("reviewsPrev")}
+            onClick={goPrev}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5"
+            style={{ border: "1px solid rgba(11,47,99,0.14)", color: NAVY }}
+          >
+            <ChevronLeft className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            aria-label={t("reviewsNext")}
+            onClick={goNext}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5"
+            style={{ border: "1px solid rgba(11,47,99,0.14)", color: NAVY }}
+          >
+            <ChevronRight className="h-[18px] w-[18px]" />
+          </button>
         </div>
       )}
     </div>
@@ -556,7 +633,6 @@ function InfoRow({
   children,
   last = false,
   contentClassName,
-  horizontal = false,
 }: {
   icon: React.ElementType;
   title: string;
@@ -567,39 +643,12 @@ function InfoRow({
    * mínima fija y que la tarjeta no cambie de tamaño según cuántas líneas
    * de dirección tenga la sede activa. */
   contentClassName?: string;
-  /** Variante para la franja horizontal de contacto (ver gradiente-
-   * transiciones-secciones.md / rediseño mapa+reseñas lado a lado): icono
-   * arriba en vez de al costado, sin border-b entre ítems — cada uno vive
-   * en su propia celda de grid, así que el divisor de la versión apilada
-   * ya no aplica. */
-  horizontal?: boolean;
 }) {
-  if (horizontal) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: CARD_BG, border: "1px solid rgba(11,47,99,0.08)" }}
-        >
-          <Icon className="h-[18px] w-[18px]" style={{ color: NAVY }} />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[12.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>
-            {title}
-          </p>
-          <p className={cn("mt-1 break-words text-[15px] leading-[1.55]", contentClassName)} style={{ color: "#3A4A5F" }}>
-            {children}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex gap-4">
       <span
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white"
-        style={{ border: "1px solid rgba(11,47,99,0.08)" }}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: CARD_BG, border: "1px solid rgba(11,47,99,0.08)" }}
       >
         <Icon className="h-5 w-5" style={{ color: NAVY }} />
       </span>
@@ -626,75 +675,40 @@ function InfoRow({
 // portapapeles, con feedback visual breve ("¡Copiado!") en vez del label
 // normal. Componente aparte (no inline en ContactSection) porque necesita
 // su propio estado de "copiado" — subirlo al padre no aportaba nada.
-function MapInfoCard({ t, site: activeSite }: { t: ReturnType<typeof useTranslations>; site: ContactSite }) {
-  const [copied, setCopied] = useState(false);
-  const reduceMotion = useReducedMotion();
-
-  const handleCopyLocation = async () => {
-    await navigator.clipboard.writeText(`${activeSite.address.lat}, ${activeSite.address.lng}`);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  };
-
+// Botones flotantes Google Maps / Waze (ver contacto-rediseno-distribucion-
+// referencia.md) — reemplaza la card navy con título + dirección + botones
+// + "copiar ubicación" (MapInfoCard, ronda anterior): la referencia solo
+// pide los controles de navegación como botones flotantes en la esquina
+// inferior DERECHA, sin repetir texto de dirección (esa info ya vive en la
+// tarjeta de info de al lado) ni el link de copiar (se movió ahí también,
+// ver handleCopyLocation en ContactSection). Iconos circulares simples en
+// vez de píldoras con texto — mismo espíritu de la referencia, no copia
+// literal (el mockup no trae texto en estos botones).
+function MapActions({ t, site: activeSite }: { t: ReturnType<typeof useTranslations>; site: ContactSite }) {
   return (
-    <div
-      className="absolute bottom-4 left-4 z-10 w-[260px] p-4"
-      style={{ background: MAP_NAVY, borderRadius: "16px", boxShadow: "0 14px 32px -8px rgba(11,49,94,0.45)" }}
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={reduceMotion ? "static-popup" : activeSite.key}
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={reduceMotion ? undefined : { opacity: 0 }}
-          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-white" />
-            <p className="text-[14px] font-bold text-white" style={{ letterSpacing: "0.01em" }}>
-              {t(`sites.${activeSite.key}.mapCardTitle`)}
-            </p>
-          </div>
-          <p className="mt-1 text-[12.5px] leading-snug" style={{ color: "#B8C2D0" }}>
-            {activeSite.address.line1}
-          </p>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Dos píldoras del MISMO tamaño (flex-1 cada una) — a diferencia del
-          link de texto simple de la ronda anterior. */}
-      <div className="mt-3 flex gap-2">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${activeSite.address.lat},${activeSite.address.lng}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[12.5px] font-semibold transition hover:brightness-95"
-          style={{ color: MAP_NAVY }}
-        >
-          {t("openInGoogleMaps")}
-          <ExternalLink className="h-3 w-3" />
-        </a>
-        <a
-          href={`https://waze.com/ul?ll=${activeSite.address.lat},${activeSite.address.lng}&navigate=yes`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-full bg-white text-[12.5px] font-semibold transition hover:brightness-95"
-          style={{ color: MAP_NAVY }}
-        >
-          {t("openInWaze")}
-          <Navigation className="h-3 w-3" />
-        </a>
-      </div>
-
-      <button
-        type="button"
-        onClick={handleCopyLocation}
-        className="mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] font-medium transition hover:opacity-80"
-        style={{ color: "#B8C2D0" }}
+    <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+      <a
+        href={`https://www.google.com/maps/dir/?api=1&destination=${activeSite.address.lat},${activeSite.address.lng}`}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={t("openInGoogleMaps")}
+        title={t("openInGoogleMaps")}
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5 hover:brightness-95"
+        style={{ color: MAP_NAVY, boxShadow: "0 10px 24px -6px rgba(11,49,94,0.45)" }}
       >
-        <Copy className="h-3 w-3" />
-        {copied ? t("copiedFeedback") : t("copyLocation")}
-      </button>
+        <ExternalLink className="h-[18px] w-[18px]" />
+      </a>
+      <a
+        href={`https://waze.com/ul?ll=${activeSite.address.lat},${activeSite.address.lng}&navigate=yes`}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={t("openInWaze")}
+        title={t("openInWaze")}
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-white transition hover:-translate-y-0.5 hover:brightness-95"
+        style={{ color: MAP_NAVY, boxShadow: "0 10px 24px -6px rgba(11,49,94,0.45)" }}
+      >
+        <Navigation className="h-[18px] w-[18px]" />
+      </a>
     </div>
   );
 }

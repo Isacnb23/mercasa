@@ -414,6 +414,7 @@
         "mapCardTitle": "Grupo Inteca · San Francisco"
       }
     },
+    "direccionLabel": "Dirección",
     "telefonoTitle": "Teléfono central",
     "correosTitle": "Correos oficiales",
     "correosRh": "(RH)",
@@ -428,7 +429,9 @@
     "copiedFeedback": "¡Copiado!",
     "googleRatingReviews": "reseñas en Google",
     "googleRatingCta": "Ver reseñas en Google",
-    "reviewsTitle": "Lo que dicen nuestros clientes"
+    "reviewsTitle": "Lo que dicen nuestros clientes",
+    "reviewsPrev": "Reseña anterior",
+    "reviewsNext": "Siguiente reseña"
   },
   "ContactMap": {
     "sites": {
