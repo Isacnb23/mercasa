@@ -130,7 +130,18 @@ export default function ContactSection() {
         // quedar tapado por el header (~96px reales) pero con poco aire
         // visual arriba. Mismo valor de pt que el resto de las secciones
         // para un espaciado parejo; pb se deja igual, no es el problema acá.
-        className="relative flex min-h-dvh scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-24 pt-[130px] md:pb-28 md:pt-[150px]"
+        // Sin min-h-dvh (feedback: "el mapa se siente muy grande, da más
+        // scroll de la cuenta"): esta sección ya tiene mucho contenido
+        // propio (info + mapa + reseñas) que de sobra supera un viewport
+        // completo — forzar además un piso de 100dvh solo agregaba aire
+        // vacío de más. pb bajado de 24/28 a 16/20 (mismo feedback, segunda
+        // vuelta — el mapa no era lo único voluminoso, todo el bloque de
+        // abajo hasta el Footer se sentía largo): esta sección ya es la
+        // más alta del sitio por naturaleza (info + mapa + reseñas juntos),
+        // así que no necesita el mismo pb generoso que secciones más
+        // cortas — es la última antes del Footer, no hace falta tanto aire
+        // de salida.
+        className="relative flex scroll-mt-[-8px] flex-col justify-center overflow-hidden pb-16 pt-[130px] md:pb-20 md:pt-[150px]"
         style={{ background: "#FFFFFF" }}
       >
         {/* Sin degradado de entrada propio acá (ver afinar-transicion-
@@ -190,11 +201,11 @@ export default function ContactSection() {
               `gap-4` entre ambos bloques ahora vive en el propio grid (ya
               no hay padding de "bandeja" alrededor). */}
           <Reveal
-            className="relative mx-auto mt-14 grid max-w-[1380px] grid-cols-1 gap-3 sm:gap-4 lg:min-h-[560px] lg:grid-cols-[380px_1fr]"
+            className="relative mx-auto mt-10 grid max-w-[1380px] grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[380px_1fr]"
           >
             {/* Tarjeta de info de contacto */}
               <div
-                className="flex flex-col gap-6 rounded-[22px] bg-white p-8"
+                className="flex flex-col gap-5 rounded-[22px] bg-white p-7"
                 style={{ border: "1px solid rgba(11,47,99,0.06)", boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
               >
                 <div>
@@ -250,7 +261,7 @@ export default function ContactSection() {
                     animate={{ opacity: 1 }}
                     exit={reduceMotion ? undefined : { opacity: 0 }}
                     transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex flex-col gap-5"
+                    className="flex flex-col gap-4"
                   >
                     <p className="font-display text-[17px] font-bold" style={{ color: NAVY }}>
                       {t(`sites.${activeSite.key}.sedeTitle`)}
@@ -346,7 +357,18 @@ export default function ContactSection() {
                   distribucion-referencia.md). Border propio por los 4 lados
                   (ver contacto-recuperar-contraste-visual.md, punto 2 — el
                   mapa "liberty" recoloreado quedó casi blanco) + su propio
-                  border-radius. */}
+                  border-radius. Se estira a la altura real de la tarjeta de
+                  info al lado (grid con align-items: stretch por defecto,
+                  sin min-height propio en ninguna de las dos columnas) —
+                  un intento anterior de darle un alto fijo más bajo,
+                  independiente de la info (ver historial), no era lo
+                  pedido: el feedback fue "el mapa dámelo igual" (mismo
+                  tamaño relativo a la info) y ajustar el zoom real del
+                  mapa en vez de la caja — ver ContactMap.tsx. El bloque
+                  se siente más corto en conjunto porque se achicaron los
+                  márgenes/paddings alrededor (mt-14→mt-10, pb-24/28→
+                  pb-16/20 en la sección, ver más arriba), no por reducir
+                  el mapa en sí. */}
               <div
                 className="relative min-h-[360px] overflow-hidden rounded-[22px] lg:min-h-0"
                 style={{ border: `1px solid ${MAP_BORDER}`, boxShadow: "0 16px 40px -22px rgba(16,37,63,0.35)" }}
@@ -540,15 +562,21 @@ function InfoRow({
   contentClassName?: string;
 }) {
   return (
-    <div className="flex gap-4">
+    // Ícono más chico (h-10, antes h-12) y sin py-3.5 propio en el
+    // contenido (feedback: "entre la información y el mapa estaba muy
+    // grande, mucho scroll para llegar a reseñas/footer") — el espaciado
+    // entre filas ya lo da el `gap` del contenedor padre (ver
+    // ContactSection); tener padding vertical ACÁ ADEMÁS de ese gap
+    // duplicaba el aire entre cada dato de contacto.
+    <div className="flex gap-3.5">
       <span
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
         style={{ background: CARD_BG, border: "1px solid rgba(11,47,99,0.08)" }}
       >
-        <Icon className="h-5 w-5" style={{ color: NAVY }} />
+        <Icon className="h-[18px] w-[18px]" style={{ color: NAVY }} />
       </span>
       <div
-        className={cn("min-w-0 flex-1 py-3.5", !last && "border-b")}
+        className={cn("min-w-0 flex-1", !last && "border-b pb-3.5")}
         style={!last ? { borderColor: "rgba(11,47,99,0.14)" } : undefined}
       >
         <p className="text-[12.5px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: NAVY }}>

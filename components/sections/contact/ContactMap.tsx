@@ -163,16 +163,16 @@ export default function ContactMap({ site }: { site: ContactSite }) {
       container: containerRef.current,
       style: LIBERTY_STYLE_URL,
       center: [site.address.lng, site.address.lat],
-      // zoom 16 (antes 17, ver mapa-zoom-inicial.md): a zoom 17 el pin
-      // quedaba muy pegado/cerca, sin aire alrededor — un nivel menos deja
-      // el marcador bien centrado con contexto real (calles y cuadras
-      // cercanas) sin perder la referencia inmediata de la zona. Un único
-      // valor de zoom vive en el mapa (no se resetea por sede): el efecto
-      // de abajo que mueve el mapa al cambiar de sede solo cambia `center`
-      // vía flyTo/jumpTo, así que este mismo valor aplica igual a las dos.
+      // zoom 15 (antes 16, y 17 originalmente — ver mapa-zoom-inicial.md):
+      // un nivel menos de zoom (feedback directo, no el tamaño de la caja
+      // del mapa) para que se vea más contexto alrededor del pin sin quedar
+      // tan "pegado" a la cuadra inmediata. Un único valor de zoom vive en
+      // el mapa (no se resetea por sede): el efecto de abajo que mueve el
+      // mapa al cambiar de sede solo cambia `center` vía flyTo/jumpTo, así
+      // que este mismo valor aplica igual a las dos.
       // pitch/bearing en 0 (ver comentario arriba): vista plana de arriba,
       // orientada al norte, tipo mapa impreso.
-      zoom: 16,
+      zoom: 15,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -288,8 +288,24 @@ export default function ContactMap({ site }: { site: ContactSite }) {
       map.jumpTo({ center: [initial.address.lng, initial.address.lat] });
     });
 
-    map.on("error", () => {
-      if (!loaded) setFailed(true);
+    // Antes esto marcaba `failed` (→ fallback a Google) ante CUALQUIER
+    // evento "error", sin loguear nada — causa raíz probable del reporte
+    // "veo el mapa genérico de Google en vez del nuestro" (ver feedback):
+    // MapLibre dispara "error" por fallos PARCIALES todo el tiempo (un
+    // tile puntual que no resuelve, un glifo/sprite que tarda, un 429/500
+    // pasajero del tile server de terceros openfreemap.org), no solo por
+    // fallas fatales que de verdad impiden que el mapa cargue — y la
+    // mayoría de esos fallos parciales no le impiden al mapa terminar de
+    // cargar bien igual unos segundos después. Con el código anterior, un
+    // solo evento de esos tiraba la toalla al instante, saltándose por
+    // completo el fail-safe de 16s de arriba (pensado justamente para
+    // tolerar redes lentas/inestables) — el usuario terminaba viendo el
+    // fallback de Google aunque el mapa personalizado hubiera cargado bien
+    // con un poco más de paciencia. Ahora solo se loguea para diagnóstico;
+    // la única señal real de fallo es que "load" nunca dispare dentro de
+    // esos 16s (el timer de arriba), no un error aislado.
+    map.on("error", (e) => {
+      console.warn("[ContactMap] evento de error de MapLibre (no fatal, se sigue esperando el load)", e.error ?? e);
     });
 
     // Fix mapa-mobile-no-carga.md: en mobile el contenedor todavía puede
