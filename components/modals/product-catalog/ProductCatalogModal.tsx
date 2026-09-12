@@ -7,6 +7,7 @@ import HTMLFlipBook from "react-pageflip";
 import { useTranslations } from "next-intl";
 import {
   Boxes,
+  Check,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -1692,6 +1693,15 @@ function ProductCard({
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
   const { addItem } = useCart();
+  // Feedback al agregar desde la grilla (ver catalogo-feedback-agregar-
+  // producto.md): antes el producto se agregaba en silencio, sin ninguna
+  // confirmación visual acá (a diferencia del detalle, que ya mostraba
+  // "¡Agregado!" en el botón — ver justAdded en ProductDetailModal.tsx,
+  // mismo patrón). El pulso del contador del ícono del carrito en la barra
+  // (CartButton.tsx) ya viene gratis: su badge se remonta con `key=
+  // {totalCount}` en cada cambio, así que cualquier addItem (acá o en el
+  // detalle) ya lo dispara sin tocar ese componente.
+  const [justAdded, setJustAdded] = useState(false);
   // Cortar la propagación en fase de CAPTURA, no alcanza con
   // stopPropagation en el onClick normal (ver catalogo-detalle-fix-imagen-
   // click.md, punto 2): react-pageflip (la librería `page-flip`) engancha
@@ -1740,13 +1750,19 @@ function ProductCard({
         onClick={(e) => {
           e.stopPropagation();
           addItem(product, 1);
+          setJustAdded(true);
+          setTimeout(() => setJustAdded(false), 1400);
         }}
         aria-label={tCart("quickAddAria", { name: product.name })}
-        title={tCart("addToCartCta")}
-        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-85"
-        style={{ background: ACCENT }}
+        title={justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}
+        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all duration-300 hover:opacity-85"
+        style={{ background: justAdded ? INK : ACCENT, transform: justAdded ? "scale(1.18)" : "scale(1)" }}
       >
-        <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+        {justAdded ? (
+          <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+        ) : (
+          <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+        )}
       </button>
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
