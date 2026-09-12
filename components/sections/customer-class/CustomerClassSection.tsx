@@ -469,8 +469,25 @@ export default function CustomerClassSection({
             panel. Un hijo de grid en la misma celda SÍ participa del
             cálculo de alto de su fila — el wrapper crece al alto del panel
             más alto de los dos superpuestos en cada instante, sin dejar de
-            superponerse visualmente para el crossfade. */}
-        <div className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]">
+            superponerse visualmente para el crossfade.
+
+            `layout` acá (ver feedback: "al volver de Catálogo general al
+            segmento, la tarjeta se ve un toque más chica/rara") — el panel
+            de Catálogo general (contenido variable según cuántas
+            categorías/familias entren) mide bastante más alto que el de un
+            segmento (alto FIJO por breakpoint, ver comentario más abajo:
+            640-1000px según el caso). Sin `layout`, cuando el hijo más alto
+            (Catálogo general) se desmonta, el grid recalcula su alto de
+            fila de golpe en el mismo frame — un salto duro de ~100px que
+            se siente como si la tarjeta "encogiera" de repente al volver.
+            `layout` hace que Framer Motion anime ESE cambio de alto del
+            contenedor con la misma curva que ya usan las transiciones de
+            entrada/salida de los paneles, en vez de un corte seco. */}
+        <motion.div
+          layout={!reduceMotion}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
+        >
         <AnimatePresence initial={false}>
         {isCatalogGeneral ? (
           /* Panel "Catálogo general" (ver refactor-segmento-mercado-
@@ -735,7 +752,7 @@ export default function CustomerClassSection({
         </motion.div>
         )}
         </AnimatePresence>
-        </div>
+        </motion.div>
       </Container>
 
       <SoftCurve position="bottom" flip />
