@@ -90,7 +90,7 @@ export default function ProductDetailModal({
       // quedaba montado en el DOM con opacidad correcta pero VISUALMENTE
       // detrás del catálogo (confirmado con captura real, no solo revisando
       // el código — esto ya había fallado antes con este mismo componente).
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-8"
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 sm:p-8"
       style={{ background: "rgba(8,20,40,0.55)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

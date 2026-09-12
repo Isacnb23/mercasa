@@ -8,11 +8,13 @@ import { useTranslations } from "next-intl";
 import {
   Boxes,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   HeartHandshake,
   Info,
+  ListFilter,
   Package,
   Plus,
   ShieldCheck,
@@ -58,9 +60,9 @@ const SEGMENT_COVER_PHOTOS: Record<string, string> = {
 // siguen con DECORATIVE_PHOTOS rotando.
 import alimentosLacteosYSucedaneos from "@/public/Catalogo/Alimentos/lacteos-y-sucedaneos.png";
 import alimentosConfiteriaYSnacks from "@/public/Catalogo/Alimentos/confiteria-y-snacks.png";
-import alimentosPanaderiaReposteriaGalletas from "@/public/Catalogo/Alimentos/panaderia-reposteria-galletas.png";
+import alimentosPanaderiaReposteriaGalletas from "@/public/Catalogo/Alimentos/panaderia-reposteria-y-galletas.png";
 import alimentosEnlatados from "@/public/Catalogo/Alimentos/enlatados.png";
-import alimentosPastasSalsasSopas from "@/public/Catalogo/Alimentos/pastas-salsas-sopas.png";
+import alimentosPastasSalsasSopas from "@/public/Catalogo/Alimentos/pastas-salsas-y-sopas.png";
 import alimentosGranos from "@/public/Catalogo/Alimentos/granos.png";
 import alimentosGrasasYAceites from "@/public/Catalogo/Alimentos/grasas-y-aceites.png";
 import alimentosCongelados from "@/public/Catalogo/Alimentos/congelados.png";
@@ -164,12 +166,11 @@ function normalizeSubFamilyKey(value: string): string {
 // familias (ver conectar-imagenes-subfamilias-alimentos.md y
 // conectar-imagenes-subfamilias-bebidas.md) — con Bebidas confirmado que
 // alcanza con agregar entradas acá, sin tocar la lógica de lookup. A
-// propósito no es una función de slugify automática: "Panadería
-// Repostería y galletas" y "Pastas Salsas y Sopas" tienen nombre de
-// archivo más corto (sin el "y" de en medio) que el slug que generaría
-// una conversión automática, así que un diccionario explícito evita ese
-// desajuste — mismo motivo por el que "Bebidas en polvo" apunta a un
-// archivo con "-v2" en el nombre real, no al que se había propuesto.
+// propósito no es una función de slugify automática: el nombre de
+// archivo real no siempre coincide con el slug que generaría una
+// conversión automática (ej. "Bebidas en polvo" apunta a un archivo con
+// "-v2" en el nombre real, no al que se había propuesto), así que un
+// diccionario explícito evita ese desajuste.
 const SUBFAMILY_PHOTOS: Record<string, StaticImageData> = {
   [normalizeSubFamilyKey("Lácteos y Sucedáneos")]: alimentosLacteosYSucedaneos,
   [normalizeSubFamilyKey("Confitería y Snacks")]: alimentosConfiteriaYSnacks,
@@ -295,24 +296,52 @@ function buildPrintPages(family: HierarchyNode): PrintPage[] {
   return pages;
 }
 
+// Busca la sub-familia real (con su `name` para SUBFAMILY_PHOTOS/foto
+// genérica) que contiene esta categoría, recorriendo el árbol COMPLETO
+// (allFamilies) — filterCategories solo trae la categoría suelta, sin el
+// padre, así que hay que volver a subir el árbol para encontrarlo.
+function findSubFamilyForCategory(allFamilies: HierarchyNode[], categoryId: string): HierarchyNode | null {
+  for (const family of allFamilies) {
+    for (const subFamily of family.children) {
+      if (subFamily.children.some((category) => category.id === categoryId)) return subFamily;
+    }
+  }
+  return null;
+}
+
 // Modo "filtrado" (ver customer-class-animacion-filtro.md, punto 2): a
 // diferencia de buildBookPages/buildPrintPages (que recorren TODAS las
 // sub-familias/categorías de UNA Familia), estas dos arman el libro/PDF a
 // partir de una lista puntual de categorías ya resueltas — puede cruzar
 // varias Familias distintas a la vez (ej. las 5 categorías de "Supermercados
-// y cadenas" en Customer Class viven en 4 Familias distintas). Sin
-// divisores de sub-familia: son categorías sueltas elegidas a mano, no un
-// recorrido completo de una sub-familia. Reusa el resto del componente
-// (portada, header, pie, impresión) sin tocarlo — ver `displayFamily` más
-// abajo, que es lo único que cambia para reflejar el segmento en vez de una
-// Familia real.
+// y cadenas" en Customer Class viven en 4 Familias distintas). SÍ lleva
+// divisores de sub-familia (con la misma foto real que el modo normal, ver
+// catalogo-custumer-sin-portadas.md) — se insertan cada vez que la
+// sub-familia real de la categoría (encontrada con findSubFamilyForCategory)
+// cambia respecto a la anterior, aunque las categorías del segmento salten
+// entre Familias distintas. Reusa el resto del componente (portada, header,
+// pie, impresión) sin tocarlo — ver `displayFamily` más abajo, que es lo
+// único que cambia para reflejar el segmento en vez de una Familia real.
 function buildFilteredBookPages(
-  filterCategories: { category: HierarchyNode }[]
+  filterCategories: { category: HierarchyNode }[],
+  allFamilies: HierarchyNode[],
+  photoOffset: number
 ): BookPage[] {
   const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
+  let lastSubFamilyId: string | null = null;
+  let dividerSlot = 0;
   for (const { category } of filterCategories) {
     const products = category.products ?? [];
     if (products.length === 0) continue;
+    const subFamily = findSubFamilyForCategory(allFamilies, category.id);
+    if (subFamily && subFamily.id !== lastSubFamilyId) {
+      pages.push({
+        kind: "subfamily-divider",
+        subFamily,
+        photo: photoForSubFamily(subFamily.name, photoOffset, dividerSlot++),
+      });
+      lastSubFamilyId = subFamily.id;
+    }
     const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
     for (let part = 0; part < totalParts; part++) {
       pages.push({
@@ -498,8 +527,11 @@ export default function ProductCatalogModal({
 
   const photoOffset = useMemo(() => photoOffsetFor(displayFamily.id), [displayFamily.id]);
   const bookPages = useMemo(
-    () => (isFiltered ? buildFilteredBookPages(filterCategories!) : buildBookPages(family, photoOffset)),
-    [isFiltered, filterCategories, family, photoOffset]
+    () =>
+      isFiltered
+        ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset)
+        : buildBookPages(family, photoOffset),
+    [isFiltered, filterCategories, family, photoOffset, allFamilies]
   );
   const totalPages = bookPages.length;
 
@@ -781,6 +813,17 @@ export default function ProductCatalogModal({
     return found;
   }, [categoryPageIndex, currentPage]);
 
+  // Nombre a mostrar en el botón del menú "Ir a categoría" — cae a la
+  // primera categoría de la primera sección si todavía no hay una activa
+  // (arranque en la portada, antes de cualquier flip).
+  const activeCategoryName = useMemo(() => {
+    for (const { categories } of categorySections) {
+      const found = categories.find((category) => category.id === activeCategoryId);
+      if (found) return found.name;
+    }
+    return categorySections[0]?.categories[0]?.name ?? "";
+  }, [categorySections, activeCategoryId]);
+
   const printPages = useMemo(
     () => (isFiltered ? buildFilteredPrintPages(filterCategories!) : buildPrintPages(family)),
     [isFiltered, filterCategories, family]
@@ -837,11 +880,54 @@ export default function ProductCatalogModal({
   // desde la portada.
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
 
+  // Menú "Ir a categoría" (ver mejora-dropdown-categoria.md) — reemplaza el
+  // <select> nativo (cuya lista desplegada la dibuja el sistema operativo,
+  // fuera del alcance de cualquier CSS) por un popover propio con el mismo
+  // control total de estilo que ya tiene el del Glosario. Mutuamente
+  // excluyente con el glosario (abrir uno cierra el otro) para no apilar dos
+  // popovers a la vez en el mismo header angosto.
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+
   // Detalle ampliado de un producto (ver catalogo-detalle-producto.md) —
   // feature nuevo, independiente del flipbook: no toca `currentPage` al
   // abrir/cerrar, así que cerrar el detalle deja al usuario exactamente en
   // la misma página/categoría de antes. `selectedProduct` null = cerrado.
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+
+  // Rueda del mouse pasa de página (ver catalogo-scroll-no-funciona.md,
+  // parte 2): react-pageflip solo entiende click/arrastre/swipe táctil —
+  // nunca `wheel` — así que sobre el libro, scrollear con el mouse no hacía
+  // NADA (se sentía "roto" en desktop, donde es el gesto más natural para
+  // pasar de página). `closest(".overflow-y-auto")` deja pasar el scroll
+  // SIN pasar de página mientras ese contenedor interno (la grilla de
+  // productos, o la lista de familias de "Nuestro Portafolio") todavía
+  // tenga a dónde scrollear en esa dirección — recién al llegar a su tope
+  // un scroll más pasa la página, como se esperaría de una revista real.
+  // Cooldown de 650ms (un poco menos que `flippingTime={700}` del libro,
+  // ver más abajo) evita que una sola rueda de mouse/trackpad (que dispara
+  // muchos eventos `wheel` seguidos) dispare varios flips de un tirón;
+  // `Math.abs(deltaY) < 12` ignora el ruido de eventos wheel minúsculos que
+  // algunos trackpads emiten en reposo.
+  const lastWheelFlipRef = useRef(0);
+  const handleBookWheel = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (!isBookReady || selectedProduct || isCategoryMenuOpen || isGlossaryOpen) return;
+      const scrollable = (e.target as HTMLElement).closest?.(".overflow-y-auto") as HTMLElement | null;
+      if (scrollable) {
+        const scrollingDown = e.deltaY > 0;
+        const atTop = scrollable.scrollTop <= 0;
+        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+        if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) return;
+      }
+      if (Math.abs(e.deltaY) < 12) return;
+      const now = Date.now();
+      if (now - lastWheelFlipRef.current < 650) return;
+      lastWheelFlipRef.current = now;
+      if (e.deltaY > 0) bookRef.current?.pageFlip()?.flipNext();
+      else bookRef.current?.pageFlip()?.flipPrev();
+    },
+    [isBookReady, selectedProduct, isCategoryMenuOpen, isGlossaryOpen]
+  );
 
   // ESC cierra el detalle de producto si está abierto (máxima prioridad —
   // está ENCIMA de todo lo demás); si no, el glosario si está abierto; si
@@ -860,6 +946,10 @@ export default function ProductCatalogModal({
           setIsGlossaryOpen(false);
           return;
         }
+        if (isCategoryMenuOpen) {
+          setIsCategoryMenuOpen(false);
+          return;
+        }
         handleClose();
       } else if (e.key === "ArrowRight") {
         if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipNext();
@@ -869,7 +959,7 @@ export default function ProductCatalogModal({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, isBookReady, isGlossaryOpen, selectedProduct]);
+  }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct]);
 
   return createPortal(
     <>
@@ -883,10 +973,23 @@ export default function ProductCatalogModal({
           className={`catalog-panel${isClosing ? " is-closing" : ""}`}
           style={{ background: PAGE_BG, ...(panelMaxWidth != null ? { maxWidth: panelMaxWidth } : {}) }}
         >
-          {/* Barra superior: identidad de familia + ir a categoría + PDF + cerrar. */}
+          {/* Barra superior: identidad de familia + ir a categoría + PDF +
+              cerrar. `z-20` (no solo `relative`, ver mejora-dropdown-
+              categoria.md): sin un z-index EXPLÍCITO acá, este header no
+              forma su propio contexto de apilamiento — sus popovers
+              absolutos (el menú de categoría, el glosario) terminaban
+              compitiendo cada uno por su cuenta contra las páginas del
+              libro de abajo (que react-pageflip sí les pone z-index propio
+              mientras pasan/asientan), así que un clic sobre una opción del
+              menú a veces le llegaba al libro de atrás en vez de al popover
+              (confirmado: el libro avanzaba una página en vez de saltar a
+              la categoría elegida). Con z-index explícito en el header, TODO
+              lo que cuelga de él (incluida esta barra y sus popovers) se
+              compara como un solo bloque contra `.catalog-shell` — gana
+              siempre, sin importar el z-index interno de las páginas. */}
           <div
             ref={headerRef}
-            className="catalog-header relative flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
+            className="catalog-header relative z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
             style={{ borderBottom: `1px solid ${RULE}` }}
           >
             <div className="flex items-center gap-3">
@@ -903,33 +1006,103 @@ export default function ProductCatalogModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2">
-                <span className="hidden text-[13px] font-medium sm:inline" style={{ color: MUTED }}>
-                  {t("catalog.jumpToCategoryLabel")}
-                </span>
-                <select
-                  value={activeCategoryId ?? ""}
-                  onChange={(e) => {
-                    const index = categoryPageIndex.get(e.target.value);
-                    if (index != null) bookRef.current?.pageFlip()?.flip(index);
+            <div className="flex items-center gap-2">
+              {/* Menú "ir a categoría" (ver mejora-dropdown-categoria.md) —
+                  popover propio en vez de un <select> nativo: la lista
+                  desplegada de un <select> la dibuja el sistema operativo, así
+                  que ni `appearance-none` ni ninguna clase de Tailwind le
+                  cambian una sola línea al panel abierto (solo al control
+                  cerrado) — quedaba con fuente/colores default del SO por más
+                  bonito que se viera cerrado. Mismo patrón de popover que el
+                  Glosario de abajo (backdrop invisible a pantalla completa +
+                  panel posicionado), pero anclado a la IZQUIERDA de este chip
+                  (no al borde derecho del header) porque es el primer control
+                  de la fila. */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCategoryMenuOpen((current) => !current);
+                    setIsGlossaryOpen(false);
                   }}
                   disabled={!isBookReady}
+                  aria-haspopup="listbox"
+                  aria-expanded={isCategoryMenuOpen}
                   aria-label={t("catalog.jumpToCategoryLabel")}
-                  className="max-w-[130px] truncate rounded-none border-0 border-b bg-transparent py-1 text-[14px] font-semibold outline-none disabled:opacity-40 sm:max-w-[220px]"
-                  style={{ borderColor: RULE, color: ACCENT }}
+                  className="flex items-center gap-1.5 rounded-full border py-1.5 pl-3 pr-2.5 transition hover:shadow-[0_1px_6px_rgba(16,37,63,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ borderColor: RULE, background: "#F7FAFD" }}
                 >
-                  {categorySections.map(({ subFamily, categories }) => (
-                    <optgroup key={subFamily.id} label={subFamily.name}>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
+                  <ListFilter className="h-3.5 w-3.5 shrink-0" strokeWidth={2} style={{ color: MUTED }} aria-hidden />
+                  <span className="hidden text-[12px] font-medium sm:inline" style={{ color: MUTED }}>
+                    {t("catalog.jumpToCategoryLabel")}
+                  </span>
+                  <span
+                    className="max-w-[100px] truncate text-[13.5px] font-semibold sm:max-w-[170px]"
+                    style={{ color: ACCENT }}
+                  >
+                    {activeCategoryName}
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 shrink-0 transition-transform duration-200 ${isCategoryMenuOpen ? "rotate-180" : ""}`}
+                    strokeWidth={2.5}
+                    style={{ color: MUTED }}
+                    aria-hidden
+                  />
+                </button>
+
+                {isCategoryMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsCategoryMenuOpen(false)}
+                      aria-hidden
+                    />
+                    <div
+                      role="listbox"
+                      aria-label={t("catalog.jumpToCategoryLabel")}
+                      className="absolute left-0 top-[calc(100%+8px)] z-40 max-h-[min(60vh,420px)] w-[min(300px,88vw)] overflow-y-auto rounded-2xl border bg-white p-2 shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
+                      style={{ borderColor: RULE }}
+                    >
+                      {categorySections.map(({ subFamily, categories }) => (
+                        <div key={subFamily.id} className="mb-1 last:mb-0">
+                          {categorySections.length > 1 && (
+                            <p
+                              className="px-2.5 pb-1 pt-2.5 text-[10px] font-bold uppercase"
+                              style={{ color: MUTED, letterSpacing: "0.08em" }}
+                            >
+                              {subFamily.name}
+                            </p>
+                          )}
+                          {categories.map((category) => {
+                            const isActive = category.id === activeCategoryId;
+                            return (
+                              <button
+                                key={category.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                                onClick={() => {
+                                  const index = categoryPageIndex.get(category.id);
+                                  if (index != null) bookRef.current?.pageFlip()?.flip(index);
+                                  setIsCategoryMenuOpen(false);
+                                }}
+                                className="flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-medium transition hover:bg-[#F0F5FC]"
+                                style={{
+                                  color: isActive ? ACCENT : "#334155",
+                                  background: isActive ? CHIP_BG : "transparent",
+                                }}
+                              >
+                                <span className="truncate">{category.name}</span>
+                                {isActive && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />}
+                              </button>
+                            );
+                          })}
+                        </div>
                       ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </label>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Glosario de abreviaturas de empaque (ver
                   fix-truncamiento-y-glosario.md) — vive en el header, no en
@@ -950,12 +1123,15 @@ export default function ProductCatalogModal({
               <>
                 <button
                   type="button"
-                  onClick={() => setIsGlossaryOpen((current) => !current)}
+                  onClick={() => {
+                    setIsGlossaryOpen((current) => !current);
+                    setIsCategoryMenuOpen(false);
+                  }}
                   aria-label={t("catalog.glossaryButtonLabel")}
                   title={t("catalog.glossaryButtonLabel")}
                   aria-expanded={isGlossaryOpen}
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[14px] font-semibold transition hover:opacity-70"
-                  style={{ borderColor: RULE, color: ACCENT }}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13.5px] font-semibold transition hover:shadow-[0_1px_6px_rgba(16,37,63,0.08)]"
+                  style={{ borderColor: RULE, background: "#F7FAFD", color: ACCENT }}
                 >
                   <Info className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
                   <span className="hidden sm:inline">{t("catalog.glossaryButtonLabel")}</span>
@@ -1016,13 +1192,18 @@ export default function ProductCatalogModal({
                 )}
               </>
 
+              {/* Acción primaria del header — antes un link subrayado que se
+                  perdía entre el resto de controles; ahora un botón sólido
+                  (mismo azul de marca) para que se lea como LA acción que
+                  hace algo, distinta de los chips de navegación/info de al
+                  lado (ver mejora-header-catalogo.md). */}
               <button
                 type="button"
                 onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-1.5 text-[14px] font-semibold underline underline-offset-4 transition hover:opacity-70"
-                style={{ color: ACCENT, textDecorationColor: RULE }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold text-white shadow-[0_2px_10px_rgba(7,95,216,0.28)] transition hover:brightness-110 active:brightness-95"
+                style={{ background: `linear-gradient(135deg, ${ACCENT_BRIGHT}, ${ACCENT})` }}
               >
-                <Download className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                <Download className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
                 <span className="hidden sm:inline">{t("catalog.downloadPdf")}</span>
               </button>
 
@@ -1058,7 +1239,7 @@ export default function ProductCatalogModal({
               `userMove`); clickear una flecha o arrastrar la esquina siguen
               pasando la página con el efecto de libro real (drawShadow,
               flippingTime) como antes. */}
-          <div className="catalog-shell" ref={shellRef}>
+          <div className="catalog-shell" ref={shellRef} onWheel={handleBookWheel}>
             {/* Ocultas debajo de `sm` (ver mobile-fixes-ronda2.md, punto 2):
                 cada flecha son 40px + márgenes (~52px por lado, ~104px las
                 dos) — en un panel mobile angosto (~370px) eso le comía
@@ -1516,7 +1697,16 @@ function BookPageContent({
           {t("catalog.portfolioIntro")}
         </p>
 
-        <div className="mt-5 flex-1 overflow-hidden">
+        {/* min-h-0 + overflow-y-auto (no solo overflow-hidden, ver
+            catalogo-scroll-no-funciona.md): en un flex column, un hijo
+            `flex-1` no se achica bajo el alto de su contenido por default
+            (min-height:auto) — con `overflow-hidden` a secas eso dejaba a
+            Electrónica (la última de las 5 familias) cortada a la mitad SIN
+            forma de llegar a verla, porque el div nunca se encogía para que
+            el scroll interno tuviera sentido. `min-h-0` fuerza ese
+            encogimiento así el overflow real cae dentro de ESTE div (que sí
+            scrollea), no fuera de la página. */}
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
           {allFamilies.map((entry) => {
             const EntryIcon = FAMILY_ICONS[entry.id] ?? Package;
             return (
