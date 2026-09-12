@@ -9,7 +9,6 @@ import { navLinks } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { useScrollTo } from "@/lib/hooks/useScrollTo";
 import logo from "@/public/models/mercasa-logo-transparent.png";
-import isotype from "@/public/favicon/icon-responsive.png";
 import LocaleSwitcher from "./LocaleSwitcher";
 import RecruitmentPopover from "./RecruitmentPopover";
 import CartButton from "@/components/cart/CartButton";
@@ -108,9 +107,12 @@ export default function Header() {
       <div className={cn("relative z-20 mx-auto max-w-[1320px] rounded-[24px] bg-white transition-shadow duration-500", scrolled ? "shadow-[0_18px_48px_-16px_rgba(8,43,92,0.28)]" : "shadow-[0_10px_32px_-14px_rgba(8,43,92,0.16)]")} style={{ border: "1px solid #E8ECF1" }}>
         <div className="relative grid h-[72px] grid-cols-[auto_1fr_auto] items-center gap-4 px-5 md:h-[78px] md:px-7">
 
-          <a href="#inicio" onClick={(e) => handleNav(e, "#inicio")} aria-label={t("logoAria")} className="flex h-11 w-11 shrink-0 items-center transition active:scale-95 sm:h-auto sm:w-auto">
-            <Image src={isotype} alt="Mercasa" priority className="h-11 w-11 rounded-[10px] sm:hidden" />
-            <Image src={logo} alt="Mercasa" priority className="hidden h-9 w-auto sm:block md:h-10" />
+          {/* Mismo logo completo ("Mercasa") en mobile y desktop — antes
+              mobile mostraba solo el isotipo (icon-responsive.png, sin el
+              wordmark) y el logo completo recién aparecía desde `sm`
+              (feedback: usar el mismo logo en mobile). */}
+          <a href="#inicio" onClick={(e) => handleNav(e, "#inicio")} aria-label={t("logoAria")} className="flex h-11 shrink-0 items-center transition active:scale-95 sm:h-auto">
+            <Image src={logo} alt="Mercasa" priority className="h-8 w-auto sm:h-9 md:h-10" />
           </a>
 
           {/* Umbral subido de md (768px) a lg (1024px, ver
