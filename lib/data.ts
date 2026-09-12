@@ -189,11 +189,12 @@ export const brandsMuralImage = "/brand/marcas/marcas-mural.jpg";
 // adivinado) confirmó con confianza razonable que es el sitio correcto de
 // ESA marca puntual. Las marcas sin `url` quedan sin link a propósito:
 // perfil regional/ambiguo sin sitio verificable (ej. MiSabor, Girol,
-// Marquise, Pelican, Renata, Thüringer, "5,0", B-Healthy, Choice Care,
-// Ideal, Belspá, Koa), o toda la línea "EZ*"/"Bio EZserv"/Clinx/Poderoso/
-// Pinol (marca propia/blanca de limpieza institucional o sin sitio propio
-// confirmado) — no inventar la URL de ninguna de estas si se agregan a
-// futuro.
+// Marquise, Pelican, Thüringer, "5,0", B-Healthy, Choice Care, Ideal,
+// Belspá, Koa, Poderoso, Pietrobon — este último sí tiene sitio de grupo
+// pero sin confirmar que sea la línea exacta de pastas que distribuye
+// Mercasa), o toda la línea "EZ*"/"Bio EZserv"/Clinx (marca propia/blanca
+// de limpieza institucional) — no inventar la URL de ninguna de estas si
+// se agregan a futuro.
 export const brandCategories = [
   {
     key: "alimentos",
@@ -207,11 +208,11 @@ export const brandCategories = [
       { name: "Milka", url: "https://www.milka.com" },
       { name: "Trident", url: "https://www.tridentgum.com" },
       { name: "Pietrobon" },
-      { name: "Vitarella" },
+      { name: "Vitarella", url: "https://vitarella.com.br/" },
       { name: "Halls", url: "https://www.gethalls.com/" },
       { name: "Able Farm", url: "https://www.abledairies.com/brands/able-farm/" },
       { name: "Pringles", url: "https://www.pringles.com/" },
-      { name: "Renata" },
+      { name: "Renata", url: "https://renata.com.br/" },
       { name: "Smucker's", url: "https://www.jmsmucker.com/" },
       { name: "Pomi", url: "https://www.pomi.us.com/" },
       { name: "Mentos", url: "https://www.mentos.com" },
@@ -269,7 +270,7 @@ export const brandCategories = [
       { name: "EZbags" },
       { name: "EZClean" },
       { name: "Poderoso" },
-      { name: "Pinol" },
+      { name: "Pinol", url: "https://www.grupoalen.com/nuestras-marcas/pinol/" },
     ],
   },
 ];

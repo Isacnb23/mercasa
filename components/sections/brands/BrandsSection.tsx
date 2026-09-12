@@ -178,31 +178,35 @@ export default function BrandsSection() {
                       href={brand.url}
                       target="_blank"
                       rel="noreferrer"
-                      // Hover más "vivo" que un simple cambio de borde/texto
-                      // (ver mural-marcas-cards-clickeables.md, feedback de
-                      // seguimiento: "más lindo pero igual de discreto"):
-                      // fondo celeste pálido + sombra propia dan un lift
-                      // real en vez de solo recolorear las líneas, sin
-                      // volverse un botón grande — sigue siendo del mismo
-                      // tamaño/forma que el resto de los chips. `bg-*`/
-                      // `border-*` de reposo pasan de `style` inline a clases
-                      // Tailwind (antes el `hover:border-corp-blue` nunca se
-                      // veía: un `style={{borderColor}}` inline gana SIEMPRE
-                      // sobre cualquier clase, hover incluido, por
-                      // especificidad CSS — quedaba ahí sin efecto real).
-                      className="group inline-flex items-center gap-1.5 rounded-full border border-[#E2E8F0] bg-[#F8F9FB] px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink transition duration-200 hover:-translate-y-0.5 hover:border-corp-blue hover:bg-corp-blue/[0.07] hover:text-corp-blue hover:shadow-[0_6px_16px_-4px_rgba(7,95,216,0.35)]"
+                      // Rediseño (pedido: "que sea más lindo también" — ver
+                      // mejora-chips-marcas.md): antes el reposo era un gris
+                      // azulado frío (#F8F9FB/#E2E8F0) que no combinaba con
+                      // el resto de la sección — el mural de arriba ya usa un
+                      // glow dorado cálido (rgba(255,217,160,...), ver su
+                      // boxShadow). El chip ahora arranca blanco con borde
+                      // beige cálido (mismo #E8DFC8 del borde del mural) y
+                      // sombra suave, y al hover se enciende con ESE mismo
+                      // dorado (glow + borde) en vez de celeste genérico —
+                      // se siente parte de la misma pieza, no un componente
+                      // de UI aparte pegado debajo.
+                      className="group inline-flex items-center gap-2 rounded-full border border-[#E8DFC8] bg-white px-4 py-2 text-[13.5px] font-semibold leading-snug text-corp-ink shadow-[0_2px_10px_rgba(16,37,63,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-corp-yellow hover:bg-[#FFFCF2] hover:shadow-[0_10px_26px_-6px_rgba(255,178,36,0.4)]"
                     >
                       {brand.name}
                       <ExternalLink
-                        className="h-3 w-3 shrink-0 opacity-40 transition group-hover:opacity-100"
+                        className="h-3 w-3 shrink-0 text-corp-blue/45 transition group-hover:text-[#C9891A] group-hover:opacity-100"
                         strokeWidth={2}
                         aria-hidden
                       />
                     </a>
                   ) : (
+                    // Sin sitio verificado: se retira visualmente (borde
+                    // punteado, fondo casi invisible, texto más tenue) para
+                    // que la diferencia con los chips clickeables se lea a
+                    // simple vista, en vez de ser idéntico salvo por un
+                    // ícono ausente.
                     <span
-                      className="inline-flex rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug text-corp-ink"
-                      style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
+                      className="inline-flex rounded-full border border-dashed border-[#E4E1D8] px-4 py-2 text-[13.5px] font-medium leading-snug text-[#6B7686]"
+                      style={{ background: "#FAF9F5" }}
                     >
                       {brand.name}
                     </span>
@@ -231,7 +235,7 @@ export default function BrandsSection() {
               {cat.brands.map((brand) => (
                 <li
                   key={brand.name}
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[13.5px] font-medium leading-snug"
+                  className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[13.5px] font-medium leading-snug"
                   style={{ background: "#F8F9FB", borderColor: "#E2E8F0" }}
                 >
                   {brand.name}

@@ -385,54 +385,90 @@ export default function CustomerClassSection({
           id="customer-class-tab-catalog-general"
           aria-selected={isCatalogGeneral}
           aria-controls="customer-class-panel"
-          onClick={() => onSelect(CATALOG_GENERAL_KEY)}
+          onClick={() => onSelect(isCatalogGeneral ? lastSegmentKeyRef.current : CATALOG_GENERAL_KEY)}
           className="group relative mx-auto mt-8 flex w-full max-w-[1280px] items-center gap-5 overflow-hidden rounded-[28px] p-7 text-left transition duration-300 hover:-translate-y-0.5 hover:brightness-110 sm:gap-6 sm:p-8"
           style={{
-            background: NAVY,
+            // Diseño invertido cuando ya estás DENTRO de "Catálogo general"
+            // (ver catalogo-general-boton-toggle.md): mismo botón, pero ahora
+            // funciona como "volver" — fondo claro (en vez de navy sólido) +
+            // ícono/textos en navy, para que se lea como un estado distinto
+            // ("estás acá") y no como el mismo CTA repetido sin sentido. El
+            // click también cambia de intención: en vez de re-seleccionar
+            // "Catálogo general" (no-op), vuelve al ÚLTIMO segmento real
+            // activo — mismo comportamiento que el link "Volver a Segmento
+            // de Mercado" de adentro del panel, ver más abajo.
+            background: isCatalogGeneral ? IVORY : NAVY,
             boxShadow: isCatalogGeneral
-              ? "0 16px 36px -8px rgba(11,49,94,0.45)"
+              ? "0 12px 28px -10px rgba(11,49,94,0.18)"
               : "0 12px 28px -10px rgba(11,49,94,0.32)",
-            border: isCatalogGeneral ? `1.5px solid ${BEIGE_MAIN}` : "1.5px solid transparent",
+            border: `1.5px solid ${BEIGE_MAIN}`,
           }}
         >
           <span
             aria-hidden
             className="absolute inset-x-8 top-0 h-[3px] rounded-full"
-            style={{ background: BEIGE_MAIN }}
+            style={{ background: isCatalogGeneral ? NAVY : BEIGE_MAIN }}
           />
           <span
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
-            style={{ background: IVORY }}
+            style={{ background: isCatalogGeneral ? NAVY : IVORY }}
           >
-            <LayoutGrid className="h-7 w-7" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
+            {isCatalogGeneral ? (
+              <ArrowLeft className="h-6 w-6" strokeWidth={1.8} style={{ color: IVORY }} aria-hidden />
+            ) : (
+              <LayoutGrid className="h-7 w-7" strokeWidth={1.5} style={{ color: NAVY }} aria-hidden />
+            )}
           </span>
           <span className="flex-1">
-            <span className="block font-display text-[19px] font-semibold text-white sm:text-[22px]">
-              {t("catalogGeneral")}
+            <span
+              className="block font-display text-[19px] font-semibold sm:text-[22px]"
+              style={{ color: isCatalogGeneral ? NAVY : "#FFFFFF" }}
+            >
+              {isCatalogGeneral ? t("backToSegmentsCta") : t("catalogGeneral")}
             </span>
-            <span className="mt-1 block max-w-[420px] text-[14px] leading-[1.5]" style={{ color: "#C6D2E2" }}>
-              {t("catalogGeneralBannerDescription")}
+            <span
+              className="mt-1 block max-w-[420px] text-[14px] leading-[1.5]"
+              style={{ color: isCatalogGeneral ? TEXT_SECONDARY : "#C6D2E2" }}
+            >
+              {isCatalogGeneral ? t("catalogGeneralBannerBackDescription") : t("catalogGeneralBannerDescription")}
             </span>
           </span>
 
           {/* Ya no hay un chip/píldora separado adentro (ver segmentos-
               familias-espaciado-animacion-boton.md, segunda ronda de
               feedback: "que todo sea el botón, no un botón dentro del
-              card") — el texto del CTA se suelta directo sobre el navy,
+              card") — el texto del CTA se suelta directo sobre el fondo,
               solo con la flecha como acento, y toda la tarjeta ya
               responde al hover (lift + brillo, ver className de arriba). */}
           <span
             className="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-bold transition duration-300 group-hover:gap-2.5 sm:inline-flex"
-            style={{ color: BEIGE_MAIN }}
+            style={{ color: isCatalogGeneral ? NAVY : BEIGE_MAIN }}
           >
-            {t("catalogGeneralCta")}
-            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+            {isCatalogGeneral ? (
+              <>
+                <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                {t("title")}
+              </>
+            ) : (
+              <>
+                {t("catalogGeneralCta")}
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+              </>
+            )}
           </span>
-          <ArrowRight
-            className="h-5 w-5 shrink-0 transition duration-300 group-hover:translate-x-1 sm:hidden"
-            style={{ color: BEIGE_MAIN }}
-            aria-hidden
-          />
+          {isCatalogGeneral ? (
+            <ArrowLeft
+              className="h-5 w-5 shrink-0 transition duration-300 group-hover:-translate-x-1 sm:hidden"
+              style={{ color: NAVY }}
+              aria-hidden
+            />
+          ) : (
+            <ArrowRight
+              className="h-5 w-5 shrink-0 transition duration-300 group-hover:translate-x-1 sm:hidden"
+              style={{ color: BEIGE_MAIN }}
+              aria-hidden
+            />
+          )}
         </button>
 
         {/* ---------- Panel principal ---------- */}
@@ -482,13 +518,31 @@ export default function CustomerClassSection({
             se siente como si la tarjeta "encogiera" de repente al volver.
             `layout` hace que Framer Motion anime ESE cambio de alto del
             contenedor con la misma curva que ya usan las transiciones de
-            entrada/salida de los paneles, en vez de un corte seco. */}
+            entrada/salida de los paneles, en vez de un corte seco.
+
+            `mode="popLayout"` (ver catalogo-general-vuelve-panel-grande.md
+            — bug reportado: "la imagen empieza grande y se ajusta"): con el
+            modo por defecto ("sync"), MIENTRAS dura el crossfade el panel
+            saliente (Catálogo general, alto variable — hasta 900px+ según
+            cuántas familias entren) sigue contando para el auto-alto de la
+            fila junto con el entrante (Segmento, alto FIJO ~640-700px), así
+            que el wrapper arranca la transición ya estirado al alto del más
+            alto de los dos y recién SE ACHICA de golpe una vez que el
+            saliente termina de desmontarse — se ve como si la tarjeta (y la
+            foto adentro, que es `h-full`) "empezara grande y se ajustara".
+            `popLayout` saca al hijo SALIENTE del flujo (position: absolute
+            sobre su última posición medida) apenas arranca su animación de
+            salida, sin tocar al entrante — el wrapper mide su alto real
+            contra el entrante desde el primer frame, sin que el saliente
+            infle ese cálculo. Sigue habiendo overlap visual para el crossfade
+            (`grid-area:1/1` en cada panel), solo cambia CUÁL de los dos
+            cuenta para el alto de la fila en cada instante. */}
         <motion.div
           layout={!reduceMotion}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           className="relative mx-auto mt-6 grid min-h-[1000px] max-w-[1280px] sm:mt-8 sm:min-h-[840px] md:min-h-[920px] lg:min-h-[700px] xl:min-h-[640px]"
         >
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
         {isCatalogGeneral ? (
           /* Panel "Catálogo general" (ver refactor-segmento-mercado-
              catalogo-general.md, punto 3): grilla de familias en versión
