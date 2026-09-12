@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShoppingBag, ShoppingCart, Trash2, X } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Sparkle, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
 import { site } from "@/lib/data";
@@ -109,7 +109,13 @@ export default function CartDrawer() {
                 bg-white/12, se sentía genérico) + badge de conteo dorado
                 junto al título, mismo acento (corp-yellow) que ya usa
                 CartButton.tsx para el badge del ícono en la barra — así el
-                carrito cerrado y abierto hablan el mismo idioma visual. */}
+                carrito cerrado y abierto hablan el mismo idioma visual.
+                Línea ondulada sutil abajo (ver carrito-rediseno-concreto-
+                v2.md: "conectar el header con el mismo patrón de curvas
+                onduladas que usa el resto del sitio") — mismo espíritu que
+                SoftCurve.tsx pero un trazo propio más bajo (este header
+                mide ~80px, no una sección completa), blanco a baja opacidad
+                sobre el navy. */}
             <div
               className="relative flex items-center justify-between gap-3 overflow-hidden px-6 py-5"
               style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)` }}
@@ -122,6 +128,15 @@ export default function CartDrawer() {
               >
                 <circle cx="160" cy="160" r="140" stroke="#fff" strokeWidth="1.5" />
                 <circle cx="160" cy="160" r="95" stroke="#fff" strokeWidth="1.5" />
+              </svg>
+              <svg
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-6 w-full opacity-[0.16]"
+                viewBox="0 0 440 24"
+                preserveAspectRatio="none"
+                fill="none"
+                aria-hidden
+              >
+                <path d="M0,14 C 70,22 140,4 220,12 C 300,20 370,2 440,10" stroke="#fff" strokeWidth="1.5" />
               </svg>
               <div className="relative flex items-center gap-3">
                 <span
@@ -157,19 +172,47 @@ export default function CartDrawer() {
             </div>
 
             {items.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-                <span
-                  className="flex h-16 w-16 items-center justify-center rounded-full"
-                  style={{ background: BEIGE }}
+              // Rediseño del estado vacío (ver carrito-rediseno-concreto-
+              // v2.md — la v1, ícono de carrito gris en círculo beige
+              // plano + texto suelto sobre blanco, seguía sintiéndose
+              // plana). Todo el conjunto vive ahora dentro de su propia
+              // tarjeta beige compacta (en vez de flotar solo en el medio
+              // de un panel blanco vacío) + ícono de BOLSA (mismo que el
+              // header/CartButton, no un carrito genérico distinto) sobre
+              // un fondo con degradado radial beige→blanco y anillo dorado
+              // — mismo tratamiento "ilustrado" que se le pide acá, no un
+              // círculo sólido plano.
+              <div className="flex flex-1 items-center justify-center px-8">
+                <div
+                  className="flex w-full max-w-[280px] flex-col items-center gap-3 rounded-[24px] px-8 py-9 text-center"
+                  style={{ background: BEIGE, boxShadow: "0 16px 40px -24px rgba(8,43,92,0.35)" }}
                 >
-                  <ShoppingCart className="h-7 w-7" strokeWidth={1.5} style={{ color: INK, opacity: 0.45 }} aria-hidden />
-                </span>
-                <p className="font-display text-[16px] font-semibold" style={{ color: INK }}>
-                  {t("emptyTitle")}
-                </p>
-                <p className="text-[13.5px] leading-relaxed" style={{ color: MUTED }}>
-                  {t("empty")}
-                </p>
+                  <span
+                    className="relative flex h-16 w-16 items-center justify-center rounded-full"
+                    style={{
+                      background: "radial-gradient(circle at 35% 30%, #FFFFFF, #F1ECE4 70%)",
+                      boxShadow: `inset 0 0 0 2px ${GOLD}`,
+                    }}
+                  >
+                    <ShoppingBag className="h-7 w-7" strokeWidth={1.6} style={{ color: INK }} aria-hidden />
+                    {/* Detalle dorado decorativo (ver doc: "acento puntual
+                        gold en el estado vacío") — un destello, no un
+                        badge de conteo (acá siempre está en 0). */}
+                    <span
+                      className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full"
+                      style={{ background: GOLD, boxShadow: "0 2px 6px rgba(8,20,40,0.25)" }}
+                      aria-hidden
+                    >
+                      <Sparkle className="h-2.5 w-2.5" fill={INK} style={{ color: INK }} strokeWidth={0} />
+                    </span>
+                  </span>
+                  <p className="font-display text-[16px] font-semibold" style={{ color: INK }}>
+                    {t("emptyTitle")}
+                  </p>
+                  <p className="text-[13.5px] leading-relaxed" style={{ color: "#5C6B7D" }}>
+                    {t("empty")}
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -186,12 +229,18 @@ export default function CartDrawer() {
                   {items.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-3.5 rounded-2xl border bg-white p-3 transition hover:shadow-[0_6px_20px_rgba(8,43,92,0.1)]"
+                      className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl border bg-white p-3 transition hover:shadow-[0_6px_20px_rgba(8,43,92,0.1)]"
                       style={{ borderColor: RULE }}
                     >
+                      {/* Filete dorado a la izquierda (ver carrito-rediseno-
+                          concreto-v2.md: "mismo criterio de calidez, acentos
+                          gold" también en las tarjetas de producto, no solo
+                          en el estado vacío) — detalle puntual, no un
+                          cambio de color grande. */}
+                      <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: GOLD }} />
                       <div
                         className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl"
-                        style={{ background: BEIGE }}
+                        style={{ background: "radial-gradient(circle at 35% 30%, #FFFFFF, #F1ECE4 75%)" }}
                       >
                         <ProductImage itemId={item.id} name={item.name} size="s" className="h-full w-full object-contain p-1.5" />
                       </div>
@@ -224,7 +273,7 @@ export default function CartDrawer() {
                           </button>
                           <span
                             className="flex h-7 w-8 items-center justify-center border-x text-[13px] font-bold"
-                            style={{ borderColor: RULE, color: INK }}
+                            style={{ borderColor: RULE, background: "rgba(255,210,26,0.14)", color: INK }}
                           >
                             {item.quantity}
                           </span>
