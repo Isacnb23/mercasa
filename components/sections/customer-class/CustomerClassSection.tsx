@@ -571,9 +571,22 @@ export default function CustomerClassSection({
               `absolute inset-0`, position la da `fill` de next/image), en
               vez de esperar a que la vieja termine de salir. Así la foto de
               abajo sigue visible durante toda la transición: nunca hay un
-              frame en blanco/gris mientras la nueva decodea. */}
+              frame en blanco/gris mientras la nueva decodea.
+
+              Sin `initial={false}` acá (ver feedback: "al volver de
+              Catálogo general, la imagen también cambia/se ve rara") — esta
+              columna vive DENTRO de la rama "segment" del AnimatePresence
+              de arriba, que se remonta ENTERA cada vez que se vuelve de
+              Catálogo general (no solo cuando cambia el segmento activo).
+              Con `initial={false}`, esta foto aparecía de golpe a opacidad
+              plena apenas remontaba, mientras el contenedor todavía estaba
+              a mitad de la animación de alto (ver `layout` en el wrapper de
+              arriba, 737px→640px) — sin fundido que lo disimule, se veía el
+              recorte de `object-cover` reacomodándose en vivo. Con fundido
+              normal (mismo que ya usaba al cambiar de segmento), la foto
+              tapa ese reacomodo mientras el contenedor termina de asentarse. */}
           <div className="relative h-[280px] shrink-0 overflow-hidden sm:h-[320px] md:h-full">
-            <AnimatePresence initial={false}>
+            <AnimatePresence>
               <motion.div
                 key={activeSegment.key}
                 className="absolute inset-0"
