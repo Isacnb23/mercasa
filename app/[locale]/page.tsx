@@ -3,7 +3,7 @@ import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/hero/Hero";
 import AboutSection from "@/components/sections/about/AboutSection";
 import LogisticsTimeline from "@/components/sections/logistics/LogisticsTimeline";
-import CollaboratorsSection from "@/components/sections/collaborators/CollaboratorsSection";
+// import CollaboratorsSection from "@/components/sections/collaborators/CollaboratorsSection";
 import ContactSection from "@/components/sections/contact/ContactSection";
 import MarketSegmentSection from "@/components/sections/customer-class/MarketSegmentSection";
 import MarketSegmentSectionLoader from "@/components/sections/customer-class/MarketSegmentSectionLoader";
@@ -59,9 +59,18 @@ export default function Home() {
           <SectionReveal variant="fade" z={30}>
             <LogisticsTimeline />
           </SectionReveal>
-          <SectionReveal variant="fade" z={32}>
+          {/* Colaboradores oculta temporalmente: todavía no hay fotos
+              reales de colaboradores (los placeholders quedaban vacíos/con
+              ícono genérico), pedido de Isaac de sacarla de la página
+              mientras tanto en vez de mostrarla a medio llenar. El
+              componente y sus datos (lib/data.ts, collaboratorPhotos) se
+              quedan intactos — solo se saca de acá. Para reactivarla:
+              descomentar este bloque y el import de arriba, y restaurar el
+              degradado de salida en LogisticsTimeline.tsx (ver comentario
+              ahí). */}
+          {/* <SectionReveal variant="fade" z={32}>
             <CollaboratorsSection />
-          </SectionReveal>
+          </SectionReveal> */}
           <SectionReveal variant="fade" z={50}>
             <ContactSection />
           </SectionReveal>
