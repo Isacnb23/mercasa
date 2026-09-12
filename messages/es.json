@@ -313,7 +313,7 @@
     "increaseAria": "Aumentar cantidad de {name}",
     "decreaseAria": "Disminuir cantidad de {name}",
     "removeAria": "Quitar {name} del carrito",
-    "checkoutHint": "Atención personalizada por WhatsApp: un asesor confirma disponibilidad y arma tu cotización.",
+    "checkoutHint": "Atención personalizada por WhatsApp: un asesor confirma disponibilidad y arma tu cotización, sin pagos en línea.",
     "checkoutCta": "Enviar pedido por WhatsApp",
     "clearCta": "Vaciar carrito",
     "whatsappIntro": "Hola, quisiera hacer un pedido de los siguientes productos:",
