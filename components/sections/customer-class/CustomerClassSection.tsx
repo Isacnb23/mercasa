@@ -11,14 +11,14 @@ import {
   Building2,
   ChefHat,
   Check,
-  Cookie,
+  Croissant,
   Droplets,
   GlassWater,
   Hotel,
   Landmark,
   LayoutGrid,
   ShoppingBag,
-  ShoppingCart,
+  ShoppingBasket,
   Sparkles,
   Store,
   UtensilsCrossed,
@@ -37,9 +37,9 @@ const segmentIcons = {
   hotel: Hotel,
   "chef-hat": ChefHat,
   "shopping-bag": ShoppingBag,
-  cookie: Cookie,
+  croissant: Croissant,
   building: Building2,
-  "shopping-cart": ShoppingCart,
+  "shopping-basket": ShoppingBasket,
 } as const;
 
 const categoryIcons = {

@@ -353,7 +353,7 @@ export const businessSegments = [
   },
   {
     key: "panaderias",
-    icon: "cookie",
+    icon: "croissant",
     image: "/customer-class/panaderias.png",
     detailedCopy: false,
     categories: ["alimentos", "limpieza-del-hogar", "institucional"],
@@ -367,7 +367,7 @@ export const businessSegments = [
   },
   {
     key: "retail",
-    icon: "shopping-cart",
+    icon: "shopping-basket",
     image: "/customer-class/retail-tiendas-de-conveniencia.png",
     detailedCopy: false,
     categories: ["alimentos", "bebidas", "cuidado-del-bebe", "higiene-personal"],

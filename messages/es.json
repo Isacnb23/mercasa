@@ -19,7 +19,7 @@
     "nosotros": "Nosotros",
     "logistica": "Nuestra Logística",
     "productos": "Productos",
-    "customerClass": "Segmento de Mercado",
+    "customerClass": "¿Quién eres?",
     "contacto": "Contacto"
   },
   "Header": {
@@ -77,7 +77,7 @@
     "eyebrow": "Logística y cobertura",
     "titleLead": "El motor detrás de cada",
     "titleAccent": "entrega",
-    "lead": "Unimos el mundo con Costa Rica a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
+    "lead": "Unimos Costa Rica con el mundo a través de una cadena logística eficiente, moderna y confiable que garantiza disponibilidad y velocidad en cada entrega.",
     "sequenceEyebrow": "Así funciona nuestra cadena logística",
     "steps": {
       "importacion": {
@@ -376,7 +376,7 @@
         "whatsappNoun": "un restaurante"
       },
       "comercio-local": {
-        "label": "Comercio local / pulperías",
+        "label": "Mini super / pulperías",
         "valuePhrase": "El surtido que tu clientela busca, con entrega confiable.",
         "whatsappNoun": "un comercio local"
       },
@@ -391,13 +391,13 @@
         "whatsappNoun": "una institución"
       },
       "retail": {
-        "label": "Retail / tiendas de conveniencia",
+        "label": "Tiendas de conveniencia",
         "valuePhrase": "Rotación alta garantizada: snacks, bebidas y esenciales de conveniencia.",
         "whatsappNoun": "una tienda de conveniencia"
       }
     },
     "eyebrow": "Contacto",
-    "title": "Hablemos de negocios",
+    "title": "¿Quieres ser nuestro proveedor?",
     "paragraph": "Visítenos en nuestro CEDI en El Tejar de El Guarco, Cartago, o escríbanos directamente — atendemos proveedores internacionales y clientes locales.",
     "infoEyebrow": "Información de contacto",
     "infoTitle": "Estamos cerca de vos",
@@ -422,7 +422,7 @@
     "horarioTitle": "Horario de atención",
     "horarioWeekdays": "Lunes a viernes: 8:00 a.m. – 6:00 p.m.",
     "horarioSaturday": "Sábados: 8:00 a.m. – 12:00 m.d.",
-    "whatsappCta": "Escríbanos por WhatsApp",
+    "whatsappCta": "Escríbenos por WhatsApp",
     "callCta": "Llamar ahora",
     "openInGoogleMaps": "Google Maps",
     "openInWaze": "Waze",
@@ -447,9 +447,27 @@
   "Recruitment": {
     "navLabel": "Reclutamiento",
     "title": "Reclutamiento",
-    "intro": "¿Querés sumarte a nuestro equipo? ",
-    "intro2": " Envia tu CV a este correo.",
-    "emailLabel": "Correo",
+    "intro": "¿Querés sumarte a nuestro equipo? Completá tus datos, adjuntá tu CV y te contactamos.",
+    "nameLabel": "Nombre completo",
+    "namePlaceholder": "Tu nombre",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tucorreo@ejemplo.com",
+    "positionLabel": "Puesto de interés",
+    "positionPlaceholder": "Ej. Vendedor",
+    "phoneLabel": "Teléfono",
+    "phonePlaceholder": "8888-8888",
+    "messageLabel": "Mensaje (opcional)",
+    "messagePlaceholder": "Contanos algo más si querés...",
+    "cvLabel": "Adjuntar CV",
+    "cvHint": "PDF o Word, máx. 5MB",
+    "cvChoose": "Seleccionar archivo",
+    "cvRemove": "Quitar",
+    "cvTooLarge": "El archivo supera los 5MB.",
+    "submitCta": "Enviar por correo",
+    "submittingCta": "Enviando...",
+    "successTitle": "¡Listo!",
+    "successMessage": "Recibimos tu postulación. Te contactaremos pronto.",
+    "errorMessage": "No se pudo enviar. Intentá de nuevo o escribinos directamente a {email}.",
     "close": "Cerrar"
   },
   "Footer": {
