@@ -137,7 +137,17 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.18, ease: [0.22, 0.61, 0.36, 1] }}
-            className="fixed inset-x-4 top-[92px] z-30 mx-auto max-h-[calc(100vh-112px)] w-auto max-w-[380px] overflow-y-auto sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-[calc(100%+14px)] sm:mx-0 sm:max-h-[min(600px,calc(100vh-120px))] sm:w-[min(380px,92vw)] sm:-translate-x-1/2"
+            // Debajo de `sm` (mobile) ESTE popover vive dentro del panel del
+            // menú hamburguesa de Header.tsx, que sigue abierto/visible
+            // detrás (un click acá adentro no cuenta como "click afuera" del
+            // menú) — antes tenía max-w-[380px] acá, así que en mobile
+            // quedaba flotando angosto sobre el menú abierto, dejando ver
+            // los links detrás por los costados y mezclando ambos
+            // visualmente. Sin el cap de ancho, `inset-x-4` lo estira a
+            // (casi) todo el ancho de pantalla y tapa el menú por completo
+            // detrás. A partir de `sm` vuelve a ser el popover angosto
+            // anclado bajo el botón (ahí no hay menú hamburguesa detrás).
+            className="fixed inset-x-4 top-[92px] z-30 max-h-[calc(100vh-112px)] overflow-y-auto sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-[calc(100%+14px)] sm:mx-0 sm:max-h-[min(600px,calc(100vh-120px))] sm:w-[min(380px,92vw)] sm:-translate-x-1/2"
             style={{
               borderRadius: "18px",
               border: "1px solid rgba(8,43,92,0.08)",
