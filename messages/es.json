@@ -332,7 +332,7 @@
   },
   "CustomerClass": {
     "eyebrow": "Soluciones por tipo de cliente",
-    "title": "Segmento de Mercado",
+    "title": "¿Qué tipo de cliente eres?",
     "subtitle": "Entendemos las necesidades de cada negocio y creamos soluciones a su medida.",
     "categoriesLabel": "Categorías disponibles",
     "exploreCta": "Explorar productos",
@@ -344,7 +344,7 @@
     "catalogGeneralBannerDescription": "Explorá todo nuestro catálogo por familia de producto.",
     "catalogGeneralBannerBackDescription": "Volvé a explorar las soluciones por tipo de cliente.",
     "catalogGeneralCta": "Ver catálogo completo",
-    "backToSegmentsCta": "Volver a Segmento de Mercado"
+    "backToSegmentsCta": "Volver a ¿Qué tipo de cliente eres?"
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hola, represento {noun} y me interesa conocer el catálogo de Mercasa para mi negocio.",

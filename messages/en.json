@@ -332,7 +332,7 @@
   },
   "CustomerClass": {
     "eyebrow": "Solutions by customer type",
-    "title": "Market Segment",
+    "title": "What type of client are you?",
     "subtitle": "We understand what every business needs and build solutions tailored to it.",
     "categoriesLabel": "Available categories",
     "exploreCta": "Explore products",
@@ -344,7 +344,7 @@
     "catalogGeneralBannerDescription": "Browse our entire catalog by product family.",
     "catalogGeneralBannerBackDescription": "Go back to browsing solutions by client type.",
     "catalogGeneralCta": "View full catalog",
-    "backToSegmentsCta": "Back to Market Segment"
+    "backToSegmentsCta": "Back to What type of client are you?"
   },
   "Contact": {
     "segmentsWhatsappMessage": "Hi, I represent {noun} and I'm interested in learning about Mercasa's catalog for my business.",
