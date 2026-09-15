@@ -51,7 +51,33 @@ export async function POST(request: NextRequest) {
       attachments,
     });
 
-    return NextResponse.json({ ok: true, delivered: result.delivered });
+    // Además del correo, se registra la postulación en el módulo de Reclutamiento de
+    // GIPLUS (GI.Recruit.API). Es independiente del correo -- si falla, no debe tumbar
+    // la respuesta al usuario, ya que el correo ya se procesó arriba.
+    let recruitModuleOk = true;
+    try {
+      const recruitFormData = new FormData();
+      recruitFormData.set("NombreCompleto", nombre);
+      recruitFormData.set("CorreoElectronico", correo);
+      recruitFormData.set("Telefono", telefono);
+      recruitFormData.set("PuestoInteres", puesto);
+      if (mensaje) recruitFormData.set("Mensaje", mensaje);
+      if (cv instanceof File && cv.size > 0) recruitFormData.set("Cv", cv);
+
+      const recruitRes = await fetch(`${process.env.RECRUIT_API_URL}/api/postulaciones`, {
+        method: "POST",
+        body: recruitFormData,
+      });
+      recruitModuleOk = recruitRes.ok;
+      if (!recruitRes.ok) {
+        console.error("[/api/careers] módulo de Reclutamiento respondió", recruitRes.status, await recruitRes.text());
+      }
+    } catch (recruitError) {
+      recruitModuleOk = false;
+      console.error("[/api/careers] no se pudo registrar en el módulo de Reclutamiento", recruitError);
+    }
+
+    return NextResponse.json({ ok: true, delivered: result.delivered, recruitModuleOk });
   } catch (error) {
     console.error("[/api/careers]", error);
     return NextResponse.json(
