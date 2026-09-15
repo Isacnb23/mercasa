@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
       if (mensaje) recruitFormData.set("Mensaje", mensaje);
       if (cv instanceof File && cv.size > 0) recruitFormData.set("Cv", cv);
 
-      const recruitRes = await fetch(`${process.env.RECRUIT_API_URL}/api/postulaciones`, {
+      const recruitApiUrl = process.env.RECRUIT_API_URL ?? "http://sjoiisapps01:8155";
+      const recruitRes = await fetch(`${recruitApiUrl}/api/postulaciones`, {
         method: "POST",
         body: recruitFormData,
       });
