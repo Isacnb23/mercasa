@@ -3,6 +3,8 @@ import { sendMail } from "@/lib/mailer";
 import { site } from "@/lib/data";
 
 const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB
+const PHONE_PATTERN = /^\d{4}-\d{4}$/; // debe calzar con components/layout/RecruitmentPopover.tsx
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // debe calzar con components/layout/RecruitmentPopover.tsx
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,13 +13,28 @@ export async function POST(request: NextRequest) {
     const nombre = String(formData.get("nombre") ?? "");
     const telefono = String(formData.get("telefono") ?? "");
     const correo = String(formData.get("correo") ?? "");
+    const canton = String(formData.get("canton") ?? "");
     const puesto = String(formData.get("puesto") ?? "");
     const mensaje = String(formData.get("mensaje") ?? "");
     const cv = formData.get("cv");
 
-    if (!nombre || !correo || !puesto) {
+    if (!nombre || !correo || !puesto || !canton) {
       return NextResponse.json(
         { ok: false, error: "Faltan campos obligatorios." },
+        { status: 400 }
+      );
+    }
+
+    if (!EMAIL_PATTERN.test(correo)) {
+      return NextResponse.json(
+        { ok: false, error: "El correo electrónico no es válido." },
+        { status: 400 }
+      );
+    }
+
+    if (!PHONE_PATTERN.test(telefono)) {
+      return NextResponse.json(
+        { ok: false, error: "El teléfono debe tener el formato 8888-8888." },
         { status: 400 }
       );
     }
@@ -39,6 +56,7 @@ export async function POST(request: NextRequest) {
       <p><strong>Nombre:</strong> ${escapeHtml(nombre)}</p>
       <p><strong>Correo:</strong> ${escapeHtml(correo)}</p>
       <p><strong>Teléfono:</strong> ${escapeHtml(telefono)}</p>
+      <p><strong>Cantón:</strong> ${escapeHtml(canton)}</p>
       <p><strong>Área de interés:</strong> ${escapeHtml(puesto)}</p>
       ${mensaje ? `<p><strong>Comentario:</strong><br/>${escapeHtml(mensaje).replace(/\n/g, "<br/>")}</p>` : ""}
     `;
@@ -60,6 +78,7 @@ export async function POST(request: NextRequest) {
       recruitFormData.set("NombreCompleto", nombre);
       recruitFormData.set("CorreoElectronico", correo);
       recruitFormData.set("Telefono", telefono);
+      recruitFormData.set("Canton", canton);
       recruitFormData.set("PuestoInteres", puesto);
       if (mensaje) recruitFormData.set("Mensaje", mensaje);
       if (cv instanceof File && cv.size > 0) recruitFormData.set("Cv", cv);
