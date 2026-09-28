@@ -334,8 +334,9 @@
     "submitCta": "Iniciar sesión",
     "submitCtaLoading": "Iniciando sesión...",
     "loggedInGreeting": "Hola, {name}",
-    "accountNumLabel": "Cédula",
+    "accountNumLabel": "Código de cliente",
     "emailLabel": "Correo",
+    "noEmailRegistered": "Sin correo registrado",
     "logoutCta": "Cerrar sesión"
   },
   "Brands": {

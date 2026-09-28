@@ -32,13 +32,22 @@ const CLAIM_ACCOUNT_NUM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims
 const CLAIM_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
 const CLAIM_EMAIL = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
 
+// AX (ARCustTable) usa placeholders tipo "Sin_Email" cuando el cliente no
+// tiene el dato cargado — no es un email/nombre real, es texto interno que
+// no debe llegar tal cual a la UI (ver prompt-claude-code-fix-labels-perfil.md).
+// Se normaliza acá (server-only, antes de que el dato salga de esta capa) en
+// vez de en cada componente que consuma AuthUser.
+function stripAxPlaceholder(value: string): string {
+  return /^sin_/i.test(value.trim()) ? "" : value;
+}
+
 export function getUserFromToken(token: string): AuthUser | null {
   const claims = decodeJwtPayload(token);
   if (!claims) return null;
 
   const accountNum = String(claims[CLAIM_ACCOUNT_NUM] ?? "");
-  const name = String(claims[CLAIM_NAME] ?? "");
-  const email = String(claims[CLAIM_EMAIL] ?? "");
+  const name = stripAxPlaceholder(String(claims[CLAIM_NAME] ?? ""));
+  const email = stripAxPlaceholder(String(claims[CLAIM_EMAIL] ?? ""));
 
   // Sin accountNum no hay usuario válido.
   if (!accountNum) return null;

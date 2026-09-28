@@ -177,17 +177,18 @@ export default function ProfileDrawer() {
                           {user.accountNum}
                         </span>
                       </div>
-                      {user.email && (
-                        <div className="flex items-center justify-between gap-2 rounded-2xl border bg-white px-4 py-3" style={{ borderColor: RULE }}>
-                          <span className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase" style={{ color: MUTED, letterSpacing: "0.06em" }}>
-                            <Mail className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                            {t("emailLabel")}
-                          </span>
-                          <span className="truncate text-[13.5px] font-semibold" style={{ color: INK }}>
-                            {user.email}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between gap-2 rounded-2xl border bg-white px-4 py-3" style={{ borderColor: RULE }}>
+                        <span className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase" style={{ color: MUTED, letterSpacing: "0.06em" }}>
+                          <Mail className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                          {t("emailLabel")}
+                        </span>
+                        <span
+                          className="truncate text-[13.5px] font-semibold"
+                          style={{ color: user.email ? INK : MUTED, fontStyle: user.email ? "normal" : "italic" }}
+                        >
+                          {user.email || t("noEmailRegistered")}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <button

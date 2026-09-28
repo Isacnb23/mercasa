@@ -334,8 +334,9 @@
     "submitCta": "Sign in",
     "submitCtaLoading": "Signing in...",
     "loggedInGreeting": "Hi, {name}",
-    "accountNumLabel": "ID number",
+    "accountNumLabel": "Customer code",
     "emailLabel": "Email",
+    "noEmailRegistered": "No email on file",
     "logoutCta": "Sign out"
   },
   "Brands": {
