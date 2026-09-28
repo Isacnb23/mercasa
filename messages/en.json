@@ -319,6 +319,25 @@
     "whatsappIntro": "Hi, I'd like to place an order for the following products:",
     "whatsappOutro": "Could you help me with availability and pricing? Thank you."
   },
+  "Profile": {
+    "eyebrow": "My account",
+    "title": "Profile",
+    "close": "Close",
+    "openAria": "Open profile",
+    "openAriaLoggedIn": "{name}'s profile",
+    "loadingSession": "Loading...",
+    "loginIntro": "Sign in with your Mercasa customer ID and password.",
+    "userIdLabel": "ID number",
+    "userIdPlaceholder": "e.g. 305640580",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "submitCta": "Sign in",
+    "submitCtaLoading": "Signing in...",
+    "loggedInGreeting": "Hi, {name}",
+    "accountNumLabel": "ID number",
+    "emailLabel": "Email",
+    "logoutCta": "Sign out"
+  },
   "Brands": {
     "muralTitle": "Backed by leading brands",
     "muralSubtitle": "These are some of the brands that guarantee the quality of our portfolio.",

@@ -16,6 +16,7 @@ import PageLoader from "@/components/chrome/PageLoader";
 import AmbientBackdrop from "@/components/chrome/AmbientBackdrop";
 import OrganizationJsonLd from "@/components/chrome/OrganizationJsonLd";
 import { CartProvider } from "@/lib/cart-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 // Dominio real de producción (AWS) — ver seo-corregir-dominio.md: es
 // "mercasacr.com" (sin "www", ".com" en vez de ".cr"), NO "www.mercasa.cr"
@@ -136,11 +137,13 @@ export default async function RootLayout({
           {`try{if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var l=document.createElement('link');l.rel='preload';l.as='fetch';l.href='/models/mercasa-truck.glb';l.crossOrigin='anonymous';document.head.appendChild(l);var d=document.createElement('link');d.rel='preload';d.as='fetch';d.href='/draco/draco_decoder.wasm';d.crossOrigin='anonymous';document.head.appendChild(d);}}catch(e){}`}
         </Script>
         <NextIntlClientProvider messages={messages}>
-          <CartProvider>
-            <AmbientBackdrop />
-            <PageLoader />
-            <SmoothScroll>{children}</SmoothScroll>
-          </CartProvider>
+          <AuthProvider>
+            <CartProvider>
+              <AmbientBackdrop />
+              <PageLoader />
+              <SmoothScroll>{children}</SmoothScroll>
+            </CartProvider>
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -319,6 +319,25 @@
     "whatsappIntro": "Hola, quisiera hacer un pedido de los siguientes productos:",
     "whatsappOutro": "¿Podrían ayudarme con la disponibilidad y cotización? Gracias."
   },
+  "Profile": {
+    "eyebrow": "Mi cuenta",
+    "title": "Perfil",
+    "close": "Cerrar",
+    "openAria": "Abrir perfil",
+    "openAriaLoggedIn": "Perfil de {name}",
+    "loadingSession": "Cargando...",
+    "loginIntro": "Iniciá sesión con tu cédula y contraseña de cliente Mercasa.",
+    "userIdLabel": "Cédula",
+    "userIdPlaceholder": "Ej. 305640580",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "••••••••",
+    "submitCta": "Iniciar sesión",
+    "submitCtaLoading": "Iniciando sesión...",
+    "loggedInGreeting": "Hola, {name}",
+    "accountNumLabel": "Cédula",
+    "emailLabel": "Correo",
+    "logoutCta": "Cerrar sesión"
+  },
   "Brands": {
     "muralTitle": "Respaldados por marcas líderes",
     "muralSubtitle": "Estas son algunas de las marcas que garantizan la calidad de nuestro portafolio.",
