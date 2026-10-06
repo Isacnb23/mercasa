@@ -36,6 +36,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
   const [position, setPosition] = useState("");
   const [message, setMessage] = useState("");
   const [cv, setCv] = useState<File | null>(null);
+  const [honeypot, setHoneypot] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -109,6 +110,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
     formData.set("canton", canton);
     formData.set("puesto", position);
     formData.set("mensaje", message);
+    formData.set("website", honeypot); // honeypot: debe ir vacío
     if (cv) formData.set("cv", cv);
 
     try {
@@ -212,6 +214,16 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
               <p className="mt-2 text-[14px] leading-[1.55] text-slate-500">{t("intro")}</p>
 
               <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                />
                 <div>
                   <label className={labelStyle}>{t("nameLabel")}</label>
                   <div className={inputWrapStyle}>
