@@ -13,3 +13,21 @@ export interface AuthUser {
   name: string;
   email: string;
 }
+
+// Datos del formulario de dirección de entrega (Perfil). Se mandan a
+// /api/directions con NOMBRES (no códigos) de provincia/cantón/distrito/
+// ciudad, igual que homex-web. OJO con el mapeo hacia AX (confirmado en el
+// backend real): `street` = señas, `address` = nombre de la dirección.
+export interface DirectionInput {
+  fullName: string;
+  province: string;
+  canton: string;
+  district: string;
+  // Vacío si el distrito no tiene ciudad.
+  city?: string;
+  street: string;
+  address: string;
+  postalName?: string;
+  latitude: number | string;
+  longitude: number | string;
+}
