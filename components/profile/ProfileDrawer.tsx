@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, Mail, User, X } from "lucide-react";
+import { LogOut, Mail, MapPin, User, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
+import AddressFlow from "./AddressFlow";
 
 // Mismo lenguaje visual que CartDrawer.tsx (header navy con degradado +
 // curvas decorativas, acentos gold, tarjetas beige) — reusa los mismos
@@ -25,6 +26,7 @@ export default function ProfileDrawer() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [addingAddress, setAddingAddress] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -53,6 +55,7 @@ export default function ProfileDrawer() {
     if (!isOpen) {
       setPassword("");
       setError(null);
+      setAddingAddress(false);
     }
   }, [isOpen]);
 
@@ -150,6 +153,8 @@ export default function ProfileDrawer() {
                 <p className="text-center text-[13.5px]" style={{ color: MUTED }}>
                   {t("loadingSession")}
                 </p>
+              ) : user && addingAddress ? (
+                <AddressFlow onClose={() => setAddingAddress(false)} />
               ) : user ? (
                 <div className="flex flex-col gap-4">
                   <div
@@ -193,7 +198,19 @@ export default function ProfileDrawer() {
                   </div>
                   <button
                     type="button"
-                    onClick={logout}
+                    onClick={() => setAddingAddress(true)}
+                    className="flex items-center justify-center gap-2 rounded-full py-3.5 text-[14.5px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
+                    style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
+                  >
+                    <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    {t("addAddressCta")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingAddress(false);
+                      logout();
+                    }}
                     className="flex items-center justify-center gap-2 rounded-full border py-3 text-[14px] font-semibold transition hover:bg-black/[0.02]"
                     style={{ borderColor: RULE, color: INK }}
                   >
