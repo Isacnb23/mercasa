@@ -488,6 +488,9 @@
     "privacyRecipients": "Quién los recibe: únicamente el área de Recursos Humanos.",
     "privacyRights": "Tus derechos: podés solicitar acceso, rectificación o eliminación de tus datos escribiendo a {email}.",
     "privacyFullLink": "Política de Privacidad completa",
+    "optional": "opcional",
+    "cvDrop": "Arrastrá tu CV acá",
+    "charCount": "{count}/{max}",
     "close": "Cerrar"
   },
   "Footer": {

@@ -488,6 +488,9 @@
     "privacyRecipients": "Who receives it: only the Human Resources department.",
     "privacyRights": "Your rights: you may request access to, correction of, or deletion of your data by writing to {email}.",
     "privacyFullLink": "Full Privacy Policy",
+    "optional": "optional",
+    "cvDrop": "Drag your resume here",
+    "charCount": "{count}/{max}",
     "close": "Close"
   },
   "Footer": {
