@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Briefcase, CheckCircle2, Loader2, Mail, MapPin, Paperclip, Phone, Send, User, X } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { site } from "@/lib/data";
+import { RECRUIT_LIMITS, validateRecruitment, type RecruitErrorCode, type RecruitErrors, type RecruitField } from "@/lib/recruitment-validation";
 
-const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB — debe calzar con app/api/careers/route.ts
-const PHONE_PATTERN = /^\d{4}-\d{4}$/; // debe calzar con app/api/careers/route.ts
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // debe calzar con app/api/careers/route.ts
+// Orden en que se busca el primer campo con error para darle el foco.
+const FIELD_ORDER: RecruitField[] = ["name", "email", "phone", "position", "canton", "message", "cv", "consent"];
+const noopSubscribe = () => () => {};
 
 function formatPhone(raw: string) {
   const digits = raw.replace(/\D/g, "").slice(0, 8);
@@ -37,16 +39,15 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
   const [message, setMessage] = useState("");
   const [cv, setCv] = useState<File | null>(null);
   const [honeypot, setHoneypot] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<RecruitErrors>({});
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // true solo en el cliente (evita crear el portal durante el render del servidor)
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   useEffect(() => {
     if (!open) return;
@@ -70,46 +71,81 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
     setPosition("");
     setMessage("");
     setCv(null);
+    setConsent(false);
+    setFieldErrors({});
     setStatus("idle");
     setError(null);
+  }
+
+  function clearFieldError(field: RecruitField) {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function errorText(field: RecruitField, code: RecruitErrorCode) {
+    if (code === "pdfOnly") return t("cvPdfOnly");
+    if (code === "tooLarge") return t("cvTooLarge");
+    if (code === "invalid") return field === "phone" ? t("phoneInvalid") : t("emailInvalid");
+    if (code === "length") {
+      if (field === "name") return t("nameLength");
+      if (field === "position") return t("positionLength");
+      if (field === "canton") return t("cantonLength");
+      return t("messageLength");
+    }
+    if (field === "cv") return t("cvRequired");
+    if (field === "consent") return t("consentRequired");
+    return t("errRequired");
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > MAX_CV_BYTES) {
-      setError(t("cvTooLarge"));
+    const isPdf = file.name.toLowerCase().endsWith(".pdf") && (file.type === "" || file.type === "application/pdf");
+    if (!isPdf || file.size > RECRUIT_LIMITS.cvMaxBytes) {
+      setFieldErrors((prev) => ({ ...prev, cv: !isPdf ? "pdfOnly" : "tooLarge" }));
       e.target.value = "";
       return;
     }
-    setError(null);
+    clearFieldError("cv");
     setCv(file);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "submitting") return; // evita doble envío
     setError(null);
 
-    if (!EMAIL_PATTERN.test(email)) {
-      setStatus("error");
-      setError(t("emailInvalid"));
-      return;
-    }
-    if (!PHONE_PATTERN.test(phone)) {
-      setStatus("error");
-      setError(t("phoneInvalid"));
+    const errors = validateRecruitment({
+      name,
+      email,
+      phone,
+      position,
+      canton,
+      message,
+      consent,
+      cv: cv ? { name: cv.name, size: cv.size } : null,
+    });
+    setFieldErrors(errors);
+    const firstInvalid = FIELD_ORDER.find((f) => errors[f]);
+    if (firstInvalid) {
+      document.getElementById(`recruit-${firstInvalid}`)?.focus();
       return;
     }
 
     setStatus("submitting");
 
     const formData = new FormData();
-    formData.set("nombre", name);
-    formData.set("correo", email);
-    formData.set("telefono", phone);
-    formData.set("canton", canton);
-    formData.set("puesto", position);
-    formData.set("mensaje", message);
+    formData.set("nombre", name.trim());
+    formData.set("correo", email.trim());
+    formData.set("telefono", phone.trim());
+    formData.set("canton", canton.trim());
+    formData.set("puesto", position.trim());
+    formData.set("mensaje", message.trim());
+    formData.set("consent", consent ? "true" : "false");
     formData.set("website", honeypot); // honeypot: debe ir vacío
     if (cv) formData.set("cv", cv);
 
@@ -140,6 +176,19 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
   const inputIconStyle = "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-corp-blue/40";
   const inputStyle =
     "w-full rounded-[10px] border border-corp-ink/10 bg-white py-2.5 pl-9 pr-3 text-[14px] text-corp-ink placeholder:text-slate-400 outline-none transition focus:border-corp-blue/40 focus:ring-2 focus:ring-corp-blue/10";
+  const fieldProps = (field: RecruitField) => ({
+    id: `recruit-${field}`,
+    "aria-invalid": fieldErrors[field] ? (true as const) : undefined,
+    "aria-describedby": fieldErrors[field] ? `recruit-err-${field}` : undefined,
+  });
+  const fieldError = (field: RecruitField) => {
+    const code = fieldErrors[field];
+    return code ? (
+      <p id={`recruit-err-${field}`} role="alert" className="mt-1 text-[12px] leading-[1.4] text-red-600">
+        {errorText(field, code)}
+      </p>
+    ) : null;
+  };
   const labelStyle = "mb-1 block text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500";
 
   const dialog = (
@@ -213,7 +262,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
             <>
               <p className="mt-2 text-[14px] leading-[1.55] text-slate-500">{t("intro")}</p>
 
-              <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+              <form onSubmit={handleSubmit} noValidate className="mt-4 flex flex-col gap-3">
                 <input
                   type="text"
                   name="website"
@@ -232,11 +281,16 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                       type="text"
                       required
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        clearFieldError("name");
+                      }}
                       placeholder={t("namePlaceholder")}
                       className={inputStyle}
+                      {...fieldProps("name")}
                     />
                   </div>
+                  {fieldError("name")}
                 </div>
 
                 <div>
@@ -247,11 +301,16 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        clearFieldError("email");
+                      }}
                       placeholder={t("emailPlaceholder")}
                       className={inputStyle}
+                      {...fieldProps("email")}
                     />
                   </div>
+                  {fieldError("email")}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -267,11 +326,16 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                         maxLength={9}
                         title={t("phoneInvalid")}
                         value={phone}
-                        onChange={(e) => setPhone(formatPhone(e.target.value))}
+                        onChange={(e) => {
+                          setPhone(formatPhone(e.target.value));
+                          clearFieldError("phone");
+                        }}
                         placeholder={t("phonePlaceholder")}
                         className={inputStyle}
+                        {...fieldProps("phone")}
                       />
                     </div>
+                    {fieldError("phone")}
                   </div>
                   <div>
                     <label className={labelStyle}>{t("positionLabel")}</label>
@@ -281,11 +345,16 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                         type="text"
                         required
                         value={position}
-                        onChange={(e) => setPosition(e.target.value)}
+                        onChange={(e) => {
+                          setPosition(e.target.value);
+                          clearFieldError("position");
+                        }}
                         placeholder={t("positionPlaceholder")}
                         className={inputStyle}
+                        {...fieldProps("position")}
                       />
                     </div>
+                    {fieldError("position")}
                   </div>
                 </div>
 
@@ -297,20 +366,29 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                       type="text"
                       required
                       value={canton}
-                      onChange={(e) => setCanton(e.target.value)}
+                      onChange={(e) => {
+                        setCanton(e.target.value);
+                        clearFieldError("canton");
+                      }}
                       placeholder={t("cantonPlaceholder")}
                       className={inputStyle}
+                      {...fieldProps("canton")}
                     />
                   </div>
+                  {fieldError("canton")}
                 </div>
 
                 <div>
                   <label className={labelStyle}>{t("messageLabel")}</label>
                   <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      clearFieldError("message");
+                    }}
                     placeholder={t("messagePlaceholder")}
                     rows={2}
+                    {...fieldProps("message")}
                     className="w-full resize-none rounded-[10px] border border-corp-ink/10 bg-white px-3 py-2.5 text-[14px] text-corp-ink placeholder:text-slate-400 outline-none transition focus:border-corp-blue/40 focus:ring-2 focus:ring-corp-blue/10"
                   />
                 </div>
@@ -320,7 +398,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -345,6 +423,7 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
+                      {...fieldProps("cv")}
                       className="flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-corp-ink/20 bg-corp-warmgray/40 px-3 py-2.5 text-[13px] font-medium text-corp-ink/70 transition hover:border-corp-blue/30 hover:bg-corp-blue/5 hover:text-corp-blue"
                     >
                       <Paperclip className="h-3.5 w-3.5" />
@@ -352,6 +431,43 @@ export default function RecruitmentPopover({ variant = "desktop" }: { variant?: 
                     </button>
                   )}
                   <p className="mt-1 text-[11px] text-slate-400">{t("cvHint")}</p>
+                  {fieldError("cv")}
+                </div>
+
+                <div>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => {
+                        setConsent(e.target.checked);
+                        clearFieldError("consent");
+                      }}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#075FD8]"
+                      {...fieldProps("consent")}
+                    />
+                    <label htmlFor="recruit-consent" className="text-[12.5px] leading-[1.45] text-corp-ink/80">
+                      {t("consentLabel")}
+                    </label>
+                  </div>
+                  {fieldError("consent")}
+                  <details className="mt-1.5 text-[12px] leading-[1.5] text-slate-500">
+                    <summary className="cursor-pointer font-semibold text-corp-blue">{t("privacyToggle")}</summary>
+                    <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4">
+                      <li>{t("privacyResponsible")}</li>
+                      <li>{t("privacyPurpose")}</li>
+                      <li>{t("privacyData")}</li>
+                      <li>{t("privacyRecipients")}</li>
+                      <li>{t("privacyRights", { email: site.emails.comunicaciones })}</li>
+                    </ul>
+                    <Link
+                      href="/legal/politica-de-privacidad"
+                      target="_blank"
+                      className="mt-1.5 inline-block font-semibold text-corp-blue underline-offset-2 hover:underline"
+                    >
+                      {t("privacyFullLink")}
+                    </Link>
+                  </details>
                 </div>
 
                 {error && <p className="text-[12.5px] leading-[1.5] text-red-600">{error}</p>}
