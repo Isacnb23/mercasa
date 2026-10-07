@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import type { SavedAddress } from "@/lib/auth-types";
 
 // Direcciones de entrega guardadas del cliente logueado (solo lectura). Lee el
 // JWT de la cookie httpOnly (el navegador nunca lo ve) y lo reenvía a
@@ -41,7 +42,9 @@ export async function GET() {
       return NextResponse.json({ error: "No se pudieron cargar las direcciones en este momento." }, { status: 502 });
     }
 
-    return NextResponse.json(await upstream.json());
+    // Se reenvía tal cual lo que devuelve mercasa-api (ya sin datos internos).
+    const addresses: SavedAddress[] = await upstream.json();
+    return NextResponse.json(addresses);
   } catch (error) {
     console.error("[addresses] No se pudo contactar a mercasa-api:", error);
     return NextResponse.json({ error: "No se pudieron cargar las direcciones en este momento." }, { status: 502 });

@@ -31,3 +31,23 @@ export interface DirectionInput {
   latitude: number | string;
   longitude: number | string;
 }
+
+// Dirección de entrega guardada (GET /api/addresses). `city` es el código
+// original (CI###, se necesita para editar); los cuatro nombres vienen
+// resueltos desde el servidor y son null si el código no está (o es ambiguo)
+// en el catálogo de ubicaciones.
+export interface SavedAddress {
+  addressId: number;
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  provinceName: string | null;
+  cantonName: string | null;
+  districtName: string | null;
+  cityName: string | null;
+  isPrimary: boolean;
+  principalDeliveryDay: number | null;
+  secondDeliveryDay: number | null;
+}
