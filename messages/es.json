@@ -316,6 +316,22 @@
     "checkoutHint": "Atención personalizada por WhatsApp: un asesor confirma disponibilidad y arma tu cotización, sin pagos en línea.",
     "checkoutCta": "Enviar pedido por WhatsApp",
     "clearCta": "Vaciar carrito",
+    "checkout": {
+      "sectionAria": "Pedido mínimo y fecha de entrega",
+      "loginHint": "Iniciá sesión para ver el pedido mínimo y las fechas de entrega de tu dirección.",
+      "minimumLabel": "Pedido mínimo",
+      "minimumLoading": "Consultando el pedido mínimo…",
+      "minimumNote": "Un asesor confirma el monto al preparar tu cotización.",
+      "datesTitle": "Fecha de entrega",
+      "datesHint": "Elegí la fecha que preferís; un asesor la confirma.",
+      "datesLoading": "Consultando fechas de entrega…",
+      "noAddress": "Agregá una dirección de entrega en tu perfil para ver las fechas disponibles.",
+      "coordination": "Tu zona se coordina con servicio al cliente",
+      "coordinationCta": "Escribir por WhatsApp",
+      "error": "No pudimos cargar esta información.",
+      "retry": "Reintentar",
+      "whatsappDeliveryLine": "Fecha de entrega preferida: {date}"
+    },
     "whatsappIntro": "Hola, quisiera hacer un pedido de los siguientes productos:",
     "whatsappOutro": "¿Podrían ayudarme con la disponibilidad y cotización? Gracias."
   },

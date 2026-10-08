@@ -316,6 +316,22 @@
     "checkoutHint": "Personalized attention over WhatsApp: an advisor confirms availability and prepares your quote, no online payments.",
     "checkoutCta": "Send order via WhatsApp",
     "clearCta": "Clear cart",
+    "checkout": {
+      "sectionAria": "Minimum order and delivery date",
+      "loginHint": "Log in to see the minimum order and the delivery dates for your address.",
+      "minimumLabel": "Minimum order",
+      "minimumLoading": "Checking the minimum order…",
+      "minimumNote": "An advisor confirms the amount when preparing your quote.",
+      "datesTitle": "Delivery date",
+      "datesHint": "Pick the date you prefer; an advisor will confirm it.",
+      "datesLoading": "Checking delivery dates…",
+      "noAddress": "Add a delivery address in your profile to see the available dates.",
+      "coordination": "Your area is coordinated with customer service",
+      "coordinationCta": "Message us on WhatsApp",
+      "error": "We couldn't load this information.",
+      "retry": "Retry",
+      "whatsappDeliveryLine": "Preferred delivery date: {date}"
+    },
     "whatsappIntro": "Hi, I'd like to place an order for the following products:",
     "whatsappOutro": "Could you help me with availability and pricing? Thank you."
   },

@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Sparkle, Trash2, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useActiveAddress } from "@/lib/addresses-context";
 import { useCart } from "@/lib/cart-context";
+import { formatDeliveryDate } from "@/lib/checkout-format";
+import CartCheckoutInfo from "@/components/cart/CartCheckoutInfo";
 import { site } from "@/lib/data";
 import { buildWhatsappHref } from "@/lib/utils";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
@@ -33,18 +36,29 @@ const GOLD = "#FFD21A";
 // cotice, no una transacción.
 function buildOrderMessage(
   items: { name: string; packSize?: string; quantity: number }[],
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
+  deliveryLine: string | null
 ) {
   const lines = items.map((item) => {
     const pack = item.packSize ? ` (${item.packSize})` : "";
     return `- ${item.name}${pack} x${item.quantity}`;
   });
-  return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${t("whatsappOutro")}`;
+  // La fecha elegida (si hay) va como línea propia; no se incluye la dirección.
+  const delivery = deliveryLine ? `${deliveryLine}\n\n` : "";
+  return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${delivery}${t("whatsappOutro")}`;
 }
 
 export default function CartDrawer() {
   const t = useTranslations("Cart");
+  const tCheckout = useTranslations("Cart.checkout");
+  const locale = useLocale();
   const { items, isOpen, closeCart, removeItem, setQuantity, clear, totalCount } = useCart();
+  const { addressId } = useActiveAddress();
+
+  // Fecha de entrega elegida, atada a la dirección activa: si cambia la dirección,
+  // la elección anterior deja de aplicar sin necesidad de un efecto que la borre.
+  const [chosenDate, setChosenDate] = useState<{ addressId: number; date: string } | null>(null);
+  const selectedDate = chosenDate && chosenDate.addressId === addressId ? chosenDate.date : null;
 
   // Este componente vive montado SIEMPRE en el Header (a diferencia de
   // ProductCatalogModal, que solo se monta tras un click) — createPortal
@@ -72,7 +86,9 @@ export default function CartDrawer() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeCart]);
 
-  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t));
+  const selectedLabel = selectedDate ? formatDeliveryDate(selectedDate, locale) : null;
+  const deliveryLine = selectedLabel ? tCheckout("whatsappDeliveryLine", { date: selectedLabel }) : null;
+  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, deliveryLine));
 
   if (!mounted) return null;
 
@@ -300,6 +316,10 @@ export default function CartDrawer() {
                     </li>
                   ))}
                 </ul>
+                <CartCheckoutInfo
+                  selectedDate={selectedDate}
+                  onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, date })}
+                />
               </div>
             )}
 
