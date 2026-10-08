@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, Mail, MapPin, User, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import AddressFlow from "./AddressFlow";
+import SavedAddresses from "./SavedAddresses";
 
 // Mismo lenguaje visual que CartDrawer.tsx (header navy con degradado +
 // curvas decorativas, acentos gold, tarjetas beige) — reusa los mismos
@@ -20,15 +22,19 @@ const GOLD = "#FFD21A";
 export default function ProfileDrawer() {
   const t = useTranslations("Profile");
   const { user, isLoading, isOpen, closeProfile, login, logout } = useAuth();
+  const { addresses, status: addressesStatus } = useAddresses();
 
-  const [mounted, setMounted] = useState(false);
+  // false en el servidor y en la hidratación, true ya en el navegador (el portal necesita document).
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [addingAddress, setAddingAddress] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,14 +56,17 @@ export default function ProfileDrawer() {
 
   // Limpia el formulario cuando el drawer se cierra, para que la próxima
   // apertura (ya sea otro intento o tras cerrar sesión) no arrastre el
-  // password ni un error viejo en pantalla.
-  useEffect(() => {
+  // password ni un error viejo en pantalla. Se ajusta durante el render al
+  // detectar el cambio de isOpen, en vez de en un efecto.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
     if (!isOpen) {
       setPassword("");
       setError(null);
       setAddingAddress(false);
     }
-  }, [isOpen]);
+  }
 
   if (!mounted) return null;
 
@@ -196,15 +205,19 @@ export default function ProfileDrawer() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAddingAddress(true)}
-                    className="flex items-center justify-center gap-2 rounded-full py-3.5 text-[14.5px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
-                    style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
-                  >
-                    <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
-                    {t("addAddressCta")}
-                  </button>
+                  <SavedAddresses onAdd={() => setAddingAddress(true)} />
+                  {/* Con la lista vacía el botón de agregar va dentro del estado vacío. */}
+                  {!(addressesStatus === "ready" && addresses.length === 0) && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingAddress(true)}
+                      className="flex items-center justify-center gap-2 rounded-full py-3.5 text-[14.5px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                      style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
+                    >
+                      <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
+                      {t("addAddressCta")}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

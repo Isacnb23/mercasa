@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowLeft, CheckCircle2, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import type { LatLng } from "./PinMap";
 
@@ -63,6 +64,7 @@ function useOptions(level: string, query: string | null) {
 export default function AddressFlow({ onClose }: { onClose: () => void }) {
   const t = useTranslations("Profile.address");
   const { user } = useAuth();
+  const { refreshAddresses } = useAddresses();
 
   const [step, setStep] = useState<Step>("map");
   const [center, setCenter] = useState<LatLng | null>(null);
@@ -146,6 +148,9 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         );
         return;
       }
+      // Recarga la lista de "Mis direcciones"; si falla, ese listado muestra su
+      // propio error con "Reintentar" y el guardado ya hecho no se ve afectado.
+      void refreshAddresses();
       setStep("done");
     } catch {
       setError(t("saveError"));

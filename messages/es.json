@@ -339,6 +339,32 @@
     "noEmailRegistered": "Sin correo registrado",
     "logoutCta": "Cerrar sesión",
     "addAddressCta": "Agregar dirección de entrega",
+
+    "addresses": {
+
+      "title": "Mis direcciones",
+
+      "hint": "Tocá una dirección para usarla como activa.",
+
+      "loading": "Cargando direcciones",
+
+      "loadError": "No pudimos cargar tus direcciones.",
+
+      "retry": "Reintentar",
+
+      "emptyTitle": "Todavía no tenés direcciones guardadas",
+
+      "emptyBody": "Agregá tu primera dirección de entrega para empezar.",
+
+      "emptyCta": "Agregar mi primera dirección",
+
+      "primaryBadge": "Principal",
+
+      "activeBadge": "Activa",
+
+      "unnamed": "Dirección sin nombre"
+
+    },
     "address": {
       "back": "Volver",
       "myLocation": "Volver a mi ubicación actual",

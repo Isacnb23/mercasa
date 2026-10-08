@@ -16,6 +16,7 @@ import PageLoader from "@/components/chrome/PageLoader";
 import AmbientBackdrop from "@/components/chrome/AmbientBackdrop";
 import OrganizationJsonLd from "@/components/chrome/OrganizationJsonLd";
 import { CartProvider } from "@/lib/cart-context";
+import { AddressesProvider } from "@/lib/addresses-context";
 import { AuthProvider } from "@/lib/auth-context";
 
 // Dominio real de producción (AWS) — ver seo-corregir-dominio.md: es
@@ -138,11 +139,13 @@ export default async function RootLayout({
         </Script>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
-            <CartProvider>
-              <AmbientBackdrop />
-              <PageLoader />
-              <SmoothScroll>{children}</SmoothScroll>
-            </CartProvider>
+            <AddressesProvider>
+              <CartProvider>
+                <AmbientBackdrop />
+                <PageLoader />
+                <SmoothScroll>{children}</SmoothScroll>
+              </CartProvider>
+            </AddressesProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

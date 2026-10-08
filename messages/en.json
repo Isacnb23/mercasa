@@ -339,6 +339,32 @@
     "noEmailRegistered": "No email on file",
     "logoutCta": "Sign out",
     "addAddressCta": "Add delivery address",
+
+    "addresses": {
+
+      "title": "My addresses",
+
+      "hint": "Tap an address to use it as your active one.",
+
+      "loading": "Loading addresses",
+
+      "loadError": "We couldn't load your addresses.",
+
+      "retry": "Try again",
+
+      "emptyTitle": "You don't have any saved addresses yet",
+
+      "emptyBody": "Add your first delivery address to get started.",
+
+      "emptyCta": "Add my first address",
+
+      "primaryBadge": "Primary",
+
+      "activeBadge": "Active",
+
+      "unnamed": "Unnamed address"
+
+    },
     "address": {
       "back": "Back",
       "myLocation": "Back to my current location",
