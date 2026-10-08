@@ -75,6 +75,10 @@ export function formatDeliveryChip(isoDate: string, locale: string): DeliveryDat
 
 // Colones con el símbolo ₡ y separador de miles del idioma: Intl con currency "CRC"
 // imprime el código ("30.000 CRC") en vez del símbolo, por eso se antepone a mano.
-export function formatColones(amount: number, locale: string): string {
-  return `₡${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)}`;
+// `decimals`: 0 para montos enteros (pedido mínimo); 2 para precios, impuestos y totales, que traen centavos.
+export function formatColones(amount: number, locale: string, decimals = 0): string {
+  // useGrouping "always": en español Intl no agrupa los miles de números de 4 cifras ("7725,80"), y los montos se
+  // verían inconsistentes junto a "14.551,73".
+  const formatter = new Intl.NumberFormat(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: "always" });
+  return `₡${formatter.format(amount)}`;
 }
