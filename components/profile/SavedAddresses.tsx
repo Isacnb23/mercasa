@@ -1,16 +1,20 @@
 "use client";
 
-import { Check, MapPin, RefreshCw } from "lucide-react";
+import { AlertCircle, Check, MapPin, Plus, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
 import type { SavedAddress } from "@/lib/auth-types";
-
-// Mismos valores que ProfileDrawer.tsx.
-const INK = "#082B5C";
-const MUTED = "#8493A5";
-const RULE = "#E2E8F0";
-const BEIGE = "#F1ECE4";
-const GOLD = "#FFD21A";
+import {
+  BEIGE,
+  DANGER_BG,
+  DANGER_TEXT,
+  FOCUS_RING,
+  INK,
+  PRIMARY_BUTTON,
+  RULE,
+  SELECTED_BG,
+  TEXT_MUTED,
+} from "@/components/ui/drawer-tokens";
 
 // provincia · cantón · distrito · ciudad, omitiendo los que vengan null/vacíos.
 // Sin ninguno devuelve null y la tarjeta no muestra la línea.
@@ -23,17 +27,17 @@ function locationLine(address: SavedAddress): string | null {
 
 function Skeletons({ label }: { label: string }) {
   return (
-    <div className="flex flex-col gap-2.5" role="status" aria-busy="true" aria-label={label}>
+    <div className="flex flex-col gap-3" role="status" aria-busy="true" aria-label={label}>
       {[0, 1].map((i) => (
         <div
           key={i}
-          className="flex flex-col gap-2 rounded-2xl px-4 py-4 motion-safe:animate-pulse"
-          style={{ background: BEIGE }}
+          className="flex flex-col gap-2.5 rounded-2xl border bg-white px-4 py-4 motion-safe:animate-pulse"
+          style={{ borderColor: RULE }}
           aria-hidden
         >
-          <span className="h-3.5 w-2/5 rounded-full bg-black/10" />
-          <span className="h-3 w-4/5 rounded-full bg-black/[0.07]" />
-          <span className="h-3 w-3/5 rounded-full bg-black/[0.07]" />
+          <span className="h-3.5 w-2/5 rounded-full" style={{ background: BEIGE }} />
+          <span className="h-3 w-4/5 rounded-full" style={{ background: BEIGE }} />
+          <span className="h-3 w-3/5 rounded-full" style={{ background: BEIGE }} />
         </div>
       ))}
     </div>
@@ -47,7 +51,7 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
 
   return (
     <section aria-labelledby="saved-addresses-title" className="flex flex-col gap-3">
-      <h2 id="saved-addresses-title" className="font-display text-[15px] font-semibold" style={{ color: INK }}>
+      <h2 id="saved-addresses-title" className="font-display text-[18px] font-semibold" style={{ color: INK }}>
         {t("title")}
       </h2>
 
@@ -57,14 +61,17 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
         <div
           role="alert"
           className="flex flex-col items-start gap-3 rounded-2xl px-4 py-4"
-          style={{ background: "#FDECEC", color: "#B3261E" }}
+          style={{ background: DANGER_BG, color: DANGER_TEXT }}
         >
-          <p className="text-[13px] font-medium">{t("loadError")}</p>
+          <p className="flex items-start gap-2 text-[13px] font-medium leading-snug">
+            <AlertCircle className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            {t("loadError")}
+          </p>
           <button
             type="button"
             onClick={() => void refreshAddresses()}
-            className="flex items-center gap-1.5 rounded-full border bg-white px-4 py-2 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075FD8]"
-            style={{ borderColor: "#F2B8B5", color: "#B3261E" }}
+            className={`flex min-h-[40px] items-center gap-1.5 rounded-full border bg-white px-4 text-[13px] font-semibold motion-safe:transition hover:bg-[#FFF7F6] ${FOCUS_RING}`}
+            style={{ borderColor: "#F2B8B5", color: DANGER_TEXT }}
           >
             <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
             {t("retry")}
@@ -73,20 +80,27 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
       )}
 
       {status === "ready" && addresses.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl px-6 py-7 text-center" style={{ background: BEIGE }}>
-          <p className="font-display text-[15px] font-semibold" style={{ color: INK }}>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border bg-white px-6 py-7 text-center" style={{ borderColor: RULE }}>
+          <span
+            className="flex h-12 w-12 items-center justify-center rounded-full"
+            style={{ background: BEIGE }}
+            aria-hidden
+          >
+            <MapPin className="h-5 w-5" strokeWidth={1.8} style={{ color: INK }} />
+          </span>
+          <p className="font-display text-[16px] font-semibold" style={{ color: INK }}>
             {t("emptyTitle")}
           </p>
-          <p className="text-[13px] leading-relaxed" style={{ color: "#5C6B7D" }}>
+          <p className="text-[13px] leading-relaxed" style={{ color: TEXT_MUTED }}>
             {t("emptyBody")}
           </p>
           <button
             type="button"
             onClick={onAdd}
-            className="flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold text-white transition duration-300 hover:brightness-110 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075FD8]"
-            style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)` }}
+            className={`${PRIMARY_BUTTON} mt-1`}
+            style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
           >
-            <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
+            <Plus className="h-4 w-4" strokeWidth={2.2} aria-hidden />
             {t("emptyCta")}
           </button>
         </div>
@@ -94,10 +108,10 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
 
       {status === "ready" && addresses.length > 0 && (
         <>
-          <p className="text-[12.5px]" style={{ color: MUTED }}>
+          <p className="text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
             {t("hint")}
           </p>
-          <ul className="flex flex-col gap-2.5">
+          <ul className="flex flex-col gap-3">
             {addresses.map((address) => {
               const active = address.addressId === activeId;
               const location = locationLine(address);
@@ -107,29 +121,29 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
                     type="button"
                     aria-pressed={active}
                     onClick={() => setActiveAddressId(address.addressId)}
-                    className="flex w-full flex-col gap-1.5 rounded-2xl border bg-white px-4 py-3.5 text-left transition duration-200 hover:bg-black/[0.015] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075FD8]"
+                    className={`flex w-full flex-col gap-1.5 rounded-2xl border bg-white px-4 py-3.5 text-left motion-safe:transition motion-safe:duration-150 hover:border-[#B9C6D8] hover:bg-[#FBF9F5] ${FOCUS_RING}`}
                     style={{
-                      borderColor: active ? GOLD : RULE,
-                      boxShadow: active ? `inset 0 0 0 1.5px ${GOLD}` : undefined,
-                      background: active ? "#FFFBEA" : undefined,
+                      borderColor: active ? INK : RULE,
+                      boxShadow: active ? `inset 0 0 0 1px ${INK}` : undefined,
+                      background: active ? SELECTED_BG : undefined,
                     }}
                   >
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-[14px] font-semibold" style={{ color: INK }}>
+                      <span className="text-[15px] font-semibold leading-snug" style={{ color: INK }}>
                         {address.name || t("unnamed")}
                       </span>
                       {address.isPrimary && (
                         <span
                           className="rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase"
-                          style={{ background: INK, color: "#fff", letterSpacing: "0.08em" }}
+                          style={{ background: BEIGE, color: INK, letterSpacing: "0.08em" }}
                         >
                           {t("primaryBadge")}
                         </span>
                       )}
                       {active && (
                         <span
-                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase"
-                          style={{ background: GOLD, color: INK, letterSpacing: "0.08em" }}
+                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase text-white"
+                          style={{ background: INK, letterSpacing: "0.08em" }}
                         >
                           <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
                           {t("activeBadge")}
@@ -137,12 +151,13 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
                       )}
                     </span>
                     {address.description && (
-                      <span className="text-[13px] leading-snug" style={{ color: "#5C6B7D" }}>
+                      <span className="line-clamp-2 text-[13px] leading-snug" style={{ color: TEXT_MUTED }}>
                         {address.description}
                       </span>
                     )}
                     {location && (
-                      <span className="text-[12px] leading-snug" style={{ color: MUTED }}>
+                      <span className="flex items-start gap-1.5 text-[12px] leading-snug" style={{ color: TEXT_MUTED }}>
+                        <MapPin className="mt-px h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
                         {location}
                       </span>
                     )}

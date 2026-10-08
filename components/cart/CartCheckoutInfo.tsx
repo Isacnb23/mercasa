@@ -8,17 +8,7 @@ import { useAddresses } from "@/lib/addresses-context";
 import { useActiveDeliveryDates, useMinimumAmount } from "@/lib/checkout-info";
 import { formatColones, formatDeliveryChip, formatDeliveryDate } from "@/lib/checkout-format";
 import { site } from "@/lib/data";
-
-// Mismos tonos del drawer del carrito (CartDrawer.tsx). TEXT_MUTED (#5C6B7D) es el gris
-// para texto legible (contraste AA sobre blanco y beige); #8493A5 queda solo para detalles.
-const INK = "#082B5C";
-const ACCENT = "#075FD8";
-const TEXT_MUTED = "#5C6B7D";
-const BEIGE = "#F1ECE4";
-const RING = "#E9E3D8";
-
-const FOCUS_RING =
-  "outline-none focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2";
+import { ACCENT, BEIGE, FOCUS_RING, INK, RULE as RING, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 
 interface Props {
   // Fecha elegida ("yyyy-MM-dd") para la dirección activa, o null.

@@ -2,20 +2,25 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowLeft, CheckCircle2, MapPin } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
+import {
+  BEIGE,
+  DANGER_BG,
+  DANGER_TEXT,
+  FIELD_CLASS,
+  FOCUS_RING,
+  INK,
+  PRIMARY_BUTTON,
+  RULE,
+  TEXT_MUTED,
+} from "@/components/ui/drawer-tokens";
 import type { LatLng } from "./PinMap";
 
 // Leaflet necesita `window`: el mapa solo se renderiza en el navegador.
 const PinMap = dynamic(() => import("./PinMap"), { ssr: false });
-
-// Mismos valores de color que ProfileDrawer.
-const INK = "#082B5C";
-const MUTED = "#8493A5";
-const RULE = "#E2E8F0";
-const BEIGE = "#F1ECE4";
 
 interface Option {
   id: string;
@@ -24,8 +29,10 @@ interface Option {
 
 type Step = "map" | "form" | "done";
 
-const inputClass =
-  "rounded-2xl border px-4 py-3 text-[14px] outline-none transition focus:border-[#075FD8] disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:opacity-70";
+// Mismo estilo de campos que el formulario de ingreso del perfil.
+const inputClass = FIELD_CLASS;
+
+const primaryStyle = { background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" } as const;
 
 // Pide un nivel de los dropdowns geográficos a través del BFF
 // (/api/location/*). `null` como query = nivel bloqueado (falta el anterior).
@@ -163,7 +170,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 self-start text-[13px] font-semibold"
+      className={`-ml-2 flex min-h-[40px] items-center gap-1.5 self-start rounded-full px-2 text-[13px] font-semibold motion-safe:transition motion-safe:duration-150 hover:bg-[#F1ECE4] ${FOCUS_RING}`}
       style={{ color: INK }}
     >
       <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -173,20 +180,17 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
 
   if (step === "done") {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-[24px] px-8 py-10 text-center" style={{ background: BEIGE }}>
-        <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.6} aria-hidden />
+      <div className="flex flex-col items-center gap-4 rounded-2xl border bg-white px-8 py-10 text-center" style={{ borderColor: RULE }}>
+        <span className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: BEIGE }} aria-hidden>
+          <CheckCircle2 className="h-9 w-9 text-emerald-700" strokeWidth={1.6} />
+        </span>
         <p className="font-display text-[17px] font-semibold" style={{ color: INK }}>
           {t("savedTitle")}
         </p>
-        <p className="text-[13.5px] leading-relaxed" style={{ color: "#5C6B7D" }}>
+        <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
           {t("savedBody")}
         </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full px-6 py-3 text-[14px] font-semibold text-white"
-          style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)` }}
-        >
+        <button type="button" onClick={onClose} className={`${PRIMARY_BUTTON} mt-1`} style={primaryStyle}>
           {t("done")}
         </button>
       </div>
@@ -201,7 +205,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
           <p className="font-display text-[17px] font-semibold" style={{ color: INK }}>
             {t("mapTitle")}
           </p>
-          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: "#5C6B7D" }}>
+          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: TEXT_MUTED }}>
             {t("mapHint")}
           </p>
         </div>
@@ -213,8 +217,8 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
             setPinned(center);
             setStep("form");
           }}
-          className="flex items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
+          className={PRIMARY_BUTTON}
+          style={primaryStyle}
         >
           <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
           {t("pinCta")}
@@ -232,7 +236,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
     locked: boolean
   ) => (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[12.5px] font-semibold" style={{ color: INK }}>
+      <span className="text-[12px] font-semibold" style={{ color: INK }}>
         {label}
       </span>
       <select
@@ -252,7 +256,8 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         ))}
       </select>
       {state.failed && (
-        <span className="text-[12px]" style={{ color: "#B3261E" }}>
+        <span className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: DANGER_TEXT }}>
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
           {t("optionsError")}
         </span>
       )}
@@ -266,14 +271,14 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         <p className="font-display text-[17px] font-semibold" style={{ color: INK }}>
           {t("formTitle")}
         </p>
-        <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" style={{ color: MUTED }}>
+        <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" style={{ color: TEXT_MUTED }}>
           <MapPin className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
           {t("pinnedAt", { lat: pinned?.lat.toFixed(5) ?? "", lng: pinned?.lng.toFixed(5) ?? "" })}
         </p>
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-semibold" style={{ color: INK }}>
+        <span className="text-[12px] font-semibold" style={{ color: INK }}>
           {t("fullNameLabel")}
         </span>
         <input
@@ -288,7 +293,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-semibold" style={{ color: INK }}>
+        <span className="text-[12px] font-semibold" style={{ color: INK }}>
           {t("countryLabel")}
         </span>
         <input
@@ -340,7 +345,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
 
       {/* Ciudad: solo si el distrito tiene; sin ciudad queda "no aplica". */}
       {cityResolved && !cityApplies ? (
-        <p className="rounded-2xl px-4 py-3 text-[12.5px]" style={{ background: BEIGE, color: "#5C6B7D" }}>
+        <p className="rounded-xl px-4 py-3 text-[12.5px]" style={{ background: BEIGE, color: TEXT_MUTED }}>
           {t("cityNotApplicable")}
         </p>
       ) : (
@@ -348,7 +353,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       )}
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-semibold" style={{ color: INK }}>
+        <span className="text-[12px] font-semibold" style={{ color: INK }}>
           {t("streetLabel")}
         </span>
         <textarea
@@ -364,7 +369,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-semibold" style={{ color: INK }}>
+        <span className="text-[12px] font-semibold" style={{ color: INK }}>
           {t("addressNameLabel")}
         </span>
         <input
@@ -380,7 +385,12 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       </label>
 
       {error && (
-        <p className="rounded-xl px-4 py-2.5 text-[13px] font-medium" style={{ background: "#FDECEC", color: "#B3261E" }}>
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl px-3.5 py-3 text-[13px] font-medium leading-snug"
+          style={{ background: DANGER_BG, color: DANGER_TEXT }}
+        >
+          <AlertCircle className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
           {error}
         </p>
       )}
@@ -388,8 +398,8 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="mt-1 flex items-center justify-center gap-2.5 rounded-full py-3.5 text-[15px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-        style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
+        className={`${PRIMARY_BUTTON} mt-1`}
+        style={primaryStyle}
       >
         {submitting ? t("saving") : t("saveCta")}
       </button>
