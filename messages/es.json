@@ -349,6 +349,7 @@
     "passwordPlaceholder": "••••••••",
     "submitCta": "Iniciar sesión",
     "submitCtaLoading": "Iniciando sesión...",
+    "serviceUnavailable": "El servicio no está disponible, intentá de nuevo en unos minutos.",
     "loggedInGreeting": "Hola, {name}",
     "accountNumLabel": "Código de cliente",
     "emailLabel": "Correo",

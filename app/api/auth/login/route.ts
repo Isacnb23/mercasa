@@ -7,6 +7,16 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth-cookies";
 import type { LoginCredentials } from "@/lib/auth-types";
+import { SERVICE_UNAVAILABLE_CODE, isServiceUnavailableStatus } from "@/lib/login-errors";
+
+// Respuesta cuando el servicio de ingreso no está disponible (backend caído, timeout): 503 con
+// `code`, distinta del 401 de credenciales incorrectas para que la pantalla muestre otro mensaje.
+function serviceUnavailable() {
+  return NextResponse.json(
+    { error: "El servicio de ingreso no está disponible en este momento.", code: SERVICE_UNAVAILABLE_CODE },
+    { status: 503 }
+  );
+}
 
 // Reenvía a mercasa-api (servicio hermano, ver app/api/product-images/
 // [itemId]/route.ts para el mismo patrón MERCASA_API_BASE/MERCASA_API_KEY)
@@ -56,23 +66,29 @@ export async function POST(request: NextRequest) {
         password: credentials.password,
       }),
       cache: "no-store",
-      // mercasa-api colgada o inalcanzable no debe dejar el login esperando
-      // para siempre (mismo criterio que product-images/route.ts).
-      signal: AbortSignal.timeout(10_000),
+      // mercasa-api colgada o inalcanzable no debe dejar el login esperando para siempre
+      // (mismo criterio que product-images/route.ts). Debe ser MAYOR que el timeout del
+      // login en mercasa-api (20 s, MERCASAVIP_AUTH_TIMEOUT_SECONDS), que a su vez supera el
+      // peor caso de homex-api (conexión 5 s + comando 10 s): así el 503 de abajo llega
+      // antes de que esta ruta se rinda.
+      signal: AbortSignal.timeout(25_000),
     });
   } catch (error) {
+    // Sin respuesta (inalcanzable o timeout): el servicio no está disponible, no es un
+    // problema de credenciales.
     console.error("[auth] No se pudo contactar a mercasa-api:", error);
-    return NextResponse.json(
-      { error: "No se pudo iniciar sesión en este momento." },
-      { status: 502 }
-    );
+    return serviceUnavailable();
   }
 
   if (!upstream.ok) {
     // mercasa-api ya devuelve mensajes genéricos (401 credenciales
     // incorrectas, 502/503 backend caído) — se reenvía tal cual, sin
-    // exponer más detalle del que ya decidió filtrar el backend.
+    // exponer más detalle del que ya decidió filtrar el backend. El 401 NO se
+    // toca; el 503/504 se marca con `code` para que la pantalla lo distinga.
     const body = await upstream.json().catch(() => ({ error: "No se pudo iniciar sesión." }));
+    if (isServiceUnavailableStatus(upstream.status)) {
+      return NextResponse.json({ ...body, code: SERVICE_UNAVAILABLE_CODE }, { status: 503 });
+    }
     return NextResponse.json(body, { status: upstream.status });
   }
 

@@ -9,8 +9,10 @@
 // disponibles en cualquier sección del sitio.
 import { createContext, useContext, useEffect, useState } from "react";
 import type { AuthUser, LoginCredentials } from "./auth-types";
+import { isServiceUnavailable } from "./login-errors";
 
-type LoginResult = { ok: true } | { ok: false; error: string };
+// `unavailable` = el servicio de ingreso no respondió (503/504): NO son credenciales malas.
+type LoginResult = { ok: true } | { ok: false; error: string; unavailable?: boolean };
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -60,7 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (!res.ok) {
-        return { ok: false, error: data.error ?? "No se pudo iniciar sesión." };
+        return {
+          ok: false,
+          error: data.error ?? "No se pudo iniciar sesión.",
+          unavailable: isServiceUnavailable(res.status, data),
+        };
       }
 
       setUser(data.user as AuthUser);

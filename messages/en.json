@@ -349,6 +349,7 @@
     "passwordPlaceholder": "••••••••",
     "submitCta": "Sign in",
     "submitCtaLoading": "Signing in...",
+    "serviceUnavailable": "The service is unavailable, please try again in a few minutes.",
     "loggedInGreeting": "Hi, {name}",
     "accountNumLabel": "Customer code",
     "emailLabel": "Email",

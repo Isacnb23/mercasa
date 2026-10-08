@@ -63,7 +63,9 @@ export default function ProfileDrawer() {
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(result.error);
+      // Servicio caído (503/504): mensaje propio y traducido; las credenciales incorrectas (401)
+      // siguen mostrando el texto que devuelve el servidor.
+      setError(result.unavailable ? t("serviceUnavailable") : result.error);
       return;
     }
     setUserId("");
