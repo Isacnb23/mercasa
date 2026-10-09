@@ -236,6 +236,7 @@
       "downloadPdf": "Descargar PDF",
       "sectionDescription": "Productos disponibles para distribución mayorista y canal comercial.",
       "bookPageIndicator": "Página {current} de {total}",
+      "bookPageRangeIndicator": "Páginas {from}–{to} de {total}",
       "jumpToCategoryLabel": "Ir a categoría",
       "coverHint": "Arrastrá la esquina o hacé clic para pasar la página.",
       "prevPage": "Anterior",

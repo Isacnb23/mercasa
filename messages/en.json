@@ -236,6 +236,7 @@
       "downloadPdf": "Download PDF",
       "sectionDescription": "Products available for wholesale distribution and the commercial channel.",
       "bookPageIndicator": "Page {current} of {total}",
+      "bookPageRangeIndicator": "Pages {from}–{to} of {total}",
       "jumpToCategoryLabel": "Jump to category",
       "coverHint": "Drag the corner or click to turn the page.",
       "prevPage": "Previous",

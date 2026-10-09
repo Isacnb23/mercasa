@@ -38,6 +38,16 @@ export interface CategoryMenuProps {
   labels: CategoryMenuLabels;
 }
 
+// Elegir una categoría: UNA sola llamada a la navegación con su id y el menú se cierra. Es la única vía (clic y
+// Enter pasan por aquí).
+export function selectCategory(
+  categoryId: string,
+  handlers: { onSelect: (categoryId: string) => void; onOpenChange: (open: boolean) => void }
+): void {
+  handlers.onSelect(categoryId);
+  handlers.onOpenChange(false);
+}
+
 export default function CategoryMenu({ sections, activeCategoryId, open, onOpenChange, onSelect, disabled, labels }: CategoryMenuProps) {
   const uid = useId();
   const listId = `${uid}-list`;
@@ -83,10 +93,7 @@ export default function CategoryMenu({ sections, activeCategoryId, open, onOpenC
     document.getElementById(activeOptionId)?.scrollIntoView({ block: "nearest" });
   }, [open, activeOptionId]);
 
-  const choose = (categoryId: string) => {
-    onSelect(categoryId);
-    onOpenChange(false);
-  };
+  const choose = (categoryId: string) => selectCategory(categoryId, { onSelect, onOpenChange });
 
   const onPanelKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {

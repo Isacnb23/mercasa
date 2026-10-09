@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, forwardRef, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image, { type StaticImageData } from "next/image";
 import HTMLFlipBook from "react-pageflip";
@@ -31,7 +31,8 @@ import { site } from "@/lib/data";
 import PriceTag from "./PriceTag";
 import { productTitle } from "@/lib/product-display";
 import CategoryMenu from "./CategoryMenu";
-import { activeCategoryId as computeActiveCategoryId, planJump, type MenuSection } from "@/lib/category-nav";
+import { activeCategoryId as computeActiveCategoryId, planJump, visiblePageIndexes, type MenuSection } from "@/lib/category-nav";
+import { createBookNavigator, type BookLike } from "@/lib/book-navigator";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -231,6 +232,9 @@ const PILLAR_KEYS = ["catalogo", "disponibilidad", "compromiso"] as const;
 
 type BookPage =
   | { kind: "cover" }
+  // Contraportada: cierra el libro cuando el total sería par (sin ella la última página quedaría sola y la
+  // hoja derecha en blanco).
+  | { kind: "back" }
   | { kind: "portfolio-info" }
   | { kind: "portfolio-visual" }
   | { kind: "subfamily-divider"; subFamily: HierarchyNode; photo: StaticImageData }
@@ -533,14 +537,17 @@ export default function ProductCatalogModal({
   const [isBookReady, setIsBookReady] = useState(false);
 
   const photoOffset = useMemo(() => photoOffsetFor(displayFamily.id), [displayFamily.id]);
-  const bookPages = useMemo(
-    () =>
-      isFiltered
-        ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset)
-        : buildBookPages(family, photoOffset),
-    [isFiltered, filterCategories, family, photoOffset, allFamilies]
-  );
+  const bookPages = useMemo(() => {
+    const content = isFiltered
+      ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset)
+      : buildBookPages(family, photoOffset);
+    // Con showCover la portada va sola y el resto en pares: si el total es par, la última página quedaría sola
+    // con la hoja derecha vacía. Se cierra con una contraportada intencional para que todo spread esté completo.
+    return content.length % 2 === 0 ? [...content, { kind: "back" } as BookPage] : content;
+  }, [isFiltered, filterCategories, family, photoOffset, allFamilies]);
   const totalPages = bookPages.length;
+  // Páginas de contenido (sin la contraportada): lo que cuenta el indicador "Página n de total".
+  const contentPageCount = bookPages.filter((page) => page.kind !== "back").length;
 
   // Agrupado por sub-familia para el <select> "Ir a categoría" (ver
   // fix-dropdown-agrupado-y-apertura-pagina.md) — mismo criterio que
@@ -751,7 +758,7 @@ export default function ProductCatalogModal({
   // portada). Sirve para saber cuándo mostrar el panel decorativo del
   // hueco de spread simple (ver catalogo-portada-espacio-y-mobile.md, más
   // arriba en el JSX del libro).
-  const isSingleSpread = currentPage === 0 || (totalPages % 2 === 0 && currentPage === totalPages - 1);
+  const isSingleSpread = currentPage === 0; // el total es siempre impar (contraportada): solo la portada va sola
   const showSpreadGutter = isSingleSpread && !isPortraitBook;
   // La portada (índice 0, "página 1" 1-indexed, impar) siempre se dibuja a
   // la DERECHA (misma convención de libro físico: impar = derecha, par =
@@ -924,6 +931,52 @@ export default function ProductCatalogModal({
   // la misma página/categoría de antes. `selectedProduct` null = cerrado.
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
 
+  // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
+  const liveBook = useMemo(() => ({ priceFor, onProductClick: setSelectedProduct }), [priceFor, setSelectedProduct]);
+
+  // Navegación del menú "Ir a categoría" (ver lib/book-navigator): UNA sola navegación a la vez. Si el libro está
+  // animando se espera a que vuelva a reposo; un spread de distancia se anima, más lejos se va directo con
+  // turnToPage tras un fundido breve (sin fundido con prefers-reduced-motion). Mientras navega se ignoran las
+  // flechas, la rueda y los clics en la esquina.
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isFading, setIsFading] = useState(false);
+  const viewRef = useRef({ currentPage, totalPages, portrait: isPortraitBook });
+  useEffect(() => {
+    viewRef.current = { currentPage, totalPages, portrait: isPortraitBook };
+  });
+  const fadeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const timers = fadeTimersRef.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  // Se crea al primer uso (en un evento o efecto, nunca durante el render) porque lee refs del libro.
+  const navigatorRef = useRef<ReturnType<typeof createBookNavigator> | null>(null);
+  const getNavigator = useCallback(() => {
+    if (!navigatorRef.current) {
+      navigatorRef.current = createBookNavigator({
+        plan: planJump,
+        getBook: () => (bookRef.current?.pageFlip() as unknown as BookLike | undefined) ?? null,
+        getView: () => viewRef.current,
+        reducedMotion: () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        turn: (_page, apply) => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            apply();
+            return;
+          }
+          setIsFading(true);
+          fadeTimersRef.current.push(
+            setTimeout(() => {
+              apply();
+              fadeTimersRef.current.push(setTimeout(() => setIsFading(false), 40));
+            }, 130)
+          );
+        },
+        onBusyChange: setIsNavigating,
+      });
+    }
+    return navigatorRef.current;
+  }, []);
+
   // Rueda del mouse pasa de página (ver catalogo-scroll-no-funciona.md,
   // parte 2): react-pageflip solo entiende click/arrastre/swipe táctil —
   // nunca `wheel` — así que sobre el libro, scrollear con el mouse no hacía
@@ -941,7 +994,7 @@ export default function ProductCatalogModal({
   const lastWheelFlipRef = useRef(0);
   const handleBookWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
-      if (!isBookReady || selectedProduct || isCategoryMenuOpen || isGlossaryOpen) return;
+      if (!isBookReady || selectedProduct || isCategoryMenuOpen || isGlossaryOpen || getNavigator().isBusy()) return;
       const scrollable = (e.target as HTMLElement).closest?.(".overflow-y-auto") as HTMLElement | null;
       if (scrollable) {
         const scrollingDown = e.deltaY > 0;
@@ -956,7 +1009,7 @@ export default function ProductCatalogModal({
       if (e.deltaY > 0) bookRef.current?.pageFlip()?.flipNext();
       else bookRef.current?.pageFlip()?.flipPrev();
     },
-    [isBookReady, selectedProduct, isCategoryMenuOpen, isGlossaryOpen]
+    [isBookReady, selectedProduct, isCategoryMenuOpen, isGlossaryOpen, getNavigator]
   );
 
   // ESC cierra el detalle de producto si está abierto (máxima prioridad —
@@ -982,22 +1035,22 @@ export default function ProductCatalogModal({
         }
         handleClose();
       } else if (e.key === "ArrowRight") {
-        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen) bookRef.current?.pageFlip()?.flipNext();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen && !getNavigator().isBusy()) bookRef.current?.pageFlip()?.flipNext();
       } else if (e.key === "ArrowLeft") {
-        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen) bookRef.current?.pageFlip()?.flipPrev();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen && !getNavigator().isBusy()) bookRef.current?.pageFlip()?.flipPrev();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct]);
+  }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct, getNavigator]);
 
-  // Elegir una categoría: pasa a su primera página, salvo que ya esté a la vista (entonces solo se marca).
+  // Elegir una categoría: queda a la vista su PRIMERA página; la categoría actual se sincroniza con la página
+  // real que muestra el libro (onFlip actualiza currentPage al llegar).
   const handleSelectCategory = (categoryId: string) => {
     const target = categoryPageIndex.get(categoryId);
     if (target === undefined) return;
-    const plan = planJump(target, currentPage, totalPages, isPortraitBook);
     setJumpTarget(categoryId);
-    if (plan.kind === "flip") bookRef.current?.pageFlip()?.flip(plan.page);
+    getNavigator().go(target);
   };
 
   return createPortal(
@@ -1336,9 +1389,27 @@ export default function ProductCatalogModal({
                 ResizeObserver: su tamaño es el espacio real disponible para el
                 libro, ya descontando flechas y cantos de página. `relative`
                 es el ancla del loader de abajo. */}
-            <div ref={bookAreaRef} className="flipbook-container relative flex h-full min-w-0 flex-1 items-center justify-center">
+            <div
+              ref={bookAreaRef}
+              className="flipbook-container relative flex h-full min-w-0 flex-1 items-center justify-center"
+              style={{
+                pointerEvents: isNavigating ? "none" : undefined,
+                opacity: isFading ? 0 : 1,
+                transition: "opacity 130ms ease",
+              }}
+            >
+              {/* IMPORTANTE (causa del libro que se descuadraba al saltar de categoría): react-pageflip llama
+                  `updateFromHtml` — destruye y reconstruye todas las páginas — cada vez que cambian los
+                  `children`, o sea en CADA render de este componente (cerrar el menú, llegar los precios, mover
+                  el foco...). Si eso ocurre en medio de una vuelta de página, `flip(i)` ya había movido el índice
+                  de spread, el libro se reinicia en el spread anterior y al terminar la animación `showNext()`
+                  suma sobre ese índice: aterriza en OTRO spread. Con `renderOnlyPageLengthChange` las páginas
+                  solo se reconstruyen si cambia su cantidad (nunca aquí); lo que cambia con el tiempo (precios,
+                  clic en un producto) llega por contexto, no por props de las páginas. */}
+              <BookLiveContext.Provider value={liveBook}>
               <HTMLFlipBook
                 ref={bookRef}
+                renderOnlyPageLengthChange
                 width={BOOK_WIDTH}
                 height={BOOK_HEIGHT}
                 size="stretch"
@@ -1364,6 +1435,9 @@ export default function ProductCatalogModal({
                 style={{ width: bookBox.width, height: bookBox.height }}
                 onFlip={(e) => setCurrentPage(e.data as number)}
                 onInit={() => setIsBookReady(true)}
+                onChangeState={(e) => {
+                  if (e.data === "read") getNavigator().onIdle();
+                }}
               >
                 {bookPages.map((page, index) => (
                   <Page key={index}>
@@ -1373,12 +1447,11 @@ export default function ProductCatalogModal({
                       allFamilies={allFamilies}
                       icon={Icon}
                       coverPhoto={coverPhoto}
-                      onProductClick={setSelectedProduct}
-                      priceFor={priceFor}
                     />
                   </Page>
                 ))}
               </HTMLFlipBook>
+              </BookLiveContext.Provider>
 
               {/* Mientras react-pageflip termina de montar, el DOM real
                   muestra la portada sin su estilo de página dura (se ve
@@ -1434,7 +1507,12 @@ export default function ProductCatalogModal({
               </span>
             </span>
             <span className="shrink-0 text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
-              {t("catalog.bookPageIndicator", { current: currentPage + 1, total: totalPages })}
+              {(() => {
+                // Páginas visibles de contenido (sin la contraportada): "Página 5 de 26" o "Páginas 5–6 de 26".
+                const shown = visiblePageIndexes(currentPage, totalPages, isPortraitBook).filter((i) => i < contentPageCount);
+                if (shown.length > 1) return t("catalog.bookPageRangeIndicator", { from: shown[0] + 1, to: shown[shown.length - 1] + 1, total: contentPageCount });
+                return t("catalog.bookPageIndicator", { current: (shown[0] ?? contentPageCount - 1) + 1, total: contentPageCount });
+              })()}
             </span>
             <span className="hidden shrink-0 text-[10px] font-medium sm:inline" style={{ color: "rgba(255,255,255,0.5)" }}>
               {t("catalog.printFooterLocation")}
@@ -1556,14 +1634,20 @@ function FamilyStripItem({
   );
 }
 
+// Datos que cambian con el tiempo y que las páginas del libro necesitan (ver el comentario sobre
+// renderOnlyPageLengthChange junto al <HTMLFlipBook>): llegan por contexto para no re-crear las páginas.
+interface BookLive {
+  priceFor: (itemId: string) => PriceView;
+  onProductClick: (product: ProductSummary) => void;
+}
+const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), onProductClick: () => {} });
+
 function BookPageContent({
   page,
   family,
   allFamilies,
   icon: Icon,
   coverPhoto,
-  onProductClick,
-  priceFor,
 }: {
   page: BookPage;
   family: HierarchyNode;
@@ -1573,14 +1657,29 @@ function BookPageContent({
    * y SEGMENT_COVER_PHOTOS arriba) — decidida en ProductCatalogModal, este
    * componente solo la pinta. */
   coverPhoto: string | StaticImageData;
-  onProductClick: (product: ProductSummary) => void;
-  priceFor: (itemId: string) => PriceView;
 }) {
   const t = useTranslations("Products");
+  const { priceFor, onProductClick } = useContext(BookLiveContext);
   // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
   // las familias (ver reemplazar-imagenes-portada-indice.md) — no rota ni
   // depende del segmento.
   const portfolioPhoto = indicePhoto;
+
+  if (page.kind === "back") {
+    // Contraportada intencional (cierra el libro con spreads completos).
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: INK }}>
+        <Image src={mercasaLogo} alt="Mercasa" className="h-8 w-auto brightness-0 invert" />
+        <span aria-hidden className="block h-[3px] w-[42px] rounded-full bg-corp-yellow" />
+        <p className="text-[12px] font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {t("catalog.printFooterTagline")}
+        </p>
+        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+          {t("catalog.printFooterLocation")}
+        </p>
+      </div>
+    );
+  }
 
   if (page.kind === "cover") {
     return (

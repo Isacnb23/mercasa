@@ -51,17 +51,47 @@ export function activeCategoryId(input: ActiveCategoryInput): string | null {
   return null;
 }
 
+// Índice del spread que contiene una página, tal como lo arma page-flip: en landscape con showCover los
+// spreads son [0], [1,2], [3,4]... (la última puede quedar sola); en portrait cada página es un spread.
+export function spreadIndexOfPage(page: number, portrait: boolean): number {
+  if (portrait || page <= 0) return Math.max(0, page);
+  return Math.ceil(page / 2);
+}
+
+export interface CategoryLanding {
+  // Spread donde aterriza el libro y sus páginas (una o dos).
+  spreadIndex: number;
+  pages: number[];
+  // Dónde queda la primera página de la categoría: izquierda, derecha (por paridad: el spread se muestra
+  // completo, con la última página de la categoría anterior a la izquierda) o única (portrait / portada).
+  side: "left" | "right" | "single";
+}
+
+// A dónde llega el libro al elegir una categoría cuya primera página es `targetPage`. Función pura y
+// determinista: siempre deja a la vista esa primera página. Una categoría que empieza en página par queda en
+// el lado derecho de su spread; no se corre un spread para evitarlo (dejaría una hoja vacía).
+export function categoryLanding(targetPage: number, totalPages: number, portrait: boolean): CategoryLanding {
+  const spreadIndex = spreadIndexOfPage(targetPage, portrait);
+  if (portrait || targetPage <= 0) return { spreadIndex, pages: [targetPage], side: "single" };
+  const left = targetPage % 2 === 1 ? targetPage : targetPage - 1;
+  const pages = left + 1 < totalPages ? [left, left + 1] : [left];
+  if (pages.length === 1) return { spreadIndex, pages, side: "single" };
+  return { spreadIndex, pages, side: targetPage === left ? "left" : "right" };
+}
+
+export type JumpPlan =
+  | { kind: "stay" }
+  // Un spread de distancia: pasar la página con animación.
+  | { kind: "animate"; page: number }
+  // Varios spreads: ir directo (sin animación larga).
+  | { kind: "turn"; page: number };
+
 // Qué hacer al elegir una categoría: si su primera página ya está a la vista no hay que pasar página (solo se
-// marca como actual); si no, se pasa a esa página.
-export function planJump(
-  targetPage: number,
-  currentPage: number,
-  totalPages: number,
-  portrait: boolean
-): { kind: "stay" } | { kind: "flip"; page: number } {
-  return visiblePageIndexes(currentPage, totalPages, portrait).includes(targetPage)
-    ? { kind: "stay" }
-    : { kind: "flip", page: targetPage };
+// marca como actual); a un spread de distancia se anima (una sola vuelta); más lejos se va directo.
+export function planJump(targetPage: number, currentPage: number, totalPages: number, portrait: boolean): JumpPlan {
+  if (visiblePageIndexes(currentPage, totalPages, portrait).includes(targetPage)) return { kind: "stay" };
+  const distance = Math.abs(spreadIndexOfPage(targetPage, portrait) - spreadIndexOfPage(currentPage, portrait));
+  return distance === 1 ? { kind: "animate", page: targetPage } : { kind: "turn", page: targetPage };
 }
 
 export interface MenuCategory {
