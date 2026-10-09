@@ -18,7 +18,7 @@ export type OrderPreviewError = "session" | "unavailable" | "invalid" | "unknown
 export const ORDER_PREVIEW_DEBOUNCE_MS = 400;
 
 interface Params {
-  cartItems: ReadonlyArray<{ id: string; quantity: number }>;
+  cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string }>;
   addressId: number | null;
   deliveryDate: string | null;
   paymentMethod: PaymentMethod | null;

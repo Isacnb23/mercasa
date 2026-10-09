@@ -7,7 +7,8 @@ import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
 import PriceTag from "./PriceTag";
-import type { PriceView } from "@/lib/catalog-prices";
+import { formatUnit, type PriceView } from "@/lib/catalog-prices";
+import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
 // producto ENCIMA del catálogo (no reemplaza el flipbook, no navega a otra
@@ -80,6 +81,14 @@ export default function ProductDetailModal({
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
+  // Presentaciones vendibles (solo con sesión): el precio y la unidad del modal siguen a la elegida. La del
+  // listado es la presentación por defecto, así precio de la tarjeta y del modal coinciden al abrir.
+  const { unitsFor } = useCatalogUnits([product.id]);
+  const units = unitsFor(product.id);
+  const [chosenUnit, setChosenUnit] = useState<string | null>(null);
+  const selected = units?.find((u) => u.unitId === chosenUnit) ?? units?.find((u) => u.isDefault) ?? null;
+  const shownPrice: PriceView = selected ? { kind: "price", unitPrice: selected.unitPrice, unit: selected.unitId } : price;
+
   // Foco inicial en el botón de cerrar (Escape lo maneja ProductCatalogModal).
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -87,7 +96,8 @@ export default function ProductDetailModal({
   }, []);
 
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    // La presentación por defecto no se guarda: así una misma presentación nunca queda en dos líneas.
+    addItem(product, quantity, selected && !selected.isDefault ? selected.unitId : undefined);
     setJustAdded(true);
     setQuantity(1);
     setTimeout(() => setJustAdded(false), 1800);
@@ -157,8 +167,53 @@ export default function ProductDetailModal({
             {product.name}
           </p>
           <div className="mt-3 empty:hidden">
-            <PriceTag view={price} size="detail" />
+            <PriceTag view={shownPrice} size="detail" />
           </div>
+
+          {units && units.length > 1 && (
+            <div className="mt-3">
+              <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }} id="pd-unit-label">
+                {t("catalog.unitSelectorLabel")}
+              </p>
+              <div
+                role="radiogroup"
+                aria-labelledby="pd-unit-label"
+                className="mt-2 flex flex-wrap gap-2"
+                onKeyDown={(e) => {
+                  if (!selected || !["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) return;
+                  e.preventDefault();
+                  const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+                  const index = units.findIndex((u) => u.unitId === selected.unitId);
+                  const next = units[(index + step + units.length) % units.length];
+                  setChosenUnit(next.unitId);
+                  (e.currentTarget.querySelector(`[data-unit="${CSS.escape(next.unitId)}"]`) as HTMLElement | null)?.focus();
+                }}
+              >
+                {units.map((u) => {
+                  const active = u.unitId === selected?.unitId;
+                  return (
+                    <button
+                      key={u.unitId}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      data-unit={u.unitId}
+                      tabIndex={active ? 0 : -1}
+                      onClick={() => setChosenUnit(u.unitId)}
+                      className="min-h-[36px] rounded-full border px-3.5 text-[13.5px] font-semibold outline-none motion-safe:transition motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
+                      style={{
+                        borderColor: active ? INK : RULE,
+                        background: active ? INK : "#FFFFFF",
+                        color: active ? "#FFFFFF" : INK,
+                      }}
+                    >
+                      {formatUnit(u.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {(product.packSize || packagingCodes.length > 0) && (
             <div className="mt-4 border-t pt-4" style={{ borderColor: RULE }}>
@@ -202,7 +257,7 @@ export default function ProductDetailModal({
               </span>
               <button
                 type="button"
-                onClick={() => setQuantity((q) => q + 1)}
+                onClick={() => setQuantity((q) => Math.min(9999, q + 1))}
                 aria-label={tCart("increaseAria", { name: product.name })}
                 className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
                 style={{ borderColor: RULE, color: INK }}

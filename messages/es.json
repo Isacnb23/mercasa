@@ -270,6 +270,7 @@
       "priceListMissingNotice": "Tu cuenta necesita configuración de precios; un asesor te ayuda por WhatsApp.",
       "priceListMissingCta": "Escribir por WhatsApp",
       "pricesUnavailable": "No pudimos cargar los precios en este momento.",
+      "unitSelectorLabel": "Presentación",
       "productDetailPackagingLabel": "Empaque",
       "productDetailAriaLabel": "Ver {name} en grande",
       "glossaryGroups": [
@@ -328,6 +329,9 @@
       "lineUnavailable": "No disponible",
       "lineInvalidQuantity": "Cantidad inválida",
       "lineNotFound": "No está en tu lista de precios",
+      "lineUnitNotAvailable": "Presentación no disponible",
+      "unitLabel": "Presentación",
+      "unitSelectAria": "Presentación de {name}",
       "unitPrice": "{price} c/u",
       "recalculating": "Recalculando…",
       "lineTotalAria": "Total de la línea: {amount}",

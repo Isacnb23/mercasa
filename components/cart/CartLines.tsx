@@ -4,7 +4,10 @@ import { AlertCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { CartItem } from "@/lib/cart-types";
 import { formatColones } from "@/lib/checkout-format";
-import { lineErrorsByItem } from "@/lib/order-logic";
+import { cartLineKey } from "@/lib/cart-logic";
+import { formatUnit } from "@/lib/catalog-prices";
+import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
+import { lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, MUTED, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import ProductImage from "@/components/modals/product-catalog/ProductImage";
@@ -15,20 +18,25 @@ interface Props {
   preview: OrderPreview | null;
   // ¿Se esperan precios (sesión + dirección)? Con false no se muestran ni esqueletos de precio.
   expectPrices: boolean;
-  onQuantity: (id: string, quantity: number) => void;
-  onRemove: (id: string) => void;
+  onQuantity: (item: CartItem, quantity: number) => void;
+  onRemove: (item: CartItem) => void;
+  // unitId undefined = la presentación por defecto.
+  onChangeUnit: (item: CartItem, unitId: string | undefined) => void;
 }
 
 // Líneas del carrito con precio unitario, cantidad y total de línea. TODO precio viene de `preview` (el
 // servidor); si una línea aún no tiene precio vigente (recién agregada o cambiando la cantidad) se muestra un
 // esqueleto, nunca un valor inventado. Los errores por línea ("No disponible", "Cantidad inválida"...) se
 // muestran junto al producto, que se puede quitar.
-export default function CartLines({ items, preview, expectPrices, onQuantity, onRemove }: Props) {
+export default function CartLines({ items, preview, expectPrices, onQuantity, onRemove, onChangeUnit }: Props) {
   const t = useTranslations("Cart");
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
   const errorsByItem = preview ? lineErrorsByItem(preview) : new Map<string, string[]>();
-  const linesById = new Map((preview?.lines ?? []).map((l) => [l.itemId.toLowerCase(), l]));
+  // Cada línea del carrito (ítem + presentación) con su línea validada por el servidor.
+  const linesByKey = matchPreviewLines(items, preview?.lines ?? []);
+  // Presentaciones vendibles de los ítems del carrito (solo con sesión y dirección): permiten cambiarlas.
+  const { unitsFor } = useCatalogUnits(expectPrices ? items.map((i) => i.id) : []);
 
   const errorLabel = (code: string): string | null => {
     switch (code) {
@@ -38,6 +46,8 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
         return tOrder("lineInvalidQuantity");
       case "item_not_found":
         return tOrder("lineNotFound");
+      case "unit_not_available":
+        return tOrder("lineUnitNotAvailable");
       default:
         return null;
     }
@@ -46,7 +56,12 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
   return (
     <ul className="flex flex-col gap-3">
       {items.map((item) => {
-        const line = linesById.get(item.id.toLowerCase());
+        const lineKey = cartLineKey(item.id, item.unitId);
+        const line = linesByKey.get(lineKey);
+        const units = unitsFor(item.id);
+        const defaultUnit = units?.find((u) => u.isDefault);
+        const currentUnit = item.unitId ?? defaultUnit?.unitId ?? line?.unitId ?? "";
+        const unitName = formatUnit(currentUnit);
         // El precio solo vale si el servidor lo calculó para ESTA cantidad.
         const priced = !!line && line.quantity === item.quantity && line.unitPrice > 0;
         const codes = errorsByItem.get(item.id.toLowerCase()) ?? [];
@@ -55,7 +70,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
 
         return (
           <li
-            key={item.id}
+            key={lineKey}
             className="flex flex-col gap-3 rounded-2xl border bg-white p-3 sm:p-3.5"
             style={{ borderColor: messages.length > 0 ? "#F2B8B5" : RULE }}
           >
@@ -74,6 +89,35 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
                   <p className="mt-0.5 text-[12px] font-medium" style={{ color: TEXT_MUTED }}>
                     {item.packSize}
                   </p>
+                )}
+                {units && units.length > 1 ? (
+                  // Presentación: se puede cambiar; el servidor recalcula precio y existencias.
+                  <label className="mt-1.5 flex items-center gap-2 text-[12px] font-medium" style={{ color: TEXT_MUTED }}>
+                    <span>{tOrder("unitLabel")}</span>
+                    <select
+                      value={currentUnit}
+                      aria-label={tOrder("unitSelectAria", { name })}
+                      onChange={(e) => {
+                        const next = units.find((u) => u.unitId === e.target.value);
+                        if (next) onChangeUnit(item, next.isDefault ? undefined : next.unitId);
+                      }}
+                      className={`min-h-[32px] rounded-full border bg-white px-3 py-1 text-[12.5px] font-semibold ${FOCUS_RING}`}
+                      style={{ borderColor: RULE, color: INK }}
+                    >
+                      {units.map((u) => (
+                        <option key={u.unitId} value={u.unitId}>
+                          {formatUnit(u.label)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  expectPrices &&
+                  unitName && (
+                    <p className="mt-0.5 text-[12px] font-medium" style={{ color: TEXT_MUTED }}>
+                      {tOrder("unitLabel")}: {unitName}
+                    </p>
+                  )
                 )}
                 {expectPrices && (
                   <div className="mt-1" aria-live="polite">
@@ -95,7 +139,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
               </div>
               <button
                 type="button"
-                onClick={() => onRemove(item.id)}
+                onClick={() => onRemove(item)}
                 aria-label={t("removeAria", { name })}
                 className={`shrink-0 self-start rounded-full p-2 motion-safe:transition motion-safe:duration-150 hover:bg-red-50 hover:text-red-700 ${FOCUS_RING}`}
                 style={{ color: MUTED }}
@@ -109,7 +153,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
               <div className="inline-flex items-center rounded-full p-0.5" style={{ background: BEIGE }}>
                 <button
                   type="button"
-                  onClick={() => onQuantity(item.id, item.quantity - 1)}
+                  onClick={() => onQuantity(item, item.quantity - 1)}
                   aria-label={t("decreaseAria", { name })}
                   className={`flex h-8 w-8 items-center justify-center rounded-full motion-safe:transition motion-safe:duration-150 hover:bg-white ${FOCUS_RING}`}
                   style={{ color: INK }}
@@ -121,7 +165,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
                 </span>
                 <button
                   type="button"
-                  onClick={() => onQuantity(item.id, item.quantity + 1)}
+                  onClick={() => onQuantity(item, item.quantity + 1)}
                   aria-label={t("increaseAria", { name })}
                   className={`flex h-8 w-8 items-center justify-center rounded-full motion-safe:transition motion-safe:duration-150 hover:bg-white ${FOCUS_RING}`}
                   style={{ color: INK }}
@@ -153,7 +197,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
                 </p>
                 <button
                   type="button"
-                  onClick={() => onRemove(item.id)}
+                  onClick={() => onRemove(item)}
                   className={`shrink-0 rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
                   style={{ color: DANGER_TEXT }}
                 >

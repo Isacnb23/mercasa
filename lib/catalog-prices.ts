@@ -2,14 +2,30 @@
 // el SERVIDOR con la lista de la cuenta del JWT: del navegador solo salen ids de producto.
 
 export const CATALOG_PRICES_BATCH_SIZE = 100;
+// Con las presentaciones (modal y carrito) el servidor acepta como máximo 20 ítems por consulta.
+export const CATALOG_UNITS_BATCH_SIZE = 20;
 export const CATALOG_PRICES_DEBOUNCE_MS = 300;
 
-// Precio de catálogo de un producto: SIN IVA, con la unidad de venta del dato.
+// Presentación vendible de un producto (unidad, caja, tarima...): precio SIN IVA e IVA propios de ella (nunca
+// precio base x factor), factor a la unidad base y cuántas hay disponibles ahora (floor(neto base / factor)).
+export interface CatalogUnit {
+  unitId: string;
+  label: string;
+  unitPrice: number;
+  tax: number;
+  factor: number;
+  available: number;
+  isDefault: boolean;
+}
+
+// Precio de catálogo de un producto: SIN IVA, con la unidad de venta del dato (la del listado). Solo
+// viene el campo units cuando se pidieron las presentaciones (withUnits).
 export interface CatalogPrice {
   itemId: string;
   unitPrice: number;
   tax: number;
   unit: string;
+  units?: CatalogUnit[] | null;
 }
 
 export interface CatalogPricesResult {
@@ -49,15 +65,52 @@ export function chunk<T>(items: readonly T[], size: number): T[][] {
   return batches;
 }
 
-// Cuerpo que sale del navegador: SOLO `itemIds` (cualquier otro campo se descarta).
-export function sanitizeCatalogPricesBody(body: unknown): { itemIds: string[] } | null {
-  const raw = (body as { itemIds?: unknown } | null)?.itemIds;
+// Cuerpo que sale del navegador: SOLO itemIds y withUnits (pedir las presentaciones; máximo 20 ítems). Cualquier
+// otro campo se descarta: la lista de precios nunca viaja del navegador.
+export function sanitizeCatalogPricesBody(body: unknown): { itemIds: string[]; withUnits: boolean } | null {
+  const candidate = body as { itemIds?: unknown; withUnits?: unknown } | null;
+  const raw = candidate?.itemIds;
   if (!Array.isArray(raw) || raw.some((id) => typeof id !== "string")) return null;
+  if (candidate?.withUnits !== undefined && typeof candidate.withUnits !== "boolean") return null;
+  const withUnits = candidate?.withUnits === true;
   const itemIds = raw as string[];
-  if (itemIds.length < 1 || itemIds.length > CATALOG_PRICES_BATCH_SIZE) return null;
+  if (itemIds.length < 1 || itemIds.length > (withUnits ? CATALOG_UNITS_BATCH_SIZE : CATALOG_PRICES_BATCH_SIZE)) return null;
   if (itemIds.some((id) => !id.trim() || id.length > 50)) return null;
   if (uniqueItemIds(itemIds).length !== itemIds.length) return null;
-  return { itemIds: itemIds.map((id) => id.trim()) };
+  return { itemIds: itemIds.map((id) => id.trim()), withUnits };
+}
+
+// Presentaciones de un ítem: undefined/null = no se pidieron; false = forma inválida.
+function parseUnits(raw: unknown): CatalogUnit[] | null | false {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) return false;
+  const units: CatalogUnit[] = [];
+  for (const entry of raw) {
+    const u = entry as Partial<CatalogUnit> | null;
+    if (
+      !u ||
+      typeof u.unitId !== "string" ||
+      typeof u.unitPrice !== "number" ||
+      !Number.isFinite(u.unitPrice) ||
+      typeof u.tax !== "number" ||
+      typeof u.factor !== "number" ||
+      !Number.isFinite(u.factor) ||
+      u.factor <= 0 ||
+      typeof u.available !== "number"
+    ) {
+      return false;
+    }
+    units.push({
+      unitId: u.unitId,
+      label: typeof u.label === "string" && u.label ? u.label : u.unitId,
+      unitPrice: u.unitPrice,
+      tax: u.tax,
+      factor: u.factor,
+      available: u.available,
+      isDefault: u.isDefault === true,
+    });
+  }
+  return units;
 }
 
 // Valida la respuesta de /api/catalog/prices; null si no tiene la forma esperada.
@@ -79,7 +132,9 @@ export function parseCatalogPrices(data: unknown): CatalogPricesResult | null {
     ) {
       return null;
     }
-    parsed.push({ itemId: p.itemId, unitPrice: p.unitPrice, tax: p.tax, unit: p.unit });
+    const units = parseUnits((entry as { units?: unknown }).units);
+    if (units === false) return null;
+    parsed.push({ itemId: p.itemId, unitPrice: p.unitPrice, tax: p.tax, unit: p.unit, ...(units ? { units } : {}) });
   }
 
   return { prices: parsed, missing: missing.filter((id): id is string => typeof id === "string"), priceListMissing };

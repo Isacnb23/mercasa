@@ -34,19 +34,21 @@ import {
 } from "@/components/ui/drawer-tokens";
 import { site } from "@/lib/data";
 import { buildWhatsappHref } from "@/lib/utils";
+import { formatUnit } from "@/lib/catalog-prices";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 
 // Arma el mensaje de WhatsApp con el detalle del pedido — mismo patrón que
 // ContactSection/CustomerClassSection (buildWhatsappHref): una lista para que un vendedor cotice, no una
 // transacción. Puede incluir el total estimado validado por el servidor y la fecha elegida; nunca la dirección.
 function buildOrderMessage(
-  items: { name: string; packSize?: string; quantity: number }[],
+  items: { name: string; packSize?: string; quantity: number; unitId?: string }[],
   t: ReturnType<typeof useTranslations>,
   extraLines: string[]
 ) {
   const lines = items.map((item) => {
     const pack = item.packSize ? ` (${item.packSize})` : "";
-    return `- ${item.name}${pack} x${item.quantity}`;
+    const unit = item.unitId ? ` ${formatUnit(item.unitId)}` : "";
+    return `- ${item.name}${pack} x${item.quantity}${unit}`;
   });
   const extra = extraLines.length > 0 ? `${extraLines.join("\n")}\n\n` : "";
   return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${extra}${t("whatsappOutro")}`;
@@ -58,7 +60,7 @@ export default function CartDrawer() {
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
   const { user, openProfile } = useAuth();
-  const { items, isOpen, closeCart, removeItem, setQuantity, clear, totalCount } = useCart();
+  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount } = useCart();
   const { addressId } = useActiveAddress();
   const { status: addressesStatus } = useAddresses();
 
@@ -128,7 +130,14 @@ export default function CartDrawer() {
         {t("itemsCount", { count: totalCount })}
       </p>
 
-      <CartLines items={items} preview={preview} expectPrices={expectPrices} onQuantity={setQuantity} onRemove={removeItem} />
+      <CartLines
+        items={items}
+        preview={preview}
+        expectPrices={expectPrices}
+        onQuantity={(item, quantity) => setQuantity(item.id, quantity, item.unitId)}
+        onRemove={(item) => removeItem(item.id, item.unitId)}
+        onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId)}
+      />
 
       {expectPrices && (
         <div className="mt-6">

@@ -6,6 +6,8 @@ export type PaymentMethod = "sinpe" | "transfer";
 
 export interface OrderLineInput {
   itemId: string;
+  // Presentación elegida (opcional): sin ella el servidor usa la por defecto. Es una selección, no un precio.
+  unitId?: string;
   quantity: number;
 }
 
@@ -21,6 +23,9 @@ export interface OrderRequest {
 export interface OrderPreviewLine {
   itemId: string;
   name: string;
+  // Presentación aplicada por el servidor (la elegida o la por defecto) y su factor a la unidad base.
+  unitId: string;
+  factor: number;
   quantity: number;
   unitPrice: number;
   discount: number;

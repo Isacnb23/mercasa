@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
+import { formatUnit } from "@/lib/catalog-prices";
 import type { OrderPreview, PaymentMethod } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import OrderSummary from "./OrderSummary";
@@ -95,11 +96,12 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </h3>
         <ul className="flex flex-col divide-y rounded-2xl border bg-white" style={{ borderColor: RULE }}>
           {preview.lines.map((line) => (
-            <li key={line.itemId} className="flex items-start justify-between gap-3 px-4 py-3" style={{ borderColor: RULE }}>
+            <li key={`${line.itemId}|${line.unitId}`} className="flex items-start justify-between gap-3 px-4 py-3" style={{ borderColor: RULE }}>
               <span className="min-w-0 flex-1 text-[13.5px] leading-snug" style={{ color: INK }}>
                 <span className="line-clamp-2 font-medium">{line.name}</span>
                 <span className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
                   {t("summaryQty", { quantity: line.quantity })}
+                  {line.unitId ? ` · ${formatUnit(line.unitId)}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: INK }}>

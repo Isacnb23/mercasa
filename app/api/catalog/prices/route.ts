@@ -4,7 +4,7 @@ import { SESSION_COOKIE } from "@/lib/auth-cookies";
 import { proxyCustomerPost } from "@/lib/checkout-proxy";
 import { sanitizeCatalogPricesBody } from "@/lib/catalog-prices";
 
-// Precios del catálogo con sesión. Del navegador se acepta SOLO `itemIds` (1 a 100, sin repetidos): la
+// Precios del catálogo con sesión. Del navegador se acepta SOLO `itemIds` (1 a 100, sin repetidos) y `withUnits` (presentaciones; máximo 20 ítems): la
 // lista de precios sale del JWT en homex-api, nunca de un valor del cliente. Sin sesión: 401 SIN llamar a
 // mercasa-api. Respuesta privada y sin caché; no se guarda nada.
 export async function POST(request: Request) {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
   }
 
-  const response = await proxyCustomerPost("/api/customer/catalog/prices", { itemIds: body.itemIds }, "catalog-prices");
+  const response = await proxyCustomerPost("/api/customer/catalog/prices", { itemIds: body.itemIds, withUnits: body.withUnits }, "catalog-prices");
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

@@ -6,20 +6,22 @@ import type {
   OrderLineInput,
   OrderPreview,
   OrderPreviewError,
+  OrderPreviewLine,
   OrderRequest,
   PaymentMethod,
 } from "./order-types";
 
 export const MAX_ORDER_LINES = 100;
 export const MAX_ITEM_ID_LENGTH = 50;
+export const MAX_UNIT_ID_LENGTH = 20;
 export const MAX_ORDER_BODY_BYTES = 64 * 1024;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Arma el cuerpo del pedido SOLO con itemId y cantidad (+ selecciones). Es el único camino por el que el
+// Arma el cuerpo del pedido SOLO con itemId, presentación elegida (si la hay) y cantidad (+ selecciones). Es el único camino por el que el
 // navegador le habla a la ruta de validación: aunque un ítem del carrito tuviera otros campos, no salen.
 export function buildOrderRequest(
-  cartItems: ReadonlyArray<{ id: string; quantity: number }>,
+  cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string }>,
   addressId: number,
   deliveryDate: string | null,
   paymentMethod: PaymentMethod | null
@@ -28,7 +30,10 @@ export function buildOrderRequest(
     addressId,
     deliveryDate,
     paymentMethod,
-    items: cartItems.map((item): OrderLineInput => ({ itemId: item.id, quantity: item.quantity })),
+    items: cartItems.map(
+      (item): OrderLineInput =>
+        item.unitId ? { itemId: item.id, unitId: item.unitId, quantity: item.quantity } : { itemId: item.id, quantity: item.quantity }
+    ),
   };
 }
 
@@ -57,10 +62,12 @@ export function sanitizeOrderRequest(raw: unknown): OrderRequest | null {
   const cleanItems: OrderLineInput[] = [];
   for (const item of items) {
     if (typeof item !== "object" || item === null) return null;
-    const { itemId, quantity } = item as Record<string, unknown>;
+    const { itemId, unitId, quantity } = item as Record<string, unknown>;
     if (typeof itemId !== "string" || itemId.trim() === "" || itemId.length > MAX_ITEM_ID_LENGTH) return null;
     if (typeof quantity !== "number" || !Number.isSafeInteger(quantity)) return null;
-    cleanItems.push({ itemId, quantity });
+    if (unitId !== undefined && unitId !== null && (typeof unitId !== "string" || unitId.length > MAX_UNIT_ID_LENGTH)) return null;
+    const unit = typeof unitId === "string" && unitId.trim() !== "" ? unitId.trim() : null;
+    cleanItems.push(unit ? { itemId, unitId: unit, quantity } : { itemId, quantity });
   }
 
   return {
@@ -95,6 +102,8 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
     lines.push({
       itemId: line.itemId,
       name: typeof line.name === "string" ? line.name : "",
+      unitId: typeof line.unitId === "string" ? line.unitId : "",
+      factor: isNumber(line.factor) ? line.factor : 1,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       discount: line.discount,
@@ -130,6 +139,37 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
     canOrder: r.canOrder,
     errors,
   };
+}
+
+// Une cada línea del carrito con su línea validada por el servidor. Las líneas con presentación explícita
+// buscan la suya por unidad; la que no tiene unidad (la por defecto) toma la línea del mismo ítem que
+// ninguna otra reclamó. La clave es la de cartLineKey (ítem|unidad, en mayúsculas).
+export function matchPreviewLines(
+  cartItems: ReadonlyArray<{ id: string; unitId?: string }>,
+  lines: ReadonlyArray<OrderPreviewLine>
+): Map<string, OrderPreviewLine> {
+  const norm = (s: string | undefined) => (s ?? "").trim().toUpperCase();
+  const key = (id: string, unitId?: string) => `${norm(id)}|${norm(unitId)}`;
+  const result = new Map<string, OrderPreviewLine>();
+  const claimed = new Set<OrderPreviewLine>();
+
+  for (const item of cartItems) {
+    if (!item.unitId) continue;
+    const line = lines.find((l) => norm(l.itemId) === norm(item.id) && norm(l.unitId) === norm(item.unitId));
+    if (line) {
+      result.set(key(item.id, item.unitId), line);
+      claimed.add(line);
+    }
+  }
+  for (const item of cartItems) {
+    if (item.unitId) continue;
+    const line = lines.find((l) => norm(l.itemId) === norm(item.id) && !claimed.has(l));
+    if (line) {
+      result.set(key(item.id), line);
+      claimed.add(line);
+    }
+  }
+  return result;
 }
 
 // Códigos de error por línea (con itemId) agrupados por ítem.

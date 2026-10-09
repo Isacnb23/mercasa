@@ -270,6 +270,7 @@
       "priceListMissingNotice": "Your account needs price configuration; an advisor will help you on WhatsApp.",
       "priceListMissingCta": "Message on WhatsApp",
       "pricesUnavailable": "We could not load prices right now.",
+      "unitSelectorLabel": "Packaging option",
       "productDetailPackagingLabel": "Packaging",
       "productDetailAriaLabel": "View {name} enlarged",
       "glossaryGroups": [
@@ -328,6 +329,9 @@
       "lineUnavailable": "Unavailable",
       "lineInvalidQuantity": "Invalid quantity",
       "lineNotFound": "Not in your price list",
+      "lineUnitNotAvailable": "Option not available",
+      "unitLabel": "Option",
+      "unitSelectAria": "Packaging option for {name}",
       "unitPrice": "{price} each",
       "recalculating": "Recalculating…",
       "lineTotalAria": "Line total: {amount}",

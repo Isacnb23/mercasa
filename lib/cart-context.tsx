@@ -14,6 +14,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ProductSummary } from "./product-types";
 import type { CartItem } from "./cart-types";
+import { addToCart, changeLineUnit, parseStoredCart, removeLine, setLineQuantity } from "./cart-logic";
 
 const STORAGE_KEY = "mercasa-cart-v1";
 
@@ -23,9 +24,12 @@ interface CartContextValue {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (product: ProductSummary, quantity?: number) => void;
-  removeItem: (id: string) => void;
-  setQuantity: (id: string, quantity: number) => void;
+  // unitId: presentación elegida; omitirlo = la presentación por defecto (la del listado).
+  addItem: (product: ProductSummary, quantity?: number, unitId?: string) => void;
+  removeItem: (id: string, unitId?: string) => void;
+  setQuantity: (id: string, quantity: number, unitId?: string) => void;
+  // Cambia la presentación de una línea (si ya hay otra con la presentación destino, se suman).
+  changeUnit: (id: string, fromUnitId: string | undefined, toUnitId: string | undefined) => void;
   clear: () => void;
 }
 
@@ -43,7 +47,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      if (raw) setItems(parseStoredCart(JSON.parse(raw)));
     } catch {
       // localStorage no disponible (modo privado, etc.) — el carrito sigue
       // funcionando en memoria para esta sesión de pestaña.
@@ -69,28 +73,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // próximo producto). El badge del ícono ya da la confirmación visual; el
   // botón "Agregar al carrito" del detalle de producto tiene su propia
   // confirmación inline ("¡Agregado!").
-  const addItem = (product: ProductSummary, quantity = 1) => {
-    setItems((current) => {
-      const existing = current.find((item) => item.id === product.id);
-      if (existing) {
-        return current.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
-      }
-      return [...current, { ...product, quantity }];
-    });
+  const addItem = (product: ProductSummary, quantity = 1, unitId?: string) => {
+    setItems((current) => addToCart(current, product, quantity, unitId));
   };
 
-  const removeItem = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
+  const removeItem = (id: string, unitId?: string) => {
+    setItems((current) => removeLine(current, id, unitId));
   };
 
-  const setQuantity = (id: string, quantity: number) => {
-    if (quantity < 1) {
-      removeItem(id);
-      return;
-    }
-    setItems((current) => current.map((item) => (item.id === id ? { ...item, quantity } : item)));
+  const setQuantity = (id: string, quantity: number, unitId?: string) => {
+    setItems((current) => setLineQuantity(current, id, quantity, unitId));
+  };
+
+  const changeUnit = (id: string, fromUnitId: string | undefined, toUnitId: string | undefined) => {
+    setItems((current) => changeLineUnit(current, id, fromUnitId, toUnitId));
   };
 
   const clear = () => setItems([]);
@@ -106,6 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     addItem,
     removeItem,
     setQuantity,
+    changeUnit,
     clear,
   };
 
