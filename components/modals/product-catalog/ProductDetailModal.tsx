@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImageOff, Minus, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
@@ -76,6 +76,12 @@ export default function ProductDetailModal({
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
+  // Foco inicial en el botón de cerrar (Escape lo maneja ProductCatalogModal).
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
   const handleAddToCart = () => {
     addItem(product, quantity);
     setJustAdded(true);
@@ -90,7 +96,7 @@ export default function ProductDetailModal({
       // quedaba montado en el DOM con opacidad correcta pero VISUALMENTE
       // detrás del catálogo (confirmado con captura real, no solo revisando
       // el código — esto ya había fallado antes con este mismo componente).
-      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 sm:p-8"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6"
       style={{ background: "rgba(8,20,40,0.55)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -100,33 +106,37 @@ export default function ProductDetailModal({
         role="dialog"
         aria-modal="true"
         aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
-        className="relative flex w-full max-w-[520px] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_30px_80px_rgba(8,20,40,0.35)]"
+        className="pd-dialog relative rounded-[24px] bg-white shadow-[0_30px_80px_rgba(8,20,40,0.35)]"
       >
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           aria-label={t("catalog.close")}
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 transition hover:bg-white"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
           style={{ boxShadow: "0 4px 12px rgba(8,20,40,0.18)" }}
         >
           <X className="h-4 w-4" strokeWidth={2} style={{ color: INK }} aria-hidden />
         </button>
 
         {/* Foto grande — misma fuente que las miniaturas (/api/product-images,
-            tabla Arte + SharePoint), solo en tamaño "l". Caja cuadrada fija
-            para que el layout no salte entre productos con/sin foto real. */}
-        <div className="relative flex aspect-square w-full items-center justify-center" style={{ background: CHIP_BG }}>
-          <ProductImage
-            itemId={product.id}
-            name={product.name}
-            familyIcon={icon}
-            size="l"
-            className="h-full w-full object-contain p-6"
-            errorIconClassName="h-16 w-16"
-            onStatusChange={setImageStatus}
-          />
+            tabla Arte + SharePoint), solo en tamaño "l". Caja de alto acotado
+            (min(40dvh, 420px), ver .pd-media) para que no empuje el botón de
+            agregar fuera de pantalla en laptops bajas; object-contain. */}
+        <div className="pd-media flex items-center justify-center" style={{ background: CHIP_BG }}>
+          <div className="absolute inset-0">
+            <ProductImage
+              itemId={product.id}
+              name={product.name}
+              familyIcon={icon}
+              size="l"
+              className="h-full w-full object-contain p-4"
+              errorIconClassName="h-16 w-16"
+              onStatusChange={setImageStatus}
+            />
+          </div>
           {imageStatus === "error" && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5">
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-col items-center gap-1.5">
               <ImageOff className="h-4 w-4" strokeWidth={1.8} style={{ color: MUTED }} aria-hidden />
               <span className="text-[13px] font-semibold" style={{ color: MUTED }}>
                 {t("catalog.productDetailPhotoNotAvailable")}
@@ -135,9 +145,11 @@ export default function ProductDetailModal({
           )}
         </div>
 
-        {/* Nombre completo (sin truncar, ver doc) + empaque. */}
-        <div className="p-6 sm:p-7">
-          <p className="font-display text-[18px] font-semibold leading-snug" style={{ color: INK }}>
+        <div className="pd-main">
+        {/* Nombre completo (sin truncar, ver doc) + empaque. Scroll interno
+            si no entra; la barra de cantidad/agregar queda fuera de esta zona. */}
+        <div className="pd-info p-5 sm:p-6" data-lenis-prevent>
+          <p className="font-display text-[clamp(16px,2.2dvh,18px)] font-semibold leading-snug" style={{ color: INK }}>
             {product.name}
           </p>
 
@@ -161,17 +173,19 @@ export default function ProductDetailModal({
               </div>
             </div>
           )}
+        </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
               — carrito de pedido sin precios, no e-commerce; el checkout
-              real pasa por WhatsApp desde el drawer del carrito. */}
-          <div className="mt-4 flex items-center gap-3 border-t pt-4" style={{ borderColor: RULE }}>
+              real pasa por WhatsApp desde el drawer del carrito. Barra fija
+              al pie del diálogo: SIEMPRE visible. */}
+          <div className="flex shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 aria-label={tCart("decreaseAria", { name: product.name })}
-                className="flex h-9 w-9 items-center justify-center rounded-full border transition hover:opacity-70"
+                className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
                 style={{ borderColor: RULE, color: INK }}
               >
                 <Minus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
@@ -183,7 +197,7 @@ export default function ProductDetailModal({
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
                 aria-label={tCart("increaseAria", { name: product.name })}
-                className="flex h-9 w-9 items-center justify-center rounded-full border transition hover:opacity-70"
+                className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
                 style={{ borderColor: RULE, color: INK }}
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
@@ -192,7 +206,7 @@ export default function ProductDetailModal({
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-corp-blue px-4 py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-corp-blue px-4 py-2.5 text-[14.5px] font-semibold text-white outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
             >
               <ShoppingCart className="h-4 w-4" strokeWidth={2} aria-hidden />
               {justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}

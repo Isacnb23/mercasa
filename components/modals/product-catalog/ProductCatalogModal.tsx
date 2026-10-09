@@ -965,6 +965,7 @@ export default function ProductCatalogModal({
     <>
       <div
         className={`catalog-backdrop${isClosing ? " is-closing" : ""}`}
+        data-lenis-prevent
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
@@ -1060,7 +1061,8 @@ export default function ProductCatalogModal({
                     <div
                       role="listbox"
                       aria-label={t("catalog.jumpToCategoryLabel")}
-                      className="absolute left-0 top-[calc(100%+8px)] z-40 max-h-[min(60vh,420px)] w-[min(300px,88vw)] overflow-y-auto rounded-2xl border bg-white p-2 shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
+                      data-lenis-prevent
+                      className="absolute left-0 top-[calc(100%+8px)] z-40 max-h-[min(60dvh,420px)] w-[min(300px,88vw)] overflow-y-auto rounded-2xl border bg-white p-2 shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
                       style={{ borderColor: RULE }}
                     >
                       {categorySections.map(({ subFamily, categories }) => (
@@ -1147,7 +1149,8 @@ export default function ProductCatalogModal({
                     <div
                       role="dialog"
                       aria-label={t("catalog.glossaryTitle")}
-                      className="absolute right-0 top-[calc(100%+10px)] z-40 max-h-[70vh] w-[min(340px,90vw)] overflow-y-auto rounded-2xl border bg-white p-4 text-left shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
+                      data-lenis-prevent
+                      className="absolute right-0 top-[calc(100%+10px)] z-40 max-h-[70dvh] w-[min(340px,90vw)] overflow-y-auto rounded-2xl border bg-white p-4 text-left shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
                       style={{ borderColor: RULE }}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -1688,7 +1691,7 @@ function BookPageContent({
         </p>
         <h2
           className="mt-2 font-display"
-          style={{ color: INK, fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 650, lineHeight: 1.1 }}
+          style={{ color: INK, fontSize: "clamp(18px, 4.2cqh, 28px)", fontWeight: 650, lineHeight: 1.1 }}
         >
           {t("catalog.portfolioTitle")}
         </h2>
@@ -1706,7 +1709,7 @@ function BookPageContent({
             el scroll interno tuviera sentido. `min-h-0` fuerza ese
             encogimiento así el overflow real cae dentro de ESTE div (que sí
             scrollea), no fuera de la página. */}
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain" data-lenis-prevent>
           {allFamilies.map((entry) => {
             const EntryIcon = FAMILY_ICONS[entry.id] ?? Package;
             return (
@@ -1795,7 +1798,7 @@ function BookPageContent({
             </p>
             <h2
               className="mt-2 font-display text-white"
-              style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 650, lineHeight: 1.08 }}
+              style={{ fontSize: "clamp(22px, 5.5cqh, 44px)", fontWeight: 650, lineHeight: 1.08 }}
             >
               {page.subFamily.name}
             </h2>
@@ -1822,7 +1825,7 @@ function BookPageContent({
             <p className="text-[9.5px] font-bold uppercase" style={{ color: ACCENT, letterSpacing: "0.14em" }}>
               {family.name}
             </p>
-            <h3 className="font-display" style={{ color: INK, fontSize: "19px", fontWeight: 650, lineHeight: 1.15 }}>
+            <h3 className="font-display" style={{ color: INK, fontSize: "clamp(15px, 2.6cqh, 19px)", fontWeight: 650, lineHeight: 1.15 }}>
               {page.category.name}
             </h3>
           </div>
@@ -1860,7 +1863,8 @@ function BookPageContent({
           productos en silencio — el resto de la página (header/línea de
           acento) se queda fijo arriba. */}
       <div
-        className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto"
+        className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto overscroll-contain"
+        data-lenis-prevent
         style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(5px, 1.4cqh, 14px)" }}
       >
         {page.products.map((product) => (
