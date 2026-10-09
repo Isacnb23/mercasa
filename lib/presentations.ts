@@ -134,3 +134,17 @@ export function approxBasePrice(unit: CatalogUnit): { price: number; unitId: str
   if (!short || unit.factor <= 1 || unit.unitPrice <= 0) return null;
   return { price: Math.round((unit.unitPrice / unit.factor) * 100) / 100, unitId: short.unitId };
 }
+
+// TODAS las equivalencias reales del producto, una por presentación mayor que la menor ("1 Caja = 24 Latas",
+// "1 Tarima = 60 Cajas"), siempre las mismas sea cual sea la presentación elegida: así el bloque no cambia de
+// alto al alternar. Con una sola presentación no hay equivalencias (la UI muestra "Se vende por Unidad").
+export function allEquivalences(units: ReadonlyArray<CatalogUnit>): Equivalence[] {
+  const sorted = sortUnits(units);
+  if (sorted.length < 2) return [];
+  const result: Equivalence[] = [];
+  for (const unit of sorted.slice(1)) {
+    const lower = equivalences(sorted, unit.unitId).find((e) => same(e.bigUnitId, unit.unitId));
+    if (lower) result.push(lower);
+  }
+  return result;
+}

@@ -8,13 +8,11 @@ import { useTranslations } from "next-intl";
 import {
   Boxes,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   HeartHandshake,
   Info,
-  ListFilter,
   Lock,
   Package,
   Plus,
@@ -31,7 +29,9 @@ import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
 import type { PriceView } from "@/lib/catalog-prices";
 import { site } from "@/lib/data";
 import PriceTag from "./PriceTag";
-import { displayProductName } from "@/lib/product-display";
+import { productTitle } from "@/lib/product-display";
+import CategoryMenu from "./CategoryMenu";
+import { activeCategoryId as computeActiveCategoryId, planJump, type MenuSection } from "@/lib/category-nav";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -824,24 +824,35 @@ export default function ProductCatalogModal({
   const panelMaxWidth =
     measuredPanelWidth != null ? Math.max(640, headerMinWidth ?? 0, measuredPanelWidth) : undefined;
 
-  const activeCategoryId = useMemo(() => {
-    let found: string | null = null;
-    for (const [categoryId, pageIndex] of categoryPageIndex) {
-      if (pageIndex <= currentPage) found = categoryId;
-    }
-    return found;
-  }, [categoryPageIndex, currentPage]);
-
-  // Nombre a mostrar en el botón del menú "Ir a categoría" — cae a la
-  // primera categoría de la primera sección si todavía no hay una activa
-  // (arranque en la portada, antes de cualquier flip).
-  const activeCategoryName = useMemo(() => {
-    for (const { categories } of categorySections) {
-      const found = categories.find((category) => category.id === activeCategoryId);
-      if (found) return found.name;
-    }
-    return categorySections[0]?.categories[0]?.name ?? "";
-  }, [categorySections, activeCategoryId]);
+  // Menú "Ir a categoría": categoría elegida (manda mientras su primera página siga a la vista), categoría
+  // actual según las páginas VISIBLES del spread (la página derecha también cuenta: una categoría que empieza en
+  // una página par queda a la derecha y antes se marcaba la anterior) y secciones para el menú.
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null);
+  const pageCategory = useMemo(
+    () => bookPages.map((page) => (page.kind === "category" ? page.category.id : null)),
+    [bookPages]
+  );
+  const activeCategoryId = useMemo(
+    () =>
+      computeActiveCategoryId({
+        currentPage,
+        totalPages,
+        portrait: isPortraitBook,
+        pageCategory,
+        categoryStart: categoryPageIndex,
+        jumpTarget,
+      }),
+    [currentPage, totalPages, isPortraitBook, pageCategory, categoryPageIndex, jumpTarget]
+  );
+  const menuSections = useMemo<MenuSection[]>(
+    () =>
+      categorySections.map(({ subFamily, categories }) => ({
+        id: subFamily.id,
+        name: subFamily.name,
+        categories: categories.map((category) => ({ id: category.id, name: category.name, itemCount: category.itemCount })),
+      })),
+    [categorySections]
+  );
 
   const printPages = useMemo(
     () => (isFiltered ? buildFilteredPrintPages(filterCategories!) : buildPrintPages(family)),
@@ -971,14 +982,23 @@ export default function ProductCatalogModal({
         }
         handleClose();
       } else if (e.key === "ArrowRight") {
-        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipNext();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen) bookRef.current?.pageFlip()?.flipNext();
       } else if (e.key === "ArrowLeft") {
-        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipPrev();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen) bookRef.current?.pageFlip()?.flipPrev();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct]);
+
+  // Elegir una categoría: pasa a su primera página, salvo que ya esté a la vista (entonces solo se marca).
+  const handleSelectCategory = (categoryId: string) => {
+    const target = categoryPageIndex.get(categoryId);
+    if (target === undefined) return;
+    const plan = planJump(target, currentPage, totalPages, isPortraitBook);
+    setJumpTarget(categoryId);
+    if (plan.kind === "flip") bookRef.current?.pageFlip()?.flip(plan.page);
+  };
 
   return createPortal(
     <>
@@ -1027,103 +1047,25 @@ export default function ProductCatalogModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Menú "ir a categoría" (ver mejora-dropdown-categoria.md) —
-                  popover propio en vez de un <select> nativo: la lista
-                  desplegada de un <select> la dibuja el sistema operativo, así
-                  que ni `appearance-none` ni ninguna clase de Tailwind le
-                  cambian una sola línea al panel abierto (solo al control
-                  cerrado) — quedaba con fuente/colores default del SO por más
-                  bonito que se viera cerrado. Mismo patrón de popover que el
-                  Glosario de abajo (backdrop invisible a pantalla completa +
-                  panel posicionado), pero anclado a la IZQUIERDA de este chip
-                  (no al borde derecho del header) porque es el primer control
-                  de la fila. */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCategoryMenuOpen((current) => !current);
-                    setIsGlossaryOpen(false);
-                  }}
-                  disabled={!isBookReady}
-                  aria-haspopup="listbox"
-                  aria-expanded={isCategoryMenuOpen}
-                  aria-label={t("catalog.jumpToCategoryLabel")}
-                  className="flex items-center gap-1.5 rounded-full border py-1.5 pl-3 pr-2.5 transition hover:shadow-[0_1px_6px_rgba(16,37,63,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ borderColor: RULE, background: "#F7FAFD" }}
-                >
-                  <ListFilter className="h-3.5 w-3.5 shrink-0" strokeWidth={2} style={{ color: MUTED }} aria-hidden />
-                  <span className="hidden text-[12px] font-medium sm:inline" style={{ color: MUTED }}>
-                    {t("catalog.jumpToCategoryLabel")}
-                  </span>
-                  <span
-                    className="max-w-[100px] truncate text-[13.5px] font-semibold sm:max-w-[170px]"
-                    style={{ color: ACCENT }}
-                  >
-                    {activeCategoryName}
-                  </span>
-                  <ChevronDown
-                    className={`h-3 w-3 shrink-0 transition-transform duration-200 ${isCategoryMenuOpen ? "rotate-180" : ""}`}
-                    strokeWidth={2.5}
-                    style={{ color: MUTED }}
-                    aria-hidden
-                  />
-                </button>
-
-                {isCategoryMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30"
-                      onClick={() => setIsCategoryMenuOpen(false)}
-                      aria-hidden
-                    />
-                    <div
-                      role="listbox"
-                      aria-label={t("catalog.jumpToCategoryLabel")}
-                      data-lenis-prevent
-                      className="absolute left-0 top-[calc(100%+8px)] z-40 max-h-[min(60dvh,420px)] w-[min(300px,88vw)] overflow-y-auto rounded-2xl border bg-white p-2 shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
-                      style={{ borderColor: RULE }}
-                    >
-                      {categorySections.map(({ subFamily, categories }) => (
-                        <div key={subFamily.id} className="mb-1 last:mb-0">
-                          {categorySections.length > 1 && (
-                            <p
-                              className="px-2.5 pb-1 pt-2.5 text-[10px] font-bold uppercase"
-                              style={{ color: MUTED, letterSpacing: "0.08em" }}
-                            >
-                              {subFamily.name}
-                            </p>
-                          )}
-                          {categories.map((category) => {
-                            const isActive = category.id === activeCategoryId;
-                            return (
-                              <button
-                                key={category.id}
-                                type="button"
-                                role="option"
-                                aria-selected={isActive}
-                                onClick={() => {
-                                  const index = categoryPageIndex.get(category.id);
-                                  if (index != null) bookRef.current?.pageFlip()?.flip(index);
-                                  setIsCategoryMenuOpen(false);
-                                }}
-                                className="flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-medium transition hover:bg-[#F0F5FC]"
-                                style={{
-                                  color: isActive ? ACCENT : "#334155",
-                                  background: isActive ? CHIP_BG : "transparent",
-                                }}
-                              >
-                                <span className="truncate">{category.name}</span>
-                                {isActive && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <CategoryMenu
+                sections={menuSections}
+                activeCategoryId={activeCategoryId}
+                open={isCategoryMenuOpen}
+                onOpenChange={(open) => {
+                  setIsCategoryMenuOpen(open);
+                  if (open) setIsGlossaryOpen(false);
+                }}
+                onSelect={handleSelectCategory}
+                disabled={!isBookReady}
+                labels={{
+                  button: t("catalog.jumpToCategoryLabel"),
+                  title: t("catalog.categoryMenuTitle"),
+                  searchPlaceholder: t("catalog.categorySearchPlaceholder"),
+                  searchEmpty: t("catalog.categorySearchEmpty"),
+                  current: t("catalog.categoryCurrent"),
+                  products: (count) => t("productsCount", { count }),
+                }}
+              />
 
               {/* Glosario de abreviaturas de empaque (ver
                   fix-truncamiento-y-glosario.md) — vive en el header, no en
@@ -1569,7 +1511,6 @@ export default function ProductCatalogModal({
         <ProductDetailModal
           product={selectedProduct}
           icon={Icon}
-          glossaryGroups={glossaryGroups}
           price={priceFor(selectedProduct.id)}
           onClose={() => setSelectedProduct(null)}
         />
@@ -2047,7 +1988,7 @@ function ProductCard({
           que el nombre SIEMPRE tiene que verse entero, sin importar
           cuántas líneas necesite. */}
       <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK, textWrap: "balance", overflowWrap: "anywhere" }}>
-        {displayProductName(product.name)}
+        {productTitle(product.name).title}
       </p>
       {product.packSize && (
         <p className="text-[9.5px] font-medium" style={{ color: MUTED }}>

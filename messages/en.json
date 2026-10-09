@@ -275,7 +275,12 @@
       "equivalenceTitle": "Equivalences",
       "equivalenceLine": "1 {big} = {amount} {small}",
       "approxPerUnit": "≈ {price} per {unit}",
-      "packagingFromName": "From the product name (for reference)",
+      "packagingFromNameLine": "Packaging from the product name (for reference): {codes}",
+      "soldBy": "Sold by {unit}",
+      "categoryMenuTitle": "Categories",
+      "categorySearchPlaceholder": "Search categories",
+      "categorySearchEmpty": "No results",
+      "categoryCurrent": "Current category",
       "productDetailPackagingLabel": "Packaging",
       "productDetailAriaLabel": "View {name} enlarged",
       "glossaryGroups": [

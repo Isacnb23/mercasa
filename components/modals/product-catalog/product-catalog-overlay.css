@@ -220,3 +220,24 @@
     display: none;
   }
 }
+
+/* Cambio de precio al alternar presentación: solo opacidad (no mueve nada); sin animación con
+   prefers-reduced-motion. */
+.pd-price-swap {
+  animation: pd-price-in 0.2s ease-out;
+}
+
+@keyframes pd-price-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-price-swap {
+    animation: none;
+  }
+}
