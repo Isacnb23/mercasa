@@ -15,6 +15,7 @@ import {
   HeartHandshake,
   Info,
   ListFilter,
+  Lock,
   Package,
   Plus,
   ShieldCheck,
@@ -25,6 +26,11 @@ import type { HierarchyNode, ProductSummary } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
 import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
+import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
+import type { PriceView } from "@/lib/catalog-prices";
+import { site } from "@/lib/data";
+import PriceTag from "./PriceTag";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -572,6 +578,18 @@ export default function ProductCatalogModal({
 
   const initialPageIndex = !isFiltered && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
   const [currentPage, setCurrentPage] = useState(initialPageIndex);
+
+  // Precios (solo con sesión): de las páginas del spread actual y las vecinas (precarga de la siguiente).
+  const { openProfile } = useAuth();
+  const visiblePriceIds = useMemo(() => {
+    const ids: string[] = [];
+    for (let i = Math.max(0, currentPage - 1); i <= currentPage + 2 && i < bookPages.length; i++) {
+      const page = bookPages[i];
+      if (page.kind === "category") for (const product of page.products) ids.push(product.id);
+    }
+    return ids;
+  }, [bookPages, currentPage]);
+  const { status: pricesStatus, priceFor } = useCatalogPrices(visiblePriceIds);
 
   // Canto de páginas apiladas a los costados del panel (ver
   // canto-paginas-flipbook.md): el ancho de cada franja representa la
@@ -1224,6 +1242,46 @@ export default function ProductCatalogModal({
             </div>
           </div>
 
+          {/* Aviso ÚNICO de precios (no uno por producto): sin sesión invita a ingresar; con la cuenta sin lista
+              de precios explica y enlaza a WhatsApp; si el servicio de precios falla lo dice una sola vez. */}
+          {pricesStatus !== "ready" && (
+            <div
+              role="status"
+              className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-1.5 text-center text-[12px] font-medium sm:px-8"
+              style={{ background: CHIP_BG, color: INK, borderBottom: `1px solid ${RULE}` }}
+            >
+              {pricesStatus === "no-session" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClose();
+                    openProfile();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-semibold underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[#075FD8]"
+                  style={{ color: ACCENT }}
+                >
+                  <Lock className="h-3 w-3" strokeWidth={2.2} aria-hidden />
+                  {t("catalog.loginForPrices")}
+                </button>
+              )}
+              {pricesStatus === "price-list-missing" && (
+                <>
+                  <span>{t("catalog.priceListMissingNotice")}</span>
+                  <a
+                    href={site.whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-[#075FD8]"
+                    style={{ color: ACCENT }}
+                  >
+                    {t("catalog.priceListMissingCta")}
+                  </a>
+                </>
+              )}
+              {pricesStatus === "unavailable" && <span>{t("catalog.pricesUnavailable")}</span>}
+            </div>
+          )}
+
           {/* Área del libro: canto de páginas (.page-stack) a los costados,
               SOLO alrededor de esto — no del header/footer (ver
               fix-canto-paginas-scope.md). Las franjas se posicionan con
@@ -1373,6 +1431,7 @@ export default function ProductCatalogModal({
                       icon={Icon}
                       coverPhoto={coverPhoto}
                       onProductClick={setSelectedProduct}
+                      priceFor={priceFor}
                     />
                   </Page>
                 ))}
@@ -1510,6 +1569,7 @@ export default function ProductCatalogModal({
           product={selectedProduct}
           icon={Icon}
           glossaryGroups={glossaryGroups}
+          price={priceFor(selectedProduct.id)}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1561,6 +1621,7 @@ function BookPageContent({
   icon: Icon,
   coverPhoto,
   onProductClick,
+  priceFor,
 }: {
   page: BookPage;
   family: HierarchyNode;
@@ -1571,6 +1632,7 @@ function BookPageContent({
    * componente solo la pinta. */
   coverPhoto: string | StaticImageData;
   onProductClick: (product: ProductSummary) => void;
+  priceFor: (itemId: string) => PriceView;
 }) {
   const t = useTranslations("Products");
   // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
@@ -1868,7 +1930,13 @@ function BookPageContent({
         style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(5px, 1.4cqh, 14px)" }}
       >
         {page.products.map((product) => (
-          <ProductCard key={product.id} product={product} icon={Icon} onClick={() => onProductClick(product)} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            icon={Icon}
+            price={priceFor(product.id)}
+            onClick={() => onProductClick(product)}
+          />
         ))}
       </div>
     </div>
@@ -1878,10 +1946,12 @@ function BookPageContent({
 function ProductCard({
   product,
   icon,
+  price,
   onClick,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
+  price: PriceView;
   onClick: () => void;
 }) {
   const t = useTranslations("Products");
@@ -1983,6 +2053,7 @@ function ProductCard({
           {product.packSize}
         </p>
       )}
+      <PriceTag view={price} />
     </div>
   );
 }

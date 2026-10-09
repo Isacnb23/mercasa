@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
+import PriceTag from "./PriceTag";
+import type { PriceView } from "@/lib/catalog-prices";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
 // producto ENCIMA del catálogo (no reemplaza el flipbook, no navega a otra
@@ -60,11 +62,13 @@ export default function ProductDetailModal({
   product,
   icon,
   glossaryGroups,
+  price,
   onClose,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
   glossaryGroups: { title: string; entries: { abbr: string; meaning: string }[] }[];
+  price: PriceView;
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
@@ -152,6 +156,9 @@ export default function ProductDetailModal({
           <p className="font-display text-[clamp(16px,2.2dvh,18px)] font-semibold leading-snug" style={{ color: INK }}>
             {product.name}
           </p>
+          <div className="mt-3 empty:hidden">
+            <PriceTag view={price} size="detail" />
+          </div>
 
           {(product.packSize || packagingCodes.length > 0) && (
             <div className="mt-4 border-t pt-4" style={{ borderColor: RULE }}>
