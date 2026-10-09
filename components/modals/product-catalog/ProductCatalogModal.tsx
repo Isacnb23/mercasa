@@ -934,6 +934,17 @@ export default function ProductCatalogModal({
   // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
   const liveBook = useMemo(() => ({ priceFor, onProductClick: setSelectedProduct }), [priceFor, setSelectedProduct]);
 
+  // Hijos del libro con identidad ESTABLE (ver el comentario junto al <HTMLFlipBook>).
+  const bookChildren = useMemo(
+    () =>
+      bookPages.map((page, index) => (
+        <Page key={index}>
+          <BookPageContent page={page} family={displayFamily} allFamilies={allFamilies} icon={Icon} coverPhoto={coverPhoto} />
+        </Page>
+      )),
+    [bookPages, displayFamily, allFamilies, Icon, coverPhoto]
+  );
+
   // Navegación del menú "Ir a categoría" (ver lib/book-navigator): UNA sola navegación a la vez. Si el libro está
   // animando se espera a que vuelva a reposo; un spread de distancia se anima, más lejos se va directo con
   // turnToPage tras un fundido breve (sin fundido con prefers-reduced-motion). Mientras navega se ignoran las
@@ -1398,18 +1409,19 @@ export default function ProductCatalogModal({
                 transition: "opacity 130ms ease",
               }}
             >
-              {/* IMPORTANTE (causa del libro que se descuadraba al saltar de categoría): react-pageflip llama
-                  `updateFromHtml` — destruye y reconstruye todas las páginas — cada vez que cambian los
-                  `children`, o sea en CADA render de este componente (cerrar el menú, llegar los precios, mover
-                  el foco...). Si eso ocurre en medio de una vuelta de página, `flip(i)` ya había movido el índice
-                  de spread, el libro se reinicia en el spread anterior y al terminar la animación `showNext()`
-                  suma sobre ese índice: aterriza en OTRO spread. Con `renderOnlyPageLengthChange` las páginas
-                  solo se reconstruyen si cambia su cantidad (nunca aquí); lo que cambia con el tiempo (precios,
-                  clic en un producto) llega por contexto, no por props de las páginas. */}
+              {/* IMPORTANTE (libro que se descuadraba al saltar de categoría): react-pageflip llama `updateFromHtml`
+                  — destruye y reconstruye TODAS las páginas — cada vez que cambia la identidad de `children`,
+                  o sea en cada render de este componente si los hijos se crean en línea (cerrar el menú, llegar
+                  los precios, mover el foco...). En medio de una vuelta de página eso reinicia el libro y la
+                  animación termina en otro spread. Por eso `bookChildren` está memoizado: misma identidad en
+                  todos los renders, solo cambia si cambian las páginas. NO usar `renderOnlyPageLengthChange`:
+                  en cada render el primer efecto de la librería vacía su lista de nodos (`childRef`) y con esa
+                  opción no vuelve a llenarla, así que si un render del padre coincide con el montaje el libro
+                  nunca se inicializa (spinner eterno y páginas sin pintar). Lo que cambia con el tiempo
+                  (precios, clic en un producto) llega a las páginas por contexto, no por props. */}
               <BookLiveContext.Provider value={liveBook}>
               <HTMLFlipBook
                 ref={bookRef}
-                renderOnlyPageLengthChange
                 width={BOOK_WIDTH}
                 height={BOOK_HEIGHT}
                 size="stretch"
@@ -1439,17 +1451,7 @@ export default function ProductCatalogModal({
                   if (e.data === "read") getNavigator().onIdle();
                 }}
               >
-                {bookPages.map((page, index) => (
-                  <Page key={index}>
-                    <BookPageContent
-                      page={page}
-                      family={displayFamily}
-                      allFamilies={allFamilies}
-                      icon={Icon}
-                      coverPhoto={coverPhoto}
-                    />
-                  </Page>
-                ))}
+                {bookChildren}
               </HTMLFlipBook>
               </BookLiveContext.Provider>
 
