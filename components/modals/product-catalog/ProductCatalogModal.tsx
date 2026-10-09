@@ -31,6 +31,7 @@ import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
 import type { PriceView } from "@/lib/catalog-prices";
 import { site } from "@/lib/data";
 import PriceTag from "./PriceTag";
+import { displayProductName } from "@/lib/product-display";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -2045,8 +2046,8 @@ function ProductCard({
           hay forma de ver el nombre completo si se corta con "...", así
           que el nombre SIEMPRE tiene que verse entero, sin importar
           cuántas líneas necesite. */}
-      <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK }}>
-        {product.name}
+      <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK, textWrap: "balance", overflowWrap: "anywhere" }}>
+        {displayProductName(product.name)}
       </p>
       {product.packSize && (
         <p className="text-[9.5px] font-medium" style={{ color: MUTED }}>

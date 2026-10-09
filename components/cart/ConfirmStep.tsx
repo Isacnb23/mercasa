@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
-import { formatUnit } from "@/lib/catalog-prices";
+import { unitLabel } from "@/lib/presentations";
 import type { OrderPreview, PaymentMethod } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import OrderSummary from "./OrderSummary";
@@ -101,7 +101,7 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
                 <span className="line-clamp-2 font-medium">{line.name}</span>
                 <span className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
                   {t("summaryQty", { quantity: line.quantity })}
-                  {line.unitId ? ` · ${formatUnit(line.unitId)}` : ""}
+                  {line.unitId ? ` · ${unitLabel(line.unitId, locale)}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: INK }}>

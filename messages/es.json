@@ -271,6 +271,11 @@
       "priceListMissingCta": "Escribir por WhatsApp",
       "pricesUnavailable": "No pudimos cargar los precios en este momento.",
       "unitSelectorLabel": "Presentación",
+      "priceVatSuffix": "+ IVA",
+      "equivalenceTitle": "Equivalencias",
+      "equivalenceLine": "1 {big} = {amount} {small}",
+      "approxPerUnit": "≈ {price} por {unit}",
+      "packagingFromName": "Según el nombre del producto (informativo)",
       "productDetailPackagingLabel": "Empaque",
       "productDetailAriaLabel": "Ver {name} en grande",
       "glossaryGroups": [

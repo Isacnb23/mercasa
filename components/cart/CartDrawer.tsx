@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/drawer-tokens";
 import { site } from "@/lib/data";
 import { buildWhatsappHref } from "@/lib/utils";
-import { formatUnit } from "@/lib/catalog-prices";
+import { unitLabel } from "@/lib/presentations";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 
 // Arma el mensaje de WhatsApp con el detalle del pedido — mismo patrón que
@@ -43,11 +43,12 @@ import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 function buildOrderMessage(
   items: { name: string; packSize?: string; quantity: number; unitId?: string }[],
   t: ReturnType<typeof useTranslations>,
-  extraLines: string[]
+  extraLines: string[],
+  locale: string
 ) {
   const lines = items.map((item) => {
     const pack = item.packSize ? ` (${item.packSize})` : "";
-    const unit = item.unitId ? ` ${formatUnit(item.unitId)}` : "";
+    const unit = item.unitId ? ` ${unitLabel(item.unitId, locale)}` : "";
     return `- ${item.name}${pack} x${item.quantity}${unit}`;
   });
   const extra = extraLines.length > 0 ? `${extraLines.join("\n")}\n\n` : "";
@@ -91,7 +92,7 @@ export default function CartDrawer() {
     extraLines.push(tOrder("whatsappTotalLine", { total: formatColones(preview.totals.total, locale, 2) }));
   }
   if (selectedLabel) extraLines.push(tCheckout("whatsappDeliveryLine", { date: selectedLabel }));
-  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines));
+  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale));
 
   const goTo = (target: CheckoutStep) => {
     setSubmit({ status: "idle" });

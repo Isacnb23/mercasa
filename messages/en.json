@@ -271,6 +271,11 @@
       "priceListMissingCta": "Message on WhatsApp",
       "pricesUnavailable": "We could not load prices right now.",
       "unitSelectorLabel": "Packaging option",
+      "priceVatSuffix": "+ VAT",
+      "equivalenceTitle": "Equivalences",
+      "equivalenceLine": "1 {big} = {amount} {small}",
+      "approxPerUnit": "≈ {price} per {unit}",
+      "packagingFromName": "From the product name (for reference)",
       "productDetailPackagingLabel": "Packaging",
       "productDetailAriaLabel": "View {name} enlarged",
       "glossaryGroups": [

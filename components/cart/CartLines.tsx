@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { CartItem } from "@/lib/cart-types";
 import { formatColones } from "@/lib/checkout-format";
 import { cartLineKey } from "@/lib/cart-logic";
-import { formatUnit } from "@/lib/catalog-prices";
+import { unitLabel } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
 import type { OrderPreview } from "@/lib/order-types";
@@ -61,7 +61,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
         const units = unitsFor(item.id);
         const defaultUnit = units?.find((u) => u.isDefault);
         const currentUnit = item.unitId ?? defaultUnit?.unitId ?? line?.unitId ?? "";
-        const unitName = formatUnit(currentUnit);
+        const unitName = currentUnit ? unitLabel(currentUnit, locale) : "";
         // El precio solo vale si el servidor lo calculó para ESTA cantidad.
         const priced = !!line && line.quantity === item.quantity && line.unitPrice > 0;
         const codes = errorsByItem.get(item.id.toLowerCase()) ?? [];
@@ -106,7 +106,7 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
                     >
                       {units.map((u) => (
                         <option key={u.unitId} value={u.unitId}>
-                          {formatUnit(u.label)}
+                          {unitLabel(u.unitId, locale)}
                         </option>
                       ))}
                     </select>

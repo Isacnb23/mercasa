@@ -2,12 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, Minus, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
 import PriceTag from "./PriceTag";
-import { formatUnit, type PriceView } from "@/lib/catalog-prices";
+import type { PriceView } from "@/lib/catalog-prices";
+import { formatColones } from "@/lib/checkout-format";
+import { displayProductName } from "@/lib/product-display";
+import {
+  approxBasePrice,
+  equivalences,
+  formatAmount,
+  pickInitialUnit,
+  shortEquivalence,
+  sortUnits,
+  unitLabel,
+  unitName,
+  unitTitle,
+} from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
@@ -19,6 +32,8 @@ import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 
 const INK = "#082B5C";
 const MUTED = "#8493A5";
+// Texto secundario legible (contraste AA sobre blanco); MUTED queda para etiquetas y detalles.
+const TEXT_SOFT = "#5C6B7D";
 const RULE = "#E2E8F0";
 const CHIP_BG = "#F4F6F9";
 
@@ -74,20 +89,34 @@ export default function ProductDetailModal({
 }) {
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
+  const locale = useLocale();
   const [imageStatus, setImageStatus] = useState<"loading" | "loaded" | "error">("loading");
   const packagingCodes = findPackagingCodes(product.name, glossaryGroups);
+  // Solo para MOSTRAR: el nombre original (product.name) es el que va al carrito y al servidor.
+  const displayName = displayProductName(product.name);
 
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
-  // Presentaciones vendibles (solo con sesión): el precio y la unidad del modal siguen a la elegida. La del
-  // listado es la presentación por defecto, así precio de la tarjeta y del modal coinciden al abrir.
+  // Presentaciones vendibles (solo con sesión). El modal abre con la MISMA presentación que muestra la tarjeta
+  // (la unidad del listado). Si esa unidad no estuviera entre las presentaciones, no se ofrece selector y se
+  // conserva el precio de la tarjeta: nunca se abre con otra presentación.
   const { unitsFor } = useCatalogUnits([product.id]);
-  const units = unitsFor(product.id);
+  const rawUnits = unitsFor(product.id);
+  const listingUnit = price.kind === "price" ? price.unit : null;
+  const initialUnit = pickInitialUnit(rawUnits, listingUnit);
+  const units = rawUnits && (initialUnit || !listingUnit) ? sortUnits(rawUnits) : null;
   const [chosenUnit, setChosenUnit] = useState<string | null>(null);
-  const selected = units?.find((u) => u.unitId === chosenUnit) ?? units?.find((u) => u.isDefault) ?? null;
+  const selected = units?.find((u) => u.unitId === chosenUnit) ?? initialUnit ?? null;
   const shownPrice: PriceView = selected ? { kind: "price", unitPrice: selected.unitPrice, unit: selected.unitId } : price;
+  const quantityUnit = selected?.unitId ?? (price.kind === "price" ? price.unit : "");
+
+  // Equivalencias reales (factores de AX) de la presentación elegida; solo informativas.
+  const equivalenceLines = units && selected ? equivalences(units, selected.unitId) : [];
+  const approx = selected ? approxBasePrice(selected) : null;
+  // Respaldo (ítem sin presentaciones reales): lo que se pueda leer del nombre, rotulado como informativo.
+  const showNameFallback = (!units || (units.length <= 1 && equivalenceLines.length === 0)) && (!!product.packSize || packagingCodes.length > 0);
 
   // Foco inicial en el botón de cerrar (Escape lo maneja ProductCatalogModal).
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -102,6 +131,8 @@ export default function ProductDetailModal({
     setQuantity(1);
     setTimeout(() => setJustAdded(false), 1800);
   };
+
+  const unitText = (unitId: string, count: number) => unitName(unitId, count, locale);
 
   return (
     <div
@@ -119,7 +150,7 @@ export default function ProductDetailModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
+        aria-label={t("catalog.productDetailAriaLabel", { name: displayName })}
         className="pd-dialog relative rounded-[24px] bg-white shadow-[0_30px_80px_rgba(8,20,40,0.35)]"
       >
         <button
@@ -141,7 +172,7 @@ export default function ProductDetailModal({
           <div className="absolute inset-0">
             <ProductImage
               itemId={product.id}
-              name={product.name}
+              name={displayName}
               familyIcon={icon}
               size="l"
               className="h-full w-full object-contain p-4"
@@ -160,105 +191,166 @@ export default function ProductDetailModal({
         </div>
 
         <div className="pd-main">
-        {/* Nombre completo (sin truncar, ver doc) + empaque. Scroll interno
-            si no entra; la barra de cantidad/agregar queda fuera de esta zona. */}
-        <div className="pd-info p-5 sm:p-6" data-lenis-prevent>
-          <p className="font-display text-[clamp(16px,2.2dvh,18px)] font-semibold leading-snug" style={{ color: INK }}>
-            {product.name}
-          </p>
-          <div className="mt-3 empty:hidden">
-            <PriceTag view={shownPrice} size="detail" />
-          </div>
+          {/* Zonas con aire: título, precio, presentación, equivalencias. Scroll interno si no entra; la barra de
+              cantidad/agregar queda fuera de esta zona y SIEMPRE visible. */}
+          <div className="pd-info flex flex-col gap-5 p-5 sm:p-6" data-lenis-prevent>
+            {/* Título: la misma sans-serif de las tarjetas (no la serif de display), peso 600, interlineado
+                cómodo y balanceado. Nombre normalizado solo para mostrar. */}
+            <h2
+              className="font-sans text-[clamp(17px,2.4dvh,20px)] font-semibold leading-[1.3]"
+              style={{ color: INK, textWrap: "balance", overflowWrap: "anywhere" }}
+            >
+              {displayName}
+            </h2>
 
-          {units && units.length > 1 && (
-            <div className="mt-3">
-              <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }} id="pd-unit-label">
-                {t("catalog.unitSelectorLabel")}
-              </p>
-              <div
-                role="radiogroup"
-                aria-labelledby="pd-unit-label"
-                className="mt-2 flex flex-wrap gap-2"
-                onKeyDown={(e) => {
-                  if (!selected || !["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) return;
-                  e.preventDefault();
-                  const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-                  const index = units.findIndex((u) => u.unitId === selected.unitId);
-                  const next = units[(index + step + units.length) % units.length];
-                  setChosenUnit(next.unitId);
-                  (e.currentTarget.querySelector(`[data-unit="${CSS.escape(next.unitId)}"]`) as HTMLElement | null)?.focus();
-                }}
-              >
-                {units.map((u) => {
-                  const active = u.unitId === selected?.unitId;
-                  return (
-                    <button
-                      key={u.unitId}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      data-unit={u.unitId}
-                      tabIndex={active ? 0 : -1}
-                      onClick={() => setChosenUnit(u.unitId)}
-                      className="min-h-[36px] rounded-full border px-3.5 text-[13.5px] font-semibold outline-none motion-safe:transition motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                      style={{
-                        borderColor: active ? INK : RULE,
-                        background: active ? INK : "#FFFFFF",
-                        color: active ? "#FFFFFF" : INK,
-                      }}
-                    >
-                      {formatUnit(u.label)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {(product.packSize || packagingCodes.length > 0) && (
-            <div className="mt-4 border-t pt-4" style={{ borderColor: RULE }}>
-              <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }}>
-                {t("catalog.productDetailPackagingLabel")}
-              </p>
-              <div className="mt-2 flex flex-col gap-1.5">
-                {product.packSize && (
-                  <p className="text-[14.5px] font-medium" style={{ color: INK }}>
-                    {product.packSize}
+            {(shownPrice.kind !== "hidden" || approx) && (
+              <div className="flex flex-col gap-1.5">
+                <PriceTag view={shownPrice} size="detail" />
+                {approx && shownPrice.kind === "price" && (
+                  <p className="text-[13px] font-medium" style={{ color: TEXT_SOFT }}>
+                    {t("catalog.approxPerUnit", {
+                      price: formatColones(approx.price, locale, 2),
+                      unit: unitText(approx.unitId, 1),
+                    })}
                   </p>
                 )}
-                {packagingCodes.map(({ code, meaning }) => (
-                  <p key={code} className="text-[14.5px] font-medium" style={{ color: INK }}>
-                    <span className="font-semibold">{code}</span>
-                    {meaning && <span style={{ color: MUTED }}> · {meaning}</span>}
-                  </p>
-                ))}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {units && units.length > 1 && selected && (
+              <div>
+                <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }} id="pd-unit-label">
+                  {t("catalog.unitSelectorLabel")}
+                </p>
+                {/* Tarjetas compactas seleccionables (grupo de opciones): nombre, precio y equivalencia corta,
+                    de menor a mayor factor, para comparar sin hacer clic. Flechas del teclado cambian la opción. */}
+                <div
+                  role="radiogroup"
+                  aria-labelledby="pd-unit-label"
+                  className="mt-2 grid gap-2"
+                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}
+                  onKeyDown={(e) => {
+                    if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) return;
+                    e.preventDefault();
+                    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+                    const index = units.findIndex((u) => u.unitId === selected.unitId);
+                    const next = units[(index + step + units.length) % units.length];
+                    setChosenUnit(next.unitId);
+                    (e.currentTarget.querySelector(`[data-unit="${CSS.escape(next.unitId)}"]`) as HTMLElement | null)?.focus();
+                  }}
+                >
+                  {units.map((u) => {
+                    const active = u.unitId === selected.unitId;
+                    const short = shortEquivalence(u);
+                    return (
+                      <button
+                        key={u.unitId}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        data-unit={u.unitId}
+                        tabIndex={active ? 0 : -1}
+                        onClick={() => setChosenUnit(u.unitId)}
+                        className="flex min-h-[68px] flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left outline-none motion-safe:transition motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
+                        style={{
+                          borderColor: active ? INK : RULE,
+                          background: active ? "#EAF0F8" : "#FFFFFF",
+                          boxShadow: active ? `inset 0 0 0 1px ${INK}` : "none",
+                        }}
+                      >
+                        <span className="text-[14px] font-semibold leading-tight" style={{ color: INK }}>
+                          {unitLabel(u.unitId, locale)}
+                        </span>
+                        <span className="text-[13px] font-bold leading-tight tabular-nums" style={{ color: INK }}>
+                          {t("catalog.pricePlusTax", { price: formatColones(u.unitPrice, locale, 2) })}
+                        </span>
+                        {short && (
+                          <span className="text-[12px] font-medium leading-tight" style={{ color: TEXT_SOFT }}>
+                            {formatAmount(short.amount, locale)} {unitText(short.unitId, short.amount)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {equivalenceLines.length > 0 && (
+              <div>
+                <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }}>
+                  {t("catalog.equivalenceTitle")}
+                </p>
+                <ul className="mt-2 flex flex-col gap-1.5" aria-live="polite">
+                  {equivalenceLines.map((eq) => (
+                    <li key={`${eq.bigUnitId}>${eq.smallUnitId}`} className="text-[14.5px] font-medium" style={{ color: INK }}>
+                      {t("catalog.equivalenceLine", {
+                        big: unitTitle(eq.bigUnitId, 1, locale),
+                        amount: formatAmount(eq.amount, locale),
+                        small: unitTitle(eq.smallUnitId, eq.amount, locale),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {showNameFallback && (
+              <div>
+                <p className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }}>
+                  {t("catalog.productDetailPackagingLabel")}
+                </p>
+                <p className="mt-0.5 text-[12px]" style={{ color: TEXT_SOFT }}>
+                  {t("catalog.packagingFromName")}
+                </p>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {product.packSize && (
+                    <p className="text-[14.5px] font-medium" style={{ color: INK }}>
+                      {product.packSize}
+                    </p>
+                  )}
+                  {packagingCodes.map(({ code, meaning }) => (
+                    <p key={code} className="text-[14.5px] font-medium" style={{ color: INK }}>
+                      <span className="font-semibold">{code}</span>
+                      {meaning && <span style={{ color: MUTED }}> · {meaning}</span>}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Una sola presentación: solo la etiqueta, sin selector (el precio ya dice "por Unidad"). */}
+          </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
               — carrito de pedido sin precios, no e-commerce; el checkout
               real pasa por WhatsApp desde el drawer del carrito. Barra fija
-              al pie del diálogo: SIEMPRE visible. */}
+              al pie del diálogo: SIEMPRE visible. La cantidad muestra la unidad elegida ("2 Cajas"). */}
           <div className="flex shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                aria-label={tCart("decreaseAria", { name: product.name })}
+                aria-label={tCart("decreaseAria", { name: displayName })}
                 className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
                 style={{ borderColor: RULE, color: INK }}
               >
                 <Minus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
               </button>
-              <span className="w-6 text-center text-[15px] font-semibold" style={{ color: INK }}>
-                {quantity}
+              <span className="min-w-[64px] text-center leading-tight" aria-live="polite">
+                <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
+                  {quantity}
+                </span>
+                {quantityUnit && (
+                  <span className="block text-[11.5px] font-medium" style={{ color: TEXT_SOFT }}>
+                    {unitText(quantityUnit, quantity)}
+                  </span>
+                )}
               </span>
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.min(9999, q + 1))}
-                aria-label={tCart("increaseAria", { name: product.name })}
+                aria-label={tCart("increaseAria", { name: displayName })}
                 className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
                 style={{ borderColor: RULE, color: INK }}
               >

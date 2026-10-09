@@ -14,6 +14,8 @@ export interface CatalogUnit {
   unitPrice: number;
   tax: number;
   factor: number;
+  // Unidad base de inventario a la que se convierte el factor (p. ej. KILO); vacía si el servidor no la envía.
+  baseUnitId: string;
   available: number;
   isDefault: boolean;
 }
@@ -106,6 +108,7 @@ function parseUnits(raw: unknown): CatalogUnit[] | null | false {
       unitPrice: u.unitPrice,
       tax: u.tax,
       factor: u.factor,
+      baseUnitId: typeof u.baseUnitId === "string" ? u.baseUnitId : "",
       available: u.available,
       isDefault: u.isDefault === true,
     });
