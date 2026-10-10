@@ -38,6 +38,7 @@ import {
   type CatalogChannel,
 } from "@/lib/catalog-channel";
 import { productTitle } from "@/lib/product-display";
+import { shouldLoadPageImages } from "@/lib/image-window";
 import CategoryMenu from "./CategoryMenu";
 import { activeCategoryId as computeActiveCategoryId, planJump, visiblePageIndexes, type MenuSection } from "@/lib/category-nav";
 import { createBookNavigator, type BookLike } from "@/lib/book-navigator";
@@ -966,14 +967,17 @@ export default function ProductCatalogModal({
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
 
   // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
-  const liveBook = useMemo(() => ({ priceFor, onProductClick: setSelectedProduct }), [priceFor, setSelectedProduct]);
+  const liveBook = useMemo(
+    () => ({ priceFor, onProductClick: setSelectedProduct, currentPage }),
+    [priceFor, setSelectedProduct, currentPage]
+  );
 
   // Hijos del libro con identidad ESTABLE (ver el comentario junto al <HTMLFlipBook>).
   const bookChildren = useMemo(
     () =>
       bookPages.map((page, index) => (
         <Page key={index}>
-          <BookPageContent page={page} family={displayFamily} allFamilies={allFamiliesProp} icon={Icon} coverPhoto={coverPhoto} />
+          <BookPageContent page={page} pageIndex={index} family={displayFamily} allFamilies={allFamiliesProp} icon={Icon} coverPhoto={coverPhoto} />
         </Page>
       )),
     [bookPages, displayFamily, allFamiliesProp, Icon, coverPhoto]
@@ -1691,17 +1695,22 @@ function FamilyStripItem({
 interface BookLive {
   priceFor: (itemId: string) => PriceView;
   onProductClick: (product: ProductSummary) => void;
+  // Página visible del libro: decide qué páginas piden sus fotos (ver lib/image-window.ts).
+  currentPage: number;
 }
-const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), onProductClick: () => {} });
+const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), onProductClick: () => {}, currentPage: 0 });
 
 function BookPageContent({
   page,
+  pageIndex,
   family,
   allFamilies,
   icon: Icon,
   coverPhoto,
 }: {
   page: BookPage;
+  /** Posición de la página en el libro (decide cuándo pide sus fotos). */
+  pageIndex: number;
   family: HierarchyNode;
   allFamilies: HierarchyNode[];
   icon: LucideIcon;
@@ -1711,7 +1720,8 @@ function BookPageContent({
   coverPhoto: string | StaticImageData;
 }) {
   const t = useTranslations("Products");
-  const { priceFor, onProductClick } = useContext(BookLiveContext);
+  const { priceFor, onProductClick, currentPage } = useContext(BookLiveContext);
+  const loadImages = shouldLoadPageImages(pageIndex, currentPage);
   // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
   // las familias (ver reemplazar-imagenes-portada-indice.md) — no rota ni
   // depende del segmento.
@@ -2027,6 +2037,7 @@ function BookPageContent({
             key={product.id}
             product={product}
             icon={Icon}
+            loadImage={loadImages}
             price={canAddToCart(product) ? priceFor(product.id) : { kind: "hidden" }}
             onClick={() => onProductClick(product)}
           />
@@ -2041,9 +2052,12 @@ function ProductCard({
   icon,
   price,
   onClick,
+  loadImage,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
+  /** false = la página está lejos de la vista: la foto espera (ver lib/image-window.ts). */
+  loadImage: boolean;
   price: PriceView;
   onClick: () => void;
 }) {
@@ -2132,6 +2146,7 @@ function ProductCard({
           name={product.name}
           familyIcon={icon}
           size="s"
+          defer={!loadImage}
           className="h-full w-full object-contain p-1.5"
         />
       </div>

@@ -15,6 +15,7 @@ import {
   type CatalogPrice,
   type PriceView,
 } from "@/lib/catalog-prices";
+import { fetchWithOneRetry } from "@/lib/retry";
 
 export type CatalogPricesStatus = "no-session" | "ready" | "price-list-missing" | "unavailable";
 
@@ -36,6 +37,22 @@ export interface CatalogPricesResult {
 }
 
 const key = (id: string) => id.trim().toUpperCase();
+
+// Espera cancelable: si se aborta (cambió la vista o la cuenta) rechaza con AbortError y se corta el reintento.
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException("Aborted", "AbortError"));
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 const SEP = "\u0000";
 
 export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesResult {
@@ -81,14 +98,21 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
 
       try {
         for (const batch of chunk(pending, CATALOG_PRICES_BATCH_SIZE)) {
-          const res = await fetch("/api/catalog/prices", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // Solo ids: la lista de precios la decide el servidor con la cuenta de la sesión.
-            body: JSON.stringify({ itemIds: batch }),
-            cache: "no-store",
-            signal: controller.signal,
-          });
+          // Ante 429 (límite de peticiones) o 503 se reintenta UNA vez tras una espera corta (Retry-After, con
+          // tope); el aviso "No pudimos cargar los precios" solo sale si el reintento también falla. Un 401
+          // (sesión vencida) no se reintenta.
+          const res = await fetchWithOneRetry(
+            () =>
+              fetch("/api/catalog/prices", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                // Solo ids: la lista de precios la decide el servidor con la cuenta de la sesión.
+                body: JSON.stringify({ itemIds: batch }),
+                cache: "no-store",
+                signal: controller.signal,
+              }),
+            (ms) => abortableSleep(ms, controller.signal),
+          );
           if (!res.ok) throw new Error(`status ${res.status}`);
           const parsed = parseCatalogPrices(await res.json());
           if (!parsed) throw new Error("respuesta inesperada");

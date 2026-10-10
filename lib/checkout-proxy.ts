@@ -5,6 +5,16 @@ import { SESSION_COOKIE } from "@/lib/auth-cookies";
 
 const GENERIC_ERROR = "No se pudo cargar la información en este momento.";
 
+// Límite de peticiones de mercasa-api: se reenvía como 429 CON Retry-After (antes se volvía un 502 genérico y
+// la web lo leía como falla definitiva). Sin Retry-After del origen, 5 s.
+function rateLimited(upstream: Response): NextResponse {
+  const retryAfter = upstream.headers.get("Retry-After")?.trim();
+  return NextResponse.json(
+    { error: "Demasiadas solicitudes. Intentá de nuevo en unos segundos.", code: "rate_limited" },
+    { status: 429, headers: { "Retry-After": retryAfter && /^d+$/.test(retryAfter) ? retryAfter : "5", "Cache-Control": "no-store" } },
+  );
+}
+
 // Reenvía un GET autenticado a mercasa-api (que tiene el X-Api-Key y llama a
 // homex-api). El JWT sale de la cookie httpOnly: el navegador nunca lo ve. Sin
 // sesión responde 401 SIN llamar a mercasa-api. Datos del cliente: nunca se
@@ -42,6 +52,10 @@ export async function proxyCustomerGet(path: string, logTag: string): Promise<Ne
 
     if (upstream.status === 404) {
       return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+    }
+
+    if (upstream.status === 429) {
+      return rateLimited(upstream);
     }
 
     if (!upstream.ok) {
@@ -99,6 +113,10 @@ export async function proxyCustomerPost(path: string, body: unknown, logTag: str
 
     if (upstream.status === 404) {
       return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+    }
+
+    if (upstream.status === 429) {
+      return rateLimited(upstream);
     }
 
     if (upstream.status === 400) {
