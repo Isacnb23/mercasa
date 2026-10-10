@@ -13,6 +13,7 @@ import {
   parseCatalogPrices,
   uniqueItemIds,
   type CatalogPrice,
+  type PickupPriceView,
   type PriceView,
 } from "@/lib/catalog-prices";
 import { fetchWithOneRetry } from "@/lib/retry";
@@ -33,7 +34,10 @@ const EMPTY: Snapshot = { accountNum: null, prices: new Map(), missing: new Set(
 
 export interface CatalogPricesResult {
   status: CatalogPricesStatus;
+  // Precio de A domicilio (cmer). Un ítem solo de retiro no tiene: hidden.
   priceFor: (itemId: string) => PriceView;
+  // Precio de Retiro en tienda (fmcm), siempre por separado del de domicilio.
+  pickupPriceFor: (itemId: string) => PickupPriceView;
 }
 
 const key = (id: string) => id.trim().toUpperCase();
@@ -159,10 +163,18 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   const priceFor = (itemId: string): PriceView => {
     if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
     const price = own.prices.get(key(itemId));
-    if (price) return { kind: "price", unitPrice: price.unitPrice, unit: price.unit };
+    if (price) return price.hasDelivery ? { kind: "price", unitPrice: price.unitPrice, unit: price.unit } : { kind: "hidden" };
     if (own.missing.has(key(itemId))) return { kind: "consult" };
     return { kind: "loading" };
   };
 
-  return { status, priceFor };
+  const pickupPriceFor = (itemId: string): PickupPriceView => {
+    if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
+    const price = own.prices.get(key(itemId));
+    if (price?.pickup) return { kind: "price", ...price.pickup };
+    if (price || own.missing.has(key(itemId))) return { kind: "consult" };
+    return { kind: "loading" };
+  };
+
+  return { status, priceFor, pickupPriceFor };
 }

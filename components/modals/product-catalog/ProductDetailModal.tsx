@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart-context";
 import ProductImage from "./ProductImage";
 import PriceTag from "./PriceTag";
 import PresentationPanel, { type PanelLabels } from "./PresentationPanel";
-import type { PriceView } from "@/lib/catalog-prices";
+import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
 import { formatColones } from "@/lib/checkout-format";
 import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
@@ -34,11 +34,14 @@ export default function ProductDetailModal({
   product,
   icon,
   price,
+  pickupPrice,
   onClose,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
   price: PriceView;
+  /** Precio de Retiro en tienda (por separado del de domicilio). */
+  pickupPrice: PickupPriceView;
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
@@ -193,7 +196,7 @@ export default function ProductDetailModal({
               <PriceTag view={price} size="detail" />
             ) : null}
 
-            <ChannelAvailability availability={product.availability} />
+            <ChannelAvailability availability={product.availability} deliveryPrice={price} pickupPrice={pickupPrice} />
           </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)

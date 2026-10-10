@@ -26,12 +26,15 @@ import { formatProductCount } from "@/lib/utils";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
-import type { PriceView } from "@/lib/catalog-prices";
+import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
 import { site } from "@/lib/data";
-import PriceTag from "./PriceTag";
+import PriceTag, { PickupPriceTag } from "./PriceTag";
 import { ChannelBadges, ChannelFilterBar } from "./ChannelBadges";
+import { collectVisiblePriceIds } from "@/lib/channel-price";
 import {
   canAddToCart,
+  hasDelivery,
+  hasPickup,
   countByChannel,
   filterNodeByChannel,
   filterTreeByChannel,
@@ -624,15 +627,10 @@ export default function ProductCatalogModal({
 
   // Precios (solo con sesión): de las páginas del spread actual y las vecinas (precarga de la siguiente).
   const { openProfile } = useAuth();
-  const visiblePriceIds = useMemo(() => {
-    const ids: string[] = [];
-    for (let i = Math.max(0, currentPage - 1); i <= currentPage + 2 && i < bookPages.length; i++) {
-      const page = bookPages[i];
-      if (page.kind === "category") for (const product of page.products) if (canAddToCart(product)) ids.push(product.id);
-    }
-    return ids;
-  }, [bookPages, currentPage]);
-  const { status: pricesStatus, priceFor } = useCatalogPrices(visiblePriceIds);
+  // Piden precio los de A domicilio Y los de Retiro en tienda (cada canal con su precio); el "+" y el carrito
+  // siguen siendo solo para domicilio.
+  const visiblePriceIds = useMemo(() => collectVisiblePriceIds(bookPages, currentPage), [bookPages, currentPage]);
+  const { status: pricesStatus, priceFor, pickupPriceFor } = useCatalogPrices(visiblePriceIds);
 
   // Canto de páginas apiladas a los costados del panel (ver
   // canto-paginas-flipbook.md): el ancho de cada franja representa la
@@ -968,8 +966,8 @@ export default function ProductCatalogModal({
 
   // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
   const liveBook = useMemo(
-    () => ({ priceFor, onProductClick: setSelectedProduct, currentPage }),
-    [priceFor, setSelectedProduct, currentPage]
+    () => ({ priceFor, pickupPriceFor, onProductClick: setSelectedProduct, currentPage }),
+    [priceFor, pickupPriceFor, setSelectedProduct, currentPage]
   );
 
   // Hijos del libro con identidad ESTABLE (ver el comentario junto al <HTMLFlipBook>).
@@ -1144,7 +1142,7 @@ export default function ProductCatalogModal({
               siempre, sin importar el z-index interno de las páginas. */}
           <div
             ref={headerRef}
-            className="catalog-header relative z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
+            className="catalog-header relative z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8"
             style={{ borderBottom: `1px solid ${RULE}` }}
           >
             <div className="flex items-center gap-3">
@@ -1152,12 +1150,14 @@ export default function ProductCatalogModal({
                 <Icon className="h-5 w-5" strokeWidth={1.7} style={{ color: ACCENT }} aria-hidden />
               </span>
               <div>
-                <p className="text-[10px] font-bold uppercase" style={{ color: ACCENT, letterSpacing: "0.18em" }}>
-                  {t("catalog.eyebrow")}
-                </p>
                 <p className="font-display" style={{ color: INK, fontSize: "19px", fontWeight: 600, lineHeight: 1.1 }}>
                   {displayFamily.name}
                 </p>
+                {/* Los chips viven en el encabezado (no en una barra propia): una barra aparte le quitaba ~40 px
+                    de alto a la hoja del libro y con ellos la rejilla 3×3 ya no cabía. */}
+                <div className="mt-1.5">
+                  <ChannelFilterBar inline value={channel} counts={channelCounts} onChange={handleChannelChange} />
+                </div>
               </div>
             </div>
 
@@ -1212,7 +1212,7 @@ export default function ProductCatalogModal({
                   style={{ borderColor: RULE, background: "#F7FAFD", color: ACCENT }}
                 >
                   <Info className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  <span className="hidden sm:inline">{t("catalog.glossaryButtonLabel")}</span>
+                  <span className="hidden xl:inline">{t("catalog.glossaryButtonLabel")}</span>
                 </button>
 
                 {isGlossaryOpen && (
@@ -1283,7 +1283,7 @@ export default function ProductCatalogModal({
                 style={{ background: `linear-gradient(135deg, ${ACCENT_BRIGHT}, ${ACCENT})` }}
               >
                 <Download className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                <span className="hidden sm:inline">{t("catalog.downloadPdf")}</span>
+                <span className="hidden xl:inline">{t("catalog.downloadPdf")}</span>
               </button>
 
               <button
@@ -1295,12 +1295,10 @@ export default function ProductCatalogModal({
                 style={{ borderColor: RULE, color: INK }}
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                <span className="hidden sm:inline">{t("catalog.backToSite")}</span>
+                <span className="hidden xl:inline">{t("catalog.backToSite")}</span>
               </button>
             </div>
           </div>
-
-          <ChannelFilterBar value={channel} counts={channelCounts} onChange={handleChannelChange} disabled={!isBookReady && !channelChanged} />
 
           {/* Aviso ÚNICO de precios (no uno por producto): sin sesión invita a ingresar; con la cuenta sin lista
               de precios explica y enlaza a WhatsApp; si el servicio de precios falla lo dice una sola vez. */}
@@ -1553,7 +1551,7 @@ export default function ProductCatalogModal({
               entre dos páginas visibles a la vez, que era el problema en el
               diseño anterior con spreads de a dos). */}
           <div
-            className="catalog-footer flex items-center justify-between gap-3 px-5 py-3 sm:px-8"
+            className="catalog-footer flex items-center justify-between gap-3 px-5 py-2 sm:px-8"
             style={{ background: INK }}
           >
             <span className="flex min-w-0 items-center gap-2">
@@ -1645,7 +1643,8 @@ export default function ProductCatalogModal({
         <ProductDetailModal
           product={selectedProduct}
           icon={Icon}
-          price={canAddToCart(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
+          price={hasDelivery(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
+          pickupPrice={hasPickup(selectedProduct) ? pickupPriceFor(selectedProduct.id) : { kind: "hidden" }}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1694,11 +1693,12 @@ function FamilyStripItem({
 // renderOnlyPageLengthChange junto al <HTMLFlipBook>): llegan por contexto para no re-crear las páginas.
 interface BookLive {
   priceFor: (itemId: string) => PriceView;
+  pickupPriceFor: (itemId: string) => PickupPriceView;
   onProductClick: (product: ProductSummary) => void;
   // Página visible del libro: decide qué páginas piden sus fotos (ver lib/image-window.ts).
   currentPage: number;
 }
-const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), onProductClick: () => {}, currentPage: 0 });
+const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), pickupPriceFor: () => ({ kind: "hidden" }), onProductClick: () => {}, currentPage: 0 });
 
 function BookPageContent({
   page,
@@ -1720,7 +1720,7 @@ function BookPageContent({
   coverPhoto: string | StaticImageData;
 }) {
   const t = useTranslations("Products");
-  const { priceFor, onProductClick, currentPage } = useContext(BookLiveContext);
+  const { priceFor, pickupPriceFor, onProductClick, currentPage } = useContext(BookLiveContext);
   const loadImages = shouldLoadPageImages(pageIndex, currentPage);
   // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
   // las familias (ver reemplazar-imagenes-portada-indice.md) — no rota ni
@@ -1980,8 +1980,8 @@ function BookPageContent({
   // línea de acento, grilla de tarjetas de producto con foto real (fallback
   // a ícono de familia).
   return (
-    <div className="flex h-full flex-col" style={{ padding: "clamp(16px, 5cqh, 36px)" }}>
-      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "clamp(6px, 1.7cqh, 14px)" }}>
+    <div className="flex h-full flex-col" style={{ padding: "clamp(10px, 3.4cqh, 28px)" }}>
+      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "clamp(4px, 1.2cqh, 12px)" }}>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: CHIP_BG }}>
             <Icon className="h-4.5 w-4.5" strokeWidth={1.7} style={{ color: ACCENT }} aria-hidden />
@@ -2004,7 +2004,7 @@ function BookPageContent({
       <span
         aria-hidden
         className="block h-[3px] w-[42px] shrink-0 rounded-full bg-corp-yellow"
-        style={{ marginTop: "clamp(6px, 1.7cqh, 16px)" }}
+        style={{ marginTop: "clamp(4px, 1.2cqh, 12px)" }}
       />
 
       {/* items-start: sin esto, CSS grid estira todas las tarjetas de una
@@ -2028,9 +2028,15 @@ function BookPageContent({
           productos en silencio — el resto de la página (header/línea de
           acento) se queda fijo arriba. */}
       <div
-        className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto overscroll-contain"
+        className="grid min-h-0 flex-1 grid-cols-3 items-stretch overflow-y-auto overscroll-contain"
         data-lenis-prevent
-        style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(5px, 1.4cqh, 14px)" }}
+        style={{
+          marginTop: "clamp(4px, 1.4cqh, 14px)",
+          gap: "clamp(4px, 1cqh, 12px)",
+          // 3 filas iguales que se reparten el alto de la hoja (cada una al menos lo que mide su contenido): las
+          // tarjetas de una misma fila y de las tres filas tienen la misma altura, con o sin etiquetas.
+          gridTemplateRows: "repeat(3, minmax(min-content, 1fr))",
+        }}
       >
         {page.products.map((product) => (
           <ProductCard
@@ -2038,7 +2044,8 @@ function BookPageContent({
             product={product}
             icon={Icon}
             loadImage={loadImages}
-            price={canAddToCart(product) ? priceFor(product.id) : { kind: "hidden" }}
+            price={hasDelivery(product) ? priceFor(product.id) : { kind: "hidden" }}
+            pickupPrice={hasPickup(product) ? pickupPriceFor(product.id) : { kind: "hidden" }}
             onClick={() => onProductClick(product)}
           />
         ))}
@@ -2051,11 +2058,14 @@ function ProductCard({
   product,
   icon,
   price,
+  pickupPrice,
   onClick,
   loadImage,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
+  /** Precio de Retiro en tienda; por separado del de domicilio (nunca se mezclan). */
+  pickupPrice: PickupPriceView;
   /** false = la página está lejos de la vista: la foto espera (ver lib/image-window.ts). */
   loadImage: boolean;
   price: PriceView;
@@ -2108,12 +2118,12 @@ function ProductCard({
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
       aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
-      className="relative flex w-full cursor-pointer flex-col items-center rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
+      className="relative flex h-full w-full cursor-pointer flex-col items-center overflow-hidden rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
       style={{
         borderColor: RULE,
         boxShadow: "0 2px 8px rgba(8,43,92,0.06)",
-        padding: "clamp(5px, 1.7cqh, 10px)",
-        gap: "clamp(3px, 1.1cqh, 7px)",
+        padding: "clamp(4px, 1.1cqh, 8px)",
+        gap: "clamp(2px, 0.6cqh, 5px)",
       }}
     >
       {canAddToCart(product) && (
@@ -2139,7 +2149,7 @@ function ProductCard({
       )}
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ background: CHIP_BG, height: "clamp(36px, 9.5cqh, 76px)", width: "clamp(36px, 9.5cqh, 76px)" }}
+        style={{ background: CHIP_BG, height: "clamp(24px, var(--pc-img, 7cqh), 64px)", width: "clamp(24px, var(--pc-img, 7cqh), 64px)" }}
       >
         <ProductImage
           itemId={product.id}
@@ -2150,12 +2160,24 @@ function ProductCard({
           className="h-full w-full object-contain p-1.5"
         />
       </div>
-      {/* Sin line-clamp/truncamiento a propósito (ver
-          fix-truncamiento-y-glosario.md): este catálogo es estático, no
-          hay forma de ver el nombre completo si se corta con "...", así
-          que el nombre SIEMPRE tiene que verse entero, sin importar
-          cuántas líneas necesite. */}
-      <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK, textWrap: "balance", overflowWrap: "anywhere" }}>
+      {/* Nombre: hasta 3 líneas (con el nombre completo en el tooltip y, al hacer clic, en el detalle del
+          producto). Antes se mostraba siempre entero (fix-truncamiento-y-glosario.md, cuando no existía el
+          detalle); con las etiquetas de canal y el precio de retiro, un nombre de 5 líneas ya no deja entrar la
+          rejilla 3×3 en la hoja. */}
+      <p
+        className="text-[10px] font-semibold leading-[1.2]"
+        title={productTitle(product.name).title}
+        style={{
+          color: INK,
+          textWrap: "balance",
+          overflowWrap: "anywhere",
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          // 3 líneas; 2 en pantallas bajas o angostas (ver --pc-name-lines en product-catalog-overlay.css).
+          WebkitLineClamp: "var(--pc-name-lines, 3)" as unknown as number,
+          overflow: "hidden",
+        }}
+      >
         {productTitle(product.name).title}
       </p>
       {product.packSize && (
@@ -2163,8 +2185,16 @@ function ProductCard({
           {product.packSize}
         </p>
       )}
-      <PriceTag view={price} />
-      <ChannelBadges product={product} />
+      {hasDelivery(product) ? (
+        <>
+          <PriceTag view={price} />
+          {hasPickup(product) && <PickupPriceTag view={pickupPrice} role="secondary" />}
+        </>
+      ) : (
+        <PickupPriceTag view={pickupPrice} role="primary" />
+      )}
+      <span className="mt-auto" />
+      <ChannelBadges product={product} omitPickup={hasDelivery(product) && hasPickup(product) && pickupPrice.kind === "price"} />
     </div>
   );
 }

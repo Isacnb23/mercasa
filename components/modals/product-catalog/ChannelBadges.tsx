@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Store, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ProductAvailability, ProductSummary } from "@/lib/product-types";
+import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
+import { formatColones } from "@/lib/checkout-format";
+import { pickupPriceText, sitePrice } from "@/lib/channel-price";
+import { usePickupPriceLabels } from "./PriceTag";
 import {
   CATALOG_CHANNELS,
   differingPickupUnit,
@@ -24,17 +28,24 @@ const RULE = "#E2E8F0";
 
 // Etiquetas chicas de la tarjeta del listado: las dos si aplica. Un producto sin `availability` (lectura de
 // respaldo) es solo A domicilio.
-export function ChannelBadges({ product }: { product: Pick<ProductSummary, "availability"> }) {
+export function ChannelBadges({
+  product,
+  omitPickup = false,
+}: {
+  product: Pick<ProductSummary, "availability">;
+  /** true cuando la línea "En tienda ₡X" ya hace de etiqueta del canal de retiro (ahorra una fila de alto). */
+  omitPickup?: boolean;
+}) {
   const t = useTranslations("Products.catalog");
   const delivery = hasDelivery(product);
-  const pickup = hasPickup(product);
+  const pickup = hasPickup(product) && !omitPickup;
   if (!delivery && !pickup) return null;
 
-  const badge = "inline-flex items-center gap-[3px] whitespace-nowrap rounded-full border font-semibold leading-none";
-  const size = { padding: "2px 5px", fontSize: "clamp(8px, 1.9cqh, 9.5px)" };
+  const badge = "inline-flex items-center gap-[2px] whitespace-nowrap rounded-full border font-semibold leading-none";
+  const size = { padding: "1.5px 4px", fontSize: "clamp(8px, 1.7cqh, 9px)" };
 
   return (
-    <span className="flex flex-wrap items-center justify-center gap-[3px]">
+    <span className="flex flex-wrap items-center justify-center gap-x-[3px] gap-y-[2px]">
       {delivery && (
         <span className={badge} style={{ ...size, color: DELIVERY.fg, background: DELIVERY.bg, borderColor: DELIVERY.border }}>
           <Truck className="h-[9px] w-[9px] shrink-0" strokeWidth={2.2} aria-hidden />
@@ -54,9 +65,24 @@ export function ChannelBadges({ product }: { product: Pick<ProductSummary, "avai
 // Sección corta del modal de detalle: "¿Cómo lo querés?" con lo disponible. En retiro: hasta 3 tiendas y un
 // "+N" desplegable. El tamaño del modal NO cambia al desplegar: la lista corta y la completa ocupan la MISMA
 // celda de una grilla (la que no se ve reserva el espacio, oculta y sin foco).
-export function ChannelAvailability({ availability }: { availability: ProductAvailability | undefined }) {
+export function ChannelAvailability({
+  availability,
+  deliveryPrice,
+  pickupPrice,
+}: {
+  availability: ProductAvailability | undefined;
+  /** Precio de A domicilio (sin sesión: hidden) y de Retiro en tienda; cada opción con SU precio. */
+  deliveryPrice: PriceView;
+  pickupPrice: PickupPriceView;
+}) {
   const t = useTranslations("Products.catalog");
   const locale = useLocale();
+  const pickupLabels = usePickupPriceLabels();
+  const money = (amount: number) => formatColones(amount, locale, 2);
+  const deliveryText = deliveryPrice.kind === "price" ? t("pricePlusTax", { price: money(deliveryPrice.unitPrice) }) : null;
+  const pickupText = pickupPriceText(pickupPrice, "primary", pickupLabels, money);
+  const pickupUnit = pickupPrice.kind === "price" && pickupPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(pickupPrice.unit, locale) }) : null;
+  const deliveryUnit = deliveryPrice.kind === "price" && deliveryPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(deliveryPrice.unit, locale) }) : null;
   const [expanded, setExpanded] = useState(false);
 
   const delivery = hasDelivery({ availability });
@@ -86,6 +112,12 @@ export function ChannelAvailability({ availability }: { availability: ProductAva
               {t("channelDelivery")}
             </span>{" "}
             · {t("howDeliveryText")}
+            {deliveryText && (
+              <span className="mt-0.5 block font-bold" style={{ color: INK }}>
+                {deliveryText}
+                {deliveryUnit && <span className="ml-1.5 font-medium" style={{ color: TEXT_SOFT }}>{deliveryUnit}</span>}
+              </span>
+            )}
           </p>
         </div>
       )}
@@ -101,7 +133,16 @@ export function ChannelAvailability({ availability }: { availability: ProductAva
                 {t("channelPickup")}
               </span>{" "}
               · {t("howPickupText")}
-              {unit ? ` ${t("howPickupUnit", { unit: unitLabel(unit, locale) })}.` : ""}
+              {pickupText && (
+                <span className="mt-0.5 block font-bold" style={{ color: INK }}>
+                  {pickupText}
+                  {pickupUnit && <span className="ml-1.5 font-medium" style={{ color: TEXT_SOFT }}>{pickupUnit}</span>}
+                </span>
+              )}
+              {/* Sin precio (sin sesión) la unidad de retiro, si difiere de la de domicilio, va en su propia línea. */}
+              {!pickupText && unit && (
+                <span className="mt-0.5 block">{t("howPickupUnit", { unit: unitLabel(unit, locale) })}.</span>
+              )}
             </p>
 
             <div className="mt-1.5 grid" role="group" aria-label={t("pickupSitesAria")}>
@@ -139,11 +180,15 @@ export function ChannelAvailability({ availability }: { availability: ProductAva
                   inert={!expanded}
                   style={{ visibility: expanded ? undefined : "hidden" }}
                 >
-                  {sites.map((site) => (
-                    <li key={site.siteId} className={chip} style={chipStyle}>
-                      {site.name}
-                    </li>
-                  ))}
+                  {sites.map((site) => {
+                    const price = pickupPrice.kind === "price" && pickupPrice.varies ? sitePrice(pickupPrice, site.siteId) : null;
+                    return (
+                      <li key={site.siteId} className={chip} style={chipStyle}>
+                        {site.name}
+                        {price != null && <span className="ml-1.5 font-bold">{money(price)}</span>}
+                      </li>
+                    );
+                  })}
                   <li>
                     <button
                       type="button"
@@ -173,11 +218,14 @@ export function ChannelFilterBar({
   counts,
   onChange,
   disabled,
+  inline = false,
 }: {
   value: CatalogChannel;
   counts: Record<CatalogChannel, number>;
   onChange: (channel: CatalogChannel) => void;
   disabled?: boolean;
+  /** En línea (dentro del encabezado, sin barra propia): no resta alto a la hoja del libro. */
+  inline?: boolean;
 }) {
   const t = useTranslations("Products.catalog");
 
@@ -187,12 +235,14 @@ export function ChannelFilterBar({
 
   return (
     <div
-      className="flex shrink-0 flex-wrap items-center gap-2 px-5 py-2 sm:px-8"
-      style={{ borderBottom: `1px solid ${RULE}`, background: "#FFFFFF" }}
+      className={inline ? "flex flex-wrap items-center gap-1.5" : "flex shrink-0 flex-wrap items-center gap-2 px-5 py-2 sm:px-8"}
+      style={inline ? undefined : { borderBottom: `1px solid ${RULE}`, background: "#FFFFFF" }}
     >
-      <span className="text-[11.5px] font-semibold" style={{ color: TEXT_SOFT }}>
-        {t("channelFilterLabel")}
-      </span>
+      {!inline && (
+        <span className="text-[11.5px] font-semibold" style={{ color: TEXT_SOFT }}>
+          {t("channelFilterLabel")}
+        </span>
+      )}
       <div role="radiogroup" aria-label={t("channelFilterLabel")} className="flex flex-wrap items-center gap-1.5">
         {CATALOG_CHANNELS.map((channel) => {
           const selected = value === channel;
@@ -206,16 +256,16 @@ export function ChannelFilterBar({
               aria-checked={selected}
               disabled={disabled || (!selected && counts[channel] === 0)}
               onClick={() => onChange(channel)}
-              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px] font-semibold leading-none outline-none transition focus-visible:ring-2 focus-visible:ring-[#075FD8] disabled:cursor-not-allowed disabled:opacity-40"
+              className={`inline-flex items-center gap-1.5 rounded-full border font-semibold leading-none outline-none transition focus-visible:ring-2 focus-visible:ring-[#075FD8] disabled:cursor-not-allowed disabled:opacity-40 ${inline ? "px-2.5 py-[3px] text-[11.5px]" : "px-3 py-1 text-[12.5px]"}`}
               style={
                 selected
                   ? { color: channel === "all" ? "#FFFFFF" : palette.fg, background: channel === "all" ? INK : palette.bg, borderColor: channel === "all" ? INK : palette.fg }
                   : { color: INK, background: "#FFFFFF", borderColor: RULE }
               }
             >
-              {ChannelIcon && <ChannelIcon className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />}
+              {ChannelIcon && <ChannelIcon className={`h-3.5 w-3.5 ${inline ? "hidden sm:block" : ""}`} strokeWidth={2} aria-hidden />}
               {label(channel)}
-              <span className="tabular-nums opacity-70">{counts[channel]}</span>
+              <span className={`tabular-nums opacity-70 ${inline ? "hidden sm:inline" : ""}`}>{counts[channel]}</span>
             </button>
           );
         })}

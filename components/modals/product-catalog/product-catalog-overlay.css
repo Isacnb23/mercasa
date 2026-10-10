@@ -241,3 +241,16 @@
     animation: none;
   }
 }
+
+/* Nombre de producto en la tarjeta del libro: líneas visibles según el espacio. Con la hoja chica (pantalla de hasta 800 px de alto
+   o angosta) caben 2; el nombre completo queda en el tooltip y en el detalle del producto. */
+.catalog-panel {
+  --pc-name-lines: 3;
+}
+
+@media (max-height: 800px), (max-width: 639px) {
+  .catalog-panel {
+    --pc-name-lines: 2;
+    --pc-img: 5.4cqh;
+  }
+}

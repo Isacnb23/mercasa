@@ -28,6 +28,20 @@ export interface CatalogPrice {
   tax: number;
   unit: string;
   units?: CatalogUnit[] | null;
+  // false = el ítem solo se retira en tienda: unitPrice/tax/unit vienen vacíos y solo cuenta `pickup`.
+  hasDelivery: boolean;
+  // Precio de Retiro en tienda (fmcm), por separado del de domicilio; null si no aplica.
+  pickup: PickupPrice | null;
+}
+
+// Precio de Retiro en tienda: SIN IVA, como el de domicilio (se muestra "+ IVA"). Si varía por tienda,
+// unitPrice es el de la más barata ("desde"), varies = true y bySite trae cada tienda.
+export interface PickupPrice {
+  unitPrice: number;
+  tax: number;
+  unit: string;
+  varies: boolean;
+  bySite: { siteId: string; unitPrice: number }[];
 }
 
 export interface CatalogPricesResult {
@@ -45,6 +59,13 @@ export type PriceView =
   | { kind: "loading" }
   | { kind: "consult" }
   | { kind: "price"; unitPrice: number; unit: string };
+
+// Lo mismo para el precio de Retiro en tienda (siempre por separado del de domicilio).
+export type PickupPriceView =
+  | { kind: "hidden" }
+  | { kind: "loading" }
+  | { kind: "consult" }
+  | { kind: "price"; unitPrice: number; unit: string; varies: boolean; bySite: { siteId: string; unitPrice: number }[] };
 
 // Ids únicos (sin distinguir mayúsculas), no vacíos y recortados, en el orden de entrada.
 export function uniqueItemIds(ids: ReadonlyArray<string | null | undefined>): string[] {
@@ -116,6 +137,20 @@ function parseUnits(raw: unknown): CatalogUnit[] | null | false {
   return units;
 }
 
+// Bloque pickup: si falta o viene mal formado se ignora (no hay precio de retiro; nunca se inventa uno).
+function parsePickup(raw: unknown): PickupPrice | null {
+  const p = raw as Partial<PickupPrice> | null | undefined;
+  if (!p || typeof p !== "object") return null;
+  if (typeof p.unitPrice !== "number" || !Number.isFinite(p.unitPrice) || p.unitPrice <= 0) return null;
+  if (typeof p.tax !== "number" || !Number.isFinite(p.tax) || typeof p.unit !== "string") return null;
+  const bySite = Array.isArray(p.bySite)
+    ? p.bySite
+        .filter((s): s is { siteId: string; unitPrice: number } => !!s && typeof s.siteId === "string" && typeof s.unitPrice === "number" && Number.isFinite(s.unitPrice))
+        .map((s) => ({ siteId: s.siteId, unitPrice: s.unitPrice }))
+    : [];
+  return { unitPrice: p.unitPrice, tax: p.tax, unit: p.unit, varies: p.varies === true && bySite.length > 1, bySite };
+}
+
 // Valida la respuesta de /api/catalog/prices; null si no tiene la forma esperada.
 export function parseCatalogPrices(data: unknown): CatalogPricesResult | null {
   if (!data || typeof data !== "object") return null;
@@ -137,7 +172,17 @@ export function parseCatalogPrices(data: unknown): CatalogPricesResult | null {
     }
     const units = parseUnits((entry as { units?: unknown }).units);
     if (units === false) return null;
-    parsed.push({ itemId: p.itemId, unitPrice: p.unitPrice, tax: p.tax, unit: p.unit, ...(units ? { units } : {}) });
+    const hasDelivery = (entry as { hasDelivery?: unknown }).hasDelivery !== false;
+    const pickup = parsePickup((entry as { pickup?: unknown }).pickup);
+    parsed.push({
+      itemId: p.itemId,
+      unitPrice: p.unitPrice,
+      tax: p.tax,
+      unit: p.unit,
+      hasDelivery,
+      pickup,
+      ...(units ? { units } : {}),
+    });
   }
 
   return { prices: parsed, missing: missing.filter((id): id is string => typeof id === "string"), priceListMissing };
