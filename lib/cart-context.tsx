@@ -14,6 +14,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ProductSummary } from "./product-types";
 import type { CartItem } from "./cart-types";
+import { canAddToCart } from "./catalog-channel";
 import { addToCart, changeLineUnit, parseStoredCart, removeLine, setLineQuantity } from "./cart-logic";
 
 const STORAGE_KEY = "mercasa-cart-v1";
@@ -74,6 +75,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // botón "Agregar al carrito" del detalle de producto tiene su propia
   // confirmación inline ("¡Agregado!").
   const addItem = (product: ProductSummary, quantity = 1, unitId?: string) => {
+    // Un producto solo de retiro en tienda no existe en cmer: nunca entra al carrito (daría item_not_found).
+    if (!canAddToCart(product)) return;
     setItems((current) => addToCart(current, product, quantity, unitId));
   };
 

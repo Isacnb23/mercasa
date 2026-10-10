@@ -29,6 +29,14 @@ import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
 import type { PriceView } from "@/lib/catalog-prices";
 import { site } from "@/lib/data";
 import PriceTag from "./PriceTag";
+import { ChannelBadges, ChannelFilterBar } from "./ChannelBadges";
+import {
+  canAddToCart,
+  countByChannel,
+  filterNodeByChannel,
+  filterTreeByChannel,
+  type CatalogChannel,
+} from "@/lib/catalog-channel";
 import { productTitle } from "@/lib/product-display";
 import CategoryMenu from "./CategoryMenu";
 import { activeCategoryId as computeActiveCategoryId, planJump, visiblePageIndexes, type MenuSection } from "@/lib/category-nav";
@@ -431,10 +439,10 @@ interface PageFlipController {
 // o un click en el backdrop fuera del panel, siempre con fade-out simétrico
 // antes de desmontar (ver `handleClose`).
 export default function ProductCatalogModal({
-  family,
-  allFamilies,
+  family: familyProp,
+  allFamilies: allFamiliesProp,
   initialCategoryId,
-  filterCategories,
+  filterCategories: filterCategoriesProp,
   filterTitle,
   filterIcon,
   segmentId,
@@ -490,7 +498,33 @@ export default function ProductCatalogModal({
     title: string;
     entries: { abbr: string; meaning: string }[];
   }[];
-  const isFiltered = !!filterCategories && filterCategories.length > 0;
+  // Canal elegido en los chips "Todos / A domicilio / Retiro en tienda". El libro, el menú "Ir a categoría" y el
+  // PDF se arman SIEMPRE desde el árbol ya filtrado (family / allFamilies / filterCategories de aquí abajo),
+  // así sus páginas y conteos coinciden con lo que se ve.
+  const [channel, setChannel] = useState<CatalogChannel>("all");
+  const [channelChanged, setChannelChanged] = useState(false);
+  // El modo filtrado de Customer Class se decide con lo que VINO por props: un canal sin productos no lo
+  // convierte en el modo de una sola familia.
+  const isFiltered = !!filterCategoriesProp && filterCategoriesProp.length > 0;
+  const family = useMemo(
+    () => filterNodeByChannel(familyProp, channel) ?? { ...familyProp, itemCount: 0, children: [] },
+    [familyProp, channel]
+  );
+  const allFamilies = useMemo(() => filterTreeByChannel(allFamiliesProp, channel), [allFamiliesProp, channel]);
+  const filterCategories = useMemo(
+    () =>
+      channel === "all" || !filterCategoriesProp
+        ? filterCategoriesProp
+        : filterCategoriesProp.flatMap(({ category }) => {
+            const filtered = filterNodeByChannel(category, channel);
+            return filtered ? [{ category: filtered }] : [];
+          }),
+    [filterCategoriesProp, channel]
+  );
+  const channelCounts = useMemo(
+    () => countByChannel(isFiltered ? filterCategoriesProp!.map(({ category }) => category) : [familyProp]),
+    [isFiltered, filterCategoriesProp, familyProp]
+  );
   // Portada por segmento (ver catalogo-portada-por-segmento.md) — solo
   // cuando `segmentId` matchea una key real del mapeo; cualquier otro caso
   // (sin segmentId, o uno que no matchea) cae a la portada genérica de
@@ -584,7 +618,7 @@ export default function ProductCatalogModal({
     return map;
   }, [bookPages]);
 
-  const initialPageIndex = !isFiltered && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
+  const initialPageIndex = !isFiltered && !channelChanged && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
   const [currentPage, setCurrentPage] = useState(initialPageIndex);
 
   // Precios (solo con sesión): de las páginas del spread actual y las vecinas (precarga de la siguiente).
@@ -593,7 +627,7 @@ export default function ProductCatalogModal({
     const ids: string[] = [];
     for (let i = Math.max(0, currentPage - 1); i <= currentPage + 2 && i < bookPages.length; i++) {
       const page = bookPages[i];
-      if (page.kind === "category") for (const product of page.products) ids.push(product.id);
+      if (page.kind === "category") for (const product of page.products) if (canAddToCart(product)) ids.push(product.id);
     }
     return ids;
   }, [bookPages, currentPage]);
@@ -939,10 +973,10 @@ export default function ProductCatalogModal({
     () =>
       bookPages.map((page, index) => (
         <Page key={index}>
-          <BookPageContent page={page} family={displayFamily} allFamilies={allFamilies} icon={Icon} coverPhoto={coverPhoto} />
+          <BookPageContent page={page} family={displayFamily} allFamilies={allFamiliesProp} icon={Icon} coverPhoto={coverPhoto} />
         </Page>
       )),
-    [bookPages, displayFamily, allFamilies, Icon, coverPhoto]
+    [bookPages, displayFamily, allFamiliesProp, Icon, coverPhoto]
   );
 
   // Navegación del menú "Ir a categoría" (ver lib/book-navigator): UNA sola navegación a la vez. Si el libro está
@@ -987,6 +1021,19 @@ export default function ProductCatalogModal({
     }
     return navigatorRef.current;
   }, []);
+
+  // Cambiar de canal rearma el libro (otras páginas): se vuelve a la portada y se vuelve a inicializar el
+  // libro (key en el <HTMLFlipBook>), sin dejar un salto o una navegación a medias del menú de categorías.
+  const handleChannelChange = (next: CatalogChannel) => {
+    if (next === channel) return;
+    setChannel(next);
+    setChannelChanged(true);
+    setCurrentPage(0);
+    setIsBookReady(false);
+    setJumpTarget(null);
+    setIsNavigating(false);
+    setIsFading(false);
+  };
 
   // Rueda del mouse pasa de página (ver catalogo-scroll-no-funciona.md,
   // parte 2): react-pageflip solo entiende click/arrastre/swipe táctil —
@@ -1249,6 +1296,8 @@ export default function ProductCatalogModal({
             </div>
           </div>
 
+          <ChannelFilterBar value={channel} counts={channelCounts} onChange={handleChannelChange} disabled={!isBookReady && !channelChanged} />
+
           {/* Aviso ÚNICO de precios (no uno por producto): sin sesión invita a ingresar; con la cuenta sin lista
               de precios explica y enlaza a WhatsApp; si el servicio de precios falla lo dice una sola vez. */}
           {pricesStatus !== "ready" && (
@@ -1421,6 +1470,7 @@ export default function ProductCatalogModal({
                   (precios, clic en un producto) llega a las páginas por contexto, no por props. */}
               <BookLiveContext.Provider value={liveBook}>
               <HTMLFlipBook
+                key={channel}
                 ref={bookRef}
                 width={BOOK_WIDTH}
                 height={BOOK_HEIGHT}
@@ -1591,7 +1641,7 @@ export default function ProductCatalogModal({
         <ProductDetailModal
           product={selectedProduct}
           icon={Icon}
-          price={priceFor(selectedProduct.id)}
+          price={canAddToCart(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1977,7 +2027,7 @@ function BookPageContent({
             key={product.id}
             product={product}
             icon={Icon}
-            price={priceFor(product.id)}
+            price={canAddToCart(product) ? priceFor(product.id) : { kind: "hidden" }}
             onClick={() => onProductClick(product)}
           />
         ))}
@@ -2052,6 +2102,7 @@ function ProductCard({
         gap: "clamp(3px, 1.1cqh, 7px)",
       }}
     >
+      {canAddToCart(product) && (
       <button
         type="button"
         onClick={(e) => {
@@ -2071,6 +2122,7 @@ function ProductCard({
           <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
         )}
       </button>
+      )}
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
         style={{ background: CHIP_BG, height: "clamp(36px, 9.5cqh, 76px)", width: "clamp(36px, 9.5cqh, 76px)" }}
@@ -2097,6 +2149,7 @@ function ProductCard({
         </p>
       )}
       <PriceTag view={price} />
+      <ChannelBadges product={product} />
     </div>
   );
 }

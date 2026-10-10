@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, Minus, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
+import { ImageOff, Minus, Plus, ShoppingCart, Store, X, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
@@ -13,6 +13,8 @@ import { formatColones } from "@/lib/checkout-format";
 import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
+import { canAddToCart } from "@/lib/catalog-channel";
+import { ChannelAvailability } from "./ChannelBadges";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
 // producto ENCIMA del catálogo (no reemplaza el flipbook, no navega a otra
@@ -48,13 +50,16 @@ export default function ProductDetailModal({
   const { title, packagingText } = productTitle(product.name);
 
   const { addItem } = useCart();
+  // Solo lo que se consigue A domicilio (cmer) se puede pedir: un producto solo de retiro en tienda se ve con
+  // sus tiendas, pero sin precio, presentaciones ni botón de agregar (nunca llega a Order/Validate).
+  const deliverable = canAddToCart(product);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
   // Presentaciones vendibles (solo con sesión). El modal abre con la MISMA presentación que muestra la tarjeta
   // (la unidad del listado). Si esa unidad no estuviera entre las presentaciones, no se ofrece selector y se
   // conserva el precio de la tarjeta: nunca se abre con otra presentación.
-  const { status: unitsStatus, unitsFor } = useCatalogUnits([product.id]);
+  const { status: unitsStatus, unitsFor } = useCatalogUnits(deliverable ? [product.id] : []);
   const rawUnits = unitsFor(product.id);
   const listingUnit = price.kind === "price" ? price.unit : null;
   const initialUnit = pickInitialUnit(rawUnits, listingUnit);
@@ -74,6 +79,7 @@ export default function ProductDetailModal({
   }, []);
 
   const handleAddToCart = () => {
+    if (!deliverable) return;
     // La presentación por defecto no se guarda: así una misma presentación nunca queda en dos líneas.
     addItem(product, quantity, selected && !selected.isDefault ? selected.unitId : undefined);
     setJustAdded(true);
@@ -183,15 +189,29 @@ export default function ProductDetailModal({
                 <PriceTag view={price} size="detail" />
                 <div className="h-[76px] rounded-2xl motion-safe:animate-pulse" style={{ background: "rgba(8, 43, 92, 0.06)" }} />
               </div>
-            ) : (
+            ) : deliverable ? (
               <PriceTag view={price} size="detail" />
-            )}
+            ) : null}
+
+            <ChannelAvailability availability={product.availability} />
           </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
               — carrito de pedido sin precios, no e-commerce; el checkout
               real pasa por WhatsApp desde el drawer del carrito. Barra fija
               al pie del diálogo: SIEMPRE visible. La cantidad muestra la unidad elegida ("2 Cajas"). */}
+          {!deliverable ? (
+            <div
+              className="flex min-h-[64px] shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6"
+              style={{ borderColor: RULE }}
+              role="note"
+            >
+              <Store className="h-4 w-4 shrink-0" strokeWidth={2} style={{ color: "#7A5300" }} aria-hidden />
+              <p className="text-[13.5px] font-medium leading-snug" style={{ color: INK }}>
+                {t("catalog.pickupOnlyNotice")}
+              </p>
+            </div>
+          ) : (
           <div className="flex shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
             <div className="flex items-center gap-1.5">
               <button
@@ -230,6 +250,7 @@ export default function ProductDetailModal({
               {justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>
