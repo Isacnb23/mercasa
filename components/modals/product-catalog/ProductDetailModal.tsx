@@ -94,7 +94,7 @@ export default function ProductDetailModal({
     selector: t("catalog.unitSelectorLabel"),
     equivalenceTitle: t("catalog.equivalenceTitle"),
     vat: t("catalog.priceVatSuffix"),
-    pricePlusTax: (priceText) => t("catalog.pricePlusTax", { price: priceText }),
+    priceVatIncluded: (priceText) => t("catalog.priceVatIncluded", { price: priceText }),
     perUnit: (unit) => t("catalog.priceUnit", { unit }),
     approx: (priceText, unit) => t("catalog.approxPerUnit", { price: priceText, unit }),
     equivalence: (big, amount, small) => t("catalog.equivalenceLine", { big, amount, small }),
@@ -184,6 +184,7 @@ export default function ProductDetailModal({
                 onSelect={setChosenUnit}
                 locale={locale}
                 formatPrice={(amount) => formatColones(amount, locale, 2)}
+                formatTotal={(amount) => formatColones(amount, locale)}
                 labels={labels}
               />
             ) : unitsStatus === "loading" && price.kind !== "hidden" ? (

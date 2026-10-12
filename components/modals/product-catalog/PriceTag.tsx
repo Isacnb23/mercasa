@@ -9,14 +9,15 @@ import { unitLabel } from "@/lib/presentations";
 
 const INK = "#082B5C";
 const MUTED = "#5C6B7D";
-// Precio de la tarjeta: una línea (no parte "+ IVA" a una segunda) y se achica con la hoja del libro.
+// Precio de la tarjeta: una línea (no parte "IVA incluido" a una segunda) y se achica con la hoja del libro.
 const CARD_PRICE_SIZE = "clamp(9px, 1.95cqh, 11px)";
 
-// Precio de catálogo: "₡X + IVA" (el precio es SIN IVA, igual que el precio unitario del carrito, mismo
-// formato ₡ con 2 decimales) y la unidad de venta si el dato la trae. `hidden` no pinta nada: sin sesión
-// no hay precio ni esqueleto (el aviso único vive en el encabezado del catálogo).
+// Precio de catálogo: "₡X IVA incluido" (precio TOTAL con IVA por unidad, en colones enteros, como MercasaVIP;
+// el carrito y los totales del pedido siguen con su propia fórmula) y la unidad de venta si el dato la trae.
+// `hidden` no pinta nada: sin sesión no hay precio ni esqueleto (el aviso único vive en el encabezado del
+// catálogo).
 //   - card: compacto, para la tarjeta del listado.
-//   - detail: jerarquía del modal: precio grande; "+ IVA" y "por Caja" más pequeños y en color suave.
+//   - detail: jerarquía del modal: precio grande; "IVA incluido" y "por Caja" más pequeños y en color suave.
 export default function PriceTag({ view, size = "card" }: { view: PriceView; size?: "card" | "detail" }) {
   const t = useTranslations("Products.catalog");
   const locale = useLocale();
@@ -48,7 +49,7 @@ export default function PriceTag({ view, size = "card" }: { view: PriceView; siz
   }
 
   const unit = view.unit.trim() ? unitLabel(view.unit, locale) : "";
-  const price = formatColones(view.unitPrice, locale, 2);
+  const price = formatColones(view.total, locale);
 
   if (detail) {
     return (
@@ -73,7 +74,7 @@ export default function PriceTag({ view, size = "card" }: { view: PriceView; siz
   return (
     <span className="flex flex-col items-center leading-tight">
       <span className="whitespace-nowrap font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
-        {t("pricePlusTax", { price })}
+        {t("priceVatIncluded", { price })}
       </span>
       {unit && (
         <span className="whitespace-nowrap text-[9px] font-medium" style={{ color: MUTED }}>
@@ -88,15 +89,15 @@ export default function PriceTag({ view, size = "card" }: { view: PriceView; siz
 export function usePickupPriceLabels(): PickupPriceLabels {
   const t = useTranslations("Products.catalog");
   return {
-    plusTax: (price) => t("pricePlusTax", { price }),
-    fromPlusTax: (price) => t("priceFromPlusTax", { price }),
+    vatIncluded: (price) => t("priceVatIncluded", { price }),
+    fromVatIncluded: (price) => t("priceFromVatIncluded", { price }),
     inStore: (price) => t("pickupPriceInStore", { price }),
     inStoreFrom: (price) => t("pickupPriceInStoreFrom", { price }),
   };
 }
 
 // Precio de Retiro en tienda en la tarjeta, por separado del de domicilio (nunca se mezclan):
-//   - primary: el producto solo se retira en tienda; misma forma que PriceTag ("₡X + IVA" y la unidad).
+//   - primary: el producto solo se retira en tienda; misma forma que PriceTag ("₡X IVA incluido" y la unidad).
 //   - secondary: el producto está en los dos canales; una línea breve debajo del precio de domicilio.
 const PICKUP_INK = "#7A5300";
 export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "primary" | "secondary" }) {
@@ -125,7 +126,7 @@ export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "p
     );
   }
 
-  const text = pickupPriceText(view, role, labels, (amount) => formatColones(amount, locale, 2));
+  const text = pickupPriceText(view, role, labels, (amount) => formatColones(amount, locale));
   if (role === "secondary") {
     // Con ícono de tienda y la palabra "tienda": esta línea ya hace de etiqueta del canal, así que la tarjeta no
     // repite la etiqueta "Retiro en tienda" cuando hay precio.

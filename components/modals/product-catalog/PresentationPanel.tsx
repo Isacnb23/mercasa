@@ -1,4 +1,4 @@
-import type { CatalogUnit } from "@/lib/catalog-prices";
+import { totalWithTax, type CatalogUnit } from "@/lib/catalog-prices";
 import { allEquivalences, approxBasePrice, formatAmount, shortEquivalence, unitLabel, unitName, unitTitle } from "@/lib/presentations";
 
 // Zona de precio + presentación del modal de producto. Componente PURO (sin hooks ni traducciones propias):
@@ -17,8 +17,10 @@ const SELECTED_BG = "#EAF0F8";
 export interface PanelLabels {
   selector: string;
   equivalenceTitle: string;
+  /** "IVA incluido" */
   vat: string;
-  pricePlusTax: (price: string) => string;
+  /** "{price} IVA incluido" */
+  priceVatIncluded: (price: string) => string;
   perUnit: (unit: string) => string;
   approx: (price: string, unit: string) => string;
   equivalence: (big: string, amount: string, small: string) => string;
@@ -31,13 +33,16 @@ export interface PresentationPanelProps {
   selectedUnitId: string;
   onSelect: (unitId: string) => void;
   locale: string;
+  /** Precios con decimales (el "≈ por lata"). */
   formatPrice: (amount: number) => string;
+  /** Precio total con IVA, en colones enteros (el grande y el de cada tarjeta). */
+  formatTotal: (amount: number) => string;
   labels: PanelLabels;
 }
 
 const KEYS = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
 
-export default function PresentationPanel({ units, selectedUnitId, onSelect, locale, formatPrice, labels }: PresentationPanelProps) {
+export default function PresentationPanel({ units, selectedUnitId, onSelect, locale, formatPrice, formatTotal, labels }: PresentationPanelProps) {
   const selected = units.find((u) => u.unitId === selectedUnitId) ?? units[0];
   if (!selected) return null;
 
@@ -47,12 +52,12 @@ export default function PresentationPanel({ units, selectedUnitId, onSelect, loc
 
   return (
     <div className="flex flex-col gap-5" data-slot="panel">
-      {/* Precio: grande; "+ IVA" y "por Caja" más pequeños y en color suave. Las dos líneas de detalle
+      {/* Precio total con IVA (de la propia presentación: su precio + SU IVA, nunca base × factor): grande; "IVA incluido" y "por Caja" más pequeños y en color suave. Las dos líneas de detalle
           conservan su alto aunque no apliquen (p. ej. "≈ por lata" cuando se elige la base). */}
       <div className="flex flex-col gap-1" data-slot="price">
         <span key={selected.unitId} className="pd-price-swap flex flex-wrap items-baseline gap-x-2" data-slot="price-main">
           <span className="text-[28px] font-bold leading-none tracking-tight tabular-nums" style={{ color: INK }}>
-            {formatPrice(selected.unitPrice)}
+            {formatTotal(totalWithTax(selected.unitPrice, selected.tax))}
           </span>
           <span className="text-[13px] font-medium" style={{ color: TEXT_SOFT }}>
             {labels.vat}
@@ -117,7 +122,7 @@ export default function PresentationPanel({ units, selectedUnitId, onSelect, loc
                     {unitLabel(u.unitId, locale)}
                   </span>
                   <span className="text-[13px] font-bold leading-tight tabular-nums" style={{ color: INK }}>
-                    {labels.pricePlusTax(formatPrice(u.unitPrice))}
+                    {labels.priceVatIncluded(formatTotal(totalWithTax(u.unitPrice, u.tax)))}
                   </span>
                   <span className="min-h-[16px] text-[12px] font-medium leading-4" style={{ color: TEXT_SOFT }} data-slot="card-eq">
                     {short ? `${formatAmount(short.amount, locale)} ${unitName(short.unitId, short.amount, locale)}` : " "}

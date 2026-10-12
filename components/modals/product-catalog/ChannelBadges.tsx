@@ -80,8 +80,8 @@ export function ChannelAvailability({
   const t = useTranslations("Products.catalog");
   const locale = useLocale();
   const pickupLabels = usePickupPriceLabels();
-  const money = (amount: number) => formatColones(amount, locale, 2);
-  const deliveryText = deliveryPrice.kind === "price" ? t("pricePlusTax", { price: money(deliveryPrice.unitPrice) }) : null;
+  const money = (amount: number) => formatColones(amount, locale);
+  const deliveryText = deliveryPrice.kind === "price" ? t("priceVatIncluded", { price: money(deliveryPrice.total) }) : null;
   const pickupText = pickupPriceText(pickupPrice, "primary", pickupLabels, money);
   const pickupUnit = pickupPrice.kind === "price" && pickupPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(pickupPrice.unit, locale) }) : null;
   const deliveryUnit = deliveryPrice.kind === "price" && deliveryPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(deliveryPrice.unit, locale) }) : null;

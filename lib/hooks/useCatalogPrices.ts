@@ -10,7 +10,9 @@ import {
   CATALOG_PRICES_BATCH_SIZE,
   CATALOG_PRICES_DEBOUNCE_MS,
   chunk,
+  deliveryPriceView,
   parseCatalogPrices,
+  pickupPriceView,
   uniqueItemIds,
   type CatalogPrice,
   type PickupPriceView,
@@ -163,7 +165,7 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   const priceFor = (itemId: string): PriceView => {
     if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
     const price = own.prices.get(key(itemId));
-    if (price) return price.hasDelivery ? { kind: "price", unitPrice: price.unitPrice, unit: price.unit } : { kind: "hidden" };
+    if (price) return price.hasDelivery ? deliveryPriceView(price) : { kind: "hidden" };
     if (own.missing.has(key(itemId))) return { kind: "consult" };
     return { kind: "loading" };
   };
@@ -171,7 +173,7 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   const pickupPriceFor = (itemId: string): PickupPriceView => {
     if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
     const price = own.prices.get(key(itemId));
-    if (price?.pickup) return { kind: "price", ...price.pickup };
+    if (price?.pickup) return pickupPriceView(price.pickup);
     if (price || own.missing.has(key(itemId))) return { kind: "consult" };
     return { kind: "loading" };
   };

@@ -34,14 +34,29 @@ export interface CatalogPrice {
   pickup: PickupPrice | null;
 }
 
-// Precio de Retiro en tienda: SIN IVA, como el de domicilio (se muestra "+ IVA"). Si varía por tienda,
-// unitPrice es el de la más barata ("desde"), varies = true y bySite trae cada tienda.
+// Precio de Retiro en tienda: unitPrice SIN IVA y tax (IVA por unidad), como el de domicilio. Si varía por
+// tienda, unitPrice/tax son los de la más barata ("desde"), varies = true y bySite trae cada tienda.
 export interface PickupPrice {
   unitPrice: number;
   tax: number;
   unit: string;
   varies: boolean;
-  bySite: { siteId: string; unitPrice: number }[];
+  bySite: { siteId: string; unitPrice: number; tax: number }[];
+}
+
+// Redondeo a colones enteros, mitad hacia arriba (AwayFromZero, la regla del backend: Math.Round(...,
+// MidpointRounding.AwayFromZero)). El ruido de coma flotante (p. ej. 0.1 + 0.2) se limpia antes para que un
+// ".5" exacto no caiga del lado equivocado.
+export function roundColones(value: number): number {
+  const clean = Number(value.toFixed(6));
+  return clean < 0 ? -Math.floor(-clean + 0.5) : Math.floor(clean + 0.5);
+}
+
+// Precio TOTAL con IVA de UNA unidad de esa presentación/tienda: lo que el servidor devolvió (precio sin IVA +
+// IVA por unidad) sumado y redondeado a colones. Solo para MOSTRAR el catálogo: el carrito, el resumen y los
+// totales del pedido siguen con la fórmula del servidor (subtotal − descuento + impuesto, 2 decimales).
+export function totalWithTax(unitPrice: number, tax: number): number {
+  return roundColones(unitPrice + tax);
 }
 
 export interface CatalogPricesResult {
@@ -50,7 +65,8 @@ export interface CatalogPricesResult {
   priceListMissing: boolean;
 }
 
-// Lo que pinta la UI para un producto.
+// Lo que pinta la UI para un producto. `total` es el precio por unidad CON IVA incluido, en colones enteros
+// (ver totalWithTax).
 //   hidden  = no mostrar nada (sin sesión, lista de precios sin configurar o servicio caído)
 //   loading = esqueleto
 //   consult = sin precio en la lista de la cuenta ("Consultar")
@@ -58,14 +74,30 @@ export type PriceView =
   | { kind: "hidden" }
   | { kind: "loading" }
   | { kind: "consult" }
-  | { kind: "price"; unitPrice: number; unit: string };
+  | { kind: "price"; total: number; unit: string };
 
-// Lo mismo para el precio de Retiro en tienda (siempre por separado del de domicilio).
+// Lo mismo para el precio de Retiro en tienda (siempre por separado del de domicilio). Si varía por tienda,
+// `total` es el de la más barata ("desde") y bySite trae el total de cada tienda.
 export type PickupPriceView =
   | { kind: "hidden" }
   | { kind: "loading" }
   | { kind: "consult" }
-  | { kind: "price"; unitPrice: number; unit: string; varies: boolean; bySite: { siteId: string; unitPrice: number }[] };
+  | { kind: "price"; total: number; unit: string; varies: boolean; bySite: { siteId: string; total: number }[] };
+
+// Vistas de la UI a partir de lo que devolvió el servidor (la web solo suma, nunca decide el precio).
+export function deliveryPriceView(price: { unitPrice: number; tax: number; unit: string }): PriceView {
+  return { kind: "price", total: totalWithTax(price.unitPrice, price.tax), unit: price.unit };
+}
+
+export function pickupPriceView(pickup: PickupPrice): PickupPriceView {
+  return {
+    kind: "price",
+    total: totalWithTax(pickup.unitPrice, pickup.tax),
+    unit: pickup.unit,
+    varies: pickup.varies,
+    bySite: pickup.bySite.map((s) => ({ siteId: s.siteId, total: totalWithTax(s.unitPrice, s.tax) })),
+  };
+}
 
 // Ids únicos (sin distinguir mayúsculas), no vacíos y recortados, en el orden de entrada.
 export function uniqueItemIds(ids: ReadonlyArray<string | null | undefined>): string[] {
@@ -145,8 +177,12 @@ function parsePickup(raw: unknown): PickupPrice | null {
   if (typeof p.tax !== "number" || !Number.isFinite(p.tax) || typeof p.unit !== "string") return null;
   const bySite = Array.isArray(p.bySite)
     ? p.bySite
-        .filter((s): s is { siteId: string; unitPrice: number } => !!s && typeof s.siteId === "string" && typeof s.unitPrice === "number" && Number.isFinite(s.unitPrice))
-        .map((s) => ({ siteId: s.siteId, unitPrice: s.unitPrice }))
+        // Sin IVA propio la tienda se descarta: un total sin impuesto sería un precio inventado.
+        .filter(
+          (s): s is { siteId: string; unitPrice: number; tax: number } =>
+            !!s && typeof s.siteId === "string" && typeof s.unitPrice === "number" && Number.isFinite(s.unitPrice) && typeof s.tax === "number" && Number.isFinite(s.tax),
+        )
+        .map((s) => ({ siteId: s.siteId, unitPrice: s.unitPrice, tax: s.tax }))
     : [];
   return { unitPrice: p.unitPrice, tax: p.tax, unit: p.unit, varies: p.varies === true && bySite.length > 1, bySite };
 }

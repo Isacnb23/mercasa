@@ -127,12 +127,13 @@ export function shortEquivalence(unit: CatalogUnit): { amount: number; unitId: s
   return { amount: unit.factor, unitId: unit.baseUnitId };
 }
 
-// Precio aproximado por unidad base ("≈ ₡26,23 por Lata") = precio de la presentación ÷ su factor, a 2 decimales.
-// Solo informativo: no sale del servidor ya calculado y nunca se envía. Null si es la base o falta la unidad base.
+// Precio aproximado por unidad base ("≈ ₡26,23 por Lata") = precio TOTAL con IVA de la presentación (su precio +
+// su IVA) ÷ su factor, a 2 decimales: va junto al precio con IVA incluido. Solo informativo: no sale del
+// servidor ya calculado y nunca se envía. Null si es la base o falta la unidad base.
 export function approxBasePrice(unit: CatalogUnit): { price: number; unitId: string } | null {
   const short = shortEquivalence(unit);
   if (!short || unit.factor <= 1 || unit.unitPrice <= 0) return null;
-  return { price: Math.round((unit.unitPrice / unit.factor) * 100) / 100, unitId: short.unitId };
+  return { price: Math.round(((unit.unitPrice + unit.tax) / unit.factor) * 100) / 100, unitId: short.unitId };
 }
 
 // TODAS las equivalencias reales del producto, una por presentación mayor que la menor ("1 Caja = 24 Latas",

@@ -27,10 +27,10 @@ export function collectVisiblePriceIds(pages: readonly PageLike[], currentPage: 
 }
 
 export interface PickupPriceLabels {
-  /** "{price} + IVA" */
-  plusTax: (price: string) => string;
-  /** "Desde {price} + IVA" */
-  fromPlusTax: (price: string) => string;
+  /** "{price} IVA incluido" */
+  vatIncluded: (price: string) => string;
+  /** "Desde {price} IVA incluido" */
+  fromVatIncluded: (price: string) => string;
   /** "En tienda {price}" */
   inStore: (price: string) => string;
   /** "En tienda desde {price}" */
@@ -38,7 +38,8 @@ export interface PickupPriceLabels {
 }
 
 // Texto del precio de retiro:
-//   - "primary": el ítem solo se retira en tienda; una línea con su precio ("₡X + IVA" / "Desde ₡X + IVA").
+//   - "primary": el ítem solo se retira en tienda; una línea con su precio total ("₡X IVA incluido" / "Desde ₡X
+//     IVA incluido").
 //   - "secondary": el ítem está en los dos canales; el de domicilio es el principal y este va aparte, breve
 //     ("En tienda ₡X" / "En tienda desde ₡X").
 // null cuando no hay precio que mostrar (sin sesión o cargando o "Consultar": lo resuelve quien dibuja).
@@ -49,15 +50,15 @@ export function pickupPriceText(
   format: (amount: number) => string,
 ): string | null {
   if (view.kind !== "price") return null;
-  const price = format(view.unitPrice);
-  if (role === "primary") return view.varies ? labels.fromPlusTax(price) : labels.plusTax(price);
+  const price = format(view.total);
+  if (role === "primary") return view.varies ? labels.fromVatIncluded(price) : labels.vatIncluded(price);
   return view.varies ? labels.inStoreFrom(price) : labels.inStore(price);
 }
 
-// Precio de una tienda puntual en el desplegable del modal; si no hay precio por tienda (precio único), el
-// de siempre.
+// Precio total (con IVA) de una tienda puntual en el desplegable del modal; si no hay precio por tienda (precio
+// único), el de siempre.
 export function sitePrice(view: PickupPriceView, siteId: string): number | null {
   if (view.kind !== "price") return null;
-  if (!view.varies) return view.unitPrice;
-  return view.bySite.find((s) => s.siteId.toUpperCase() === siteId.toUpperCase())?.unitPrice ?? null;
+  if (!view.varies) return view.total;
+  return view.bySite.find((s) => s.siteId.toUpperCase() === siteId.toUpperCase())?.total ?? null;
 }
