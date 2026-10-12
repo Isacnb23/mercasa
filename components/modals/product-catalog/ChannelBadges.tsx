@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Store, Truck } from "lucide-react";
+import { MapPin, Store, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { ProductAvailability, ProductSummary } from "@/lib/product-types";
+import type { PickupSite, ProductAvailability, ProductSummary } from "@/lib/product-types";
 import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
 import { formatColones } from "@/lib/checkout-format";
 import { pickupPriceText, sitePrice } from "@/lib/channel-price";
@@ -13,6 +13,7 @@ import {
   differingPickupUnit,
   hasDelivery,
   hasPickup,
+  siteDetails,
   splitSites,
   type CatalogChannel,
 } from "@/lib/catalog-channel";
@@ -25,6 +26,7 @@ const PICKUP = { fg: "#7A5300", bg: "#FFF3CF", border: "#EBCB6B" };
 const INK = "#082B5C";
 const TEXT_SOFT = "#5C6B7D";
 const RULE = "#E2E8F0";
+const DETAILS_ID = "pd-site-details";
 
 // Etiquetas chicas de la tarjeta del listado: las dos si aplica. Un producto sin `availability` (lectura de
 // respaldo) es solo A domicilio.
@@ -84,6 +86,9 @@ export function ChannelAvailability({
   const pickupUnit = pickupPrice.kind === "price" && pickupPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(pickupPrice.unit, locale) }) : null;
   const deliveryUnit = deliveryPrice.kind === "price" && deliveryPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(deliveryPrice.unit, locale) }) : null;
   const [expanded, setExpanded] = useState(false);
+  // Tienda fijada (toque/Enter) y tienda bajo el cursor; el panel muestra la del cursor y, sin ella, la fijada.
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const delivery = hasDelivery({ availability });
   const pickup = hasPickup({ availability });
@@ -92,9 +97,49 @@ export function ChannelAvailability({
   const sites = availability?.pickup.sites ?? [];
   const { shown, hidden } = splitSites(sites);
   const unit = differingPickupUnit(availability);
+  const activeSite = sites.find((s) => s.siteId === (hoveredId ?? pinnedId)) ?? null;
+  const activeDetails = activeSite ? siteDetails(activeSite) : null;
 
   const chip = "inline-flex items-center rounded-full border px-2.5 py-1 text-[12.5px] font-semibold leading-none";
   const chipStyle = { color: PICKUP.fg, background: PICKUP.bg, borderColor: PICKUP.border };
+
+  // Nombre de la tienda y su ciudad/zona. Con datos que desplegar es un botón (toque, Enter o cursor); sin
+  // ellos, una etiqueta quieta.
+  const renderSiteChip = (site: PickupSite, price: number | null) => {
+    const label = (
+      <>
+        <span>{site.name}</span>
+        {site.city && <span className="ml-1 font-medium opacity-80">· {site.city}</span>}
+        {price != null && <span className="ml-1.5 font-bold">{money(price)}</span>}
+      </>
+    );
+    const siteChip = `${chip} max-w-full flex-wrap gap-y-0.5 text-left leading-tight`;
+    if (!siteDetails(site)) {
+      return (
+        <li key={site.siteId} className={siteChip} style={chipStyle}>
+          {label}
+        </li>
+      );
+    }
+    const open = pinnedId === site.siteId;
+    return (
+      <li key={site.siteId} className="max-w-full">
+        <button
+          type="button"
+          onClick={() => setPinnedId(open ? null : site.siteId)}
+          onPointerEnter={(e) => {
+            if (e.pointerType === "mouse") setHoveredId(site.siteId);
+          }}
+          aria-expanded={open}
+          aria-controls={activeSite?.siteId === site.siteId ? DETAILS_ID : undefined}
+          className={`${siteChip} cursor-pointer outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
+          style={open ? { ...chipStyle, borderColor: PICKUP.fg } : chipStyle}
+        >
+          {label}
+        </button>
+      </li>
+    );
+  };
 
   return (
     <section className="flex flex-col gap-2.5 rounded-2xl border p-3.5" style={{ borderColor: RULE }} aria-labelledby="pd-how-title">
@@ -145,63 +190,98 @@ export function ChannelAvailability({
               )}
             </p>
 
-            <div className="mt-1.5 grid" role="group" aria-label={t("pickupSitesAria")}>
-              <ul
-                className="col-start-1 row-start-1 flex flex-wrap content-start gap-1.5"
-                aria-hidden={expanded || undefined}
-                inert={expanded}
-                style={{ visibility: expanded ? "hidden" : undefined }}
-              >
-                {shown.map((site) => (
-                  <li key={site.siteId} className={chip} style={chipStyle}>
-                    {site.name}
-                  </li>
-                ))}
-                {hidden.length > 0 && (
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(true)}
-                      aria-expanded={false}
-                      aria-label={t("pickupMoreAria", { count: hidden.length })}
-                      className={`${chip} outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
-                      style={{ ...chipStyle, background: "#FFFFFF" }}
-                    >
-                      +{hidden.length}
-                    </button>
-                  </li>
-                )}
-              </ul>
-
-              {hidden.length > 0 && (
+            {/* Hover (mouse) o toque/Enter fijan la tienda activa; sus datos salen en un solo panel debajo de la
+                lista, así el tamaño de la lista corta/completa no cambia. Si salís con el cursor del bloque entero
+                (chips + panel) se vuelve a la tienda fijada, para poder llegar al enlace del mapa. */}
+            <div className="mt-1.5" onPointerLeave={() => setHoveredId(null)}>
+              <div className="grid" role="group" aria-label={t("pickupSitesAria")}>
                 <ul
                   className="col-start-1 row-start-1 flex flex-wrap content-start gap-1.5"
-                  aria-hidden={!expanded || undefined}
-                  inert={!expanded}
-                  style={{ visibility: expanded ? undefined : "hidden" }}
+                  aria-hidden={expanded || undefined}
+                  inert={expanded}
+                  style={{ visibility: expanded ? "hidden" : undefined }}
                 >
-                  {sites.map((site) => {
-                    const price = pickupPrice.kind === "price" && pickupPrice.varies ? sitePrice(pickupPrice, site.siteId) : null;
-                    return (
-                      <li key={site.siteId} className={chip} style={chipStyle}>
-                        {site.name}
-                        {price != null && <span className="ml-1.5 font-bold">{money(price)}</span>}
-                      </li>
-                    );
-                  })}
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(false)}
-                      aria-expanded
-                      aria-label={t("pickupLessAria")}
-                      className={`${chip} outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
-                      style={{ ...chipStyle, background: "#FFFFFF" }}
-                    >
-                      −
-                    </button>
-                  </li>
+                  {shown.map((site) => (
+                    renderSiteChip(site, null)
+                  ))}
+                  {hidden.length > 0 && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(true)}
+                        aria-expanded={false}
+                        aria-label={t("pickupMoreAria", { count: hidden.length })}
+                        className={`${chip} outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
+                        style={{ ...chipStyle, background: "#FFFFFF" }}
+                      >
+                        +{hidden.length}
+                      </button>
+                    </li>
+                  )}
                 </ul>
+
+                {hidden.length > 0 && (
+                  <ul
+                    className="col-start-1 row-start-1 flex flex-wrap content-start gap-1.5"
+                    aria-hidden={!expanded || undefined}
+                    inert={!expanded}
+                    style={{ visibility: expanded ? undefined : "hidden" }}
+                  >
+                    {sites.map((site) => {
+                      const price = pickupPrice.kind === "price" && pickupPrice.varies ? sitePrice(pickupPrice, site.siteId) : null;
+                      return renderSiteChip(site, price);
+                    })}
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(false)}
+                        aria-expanded
+                        aria-label={t("pickupLessAria")}
+                        className={`${chip} outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
+                        style={{ ...chipStyle, background: "#FFFFFF" }}
+                      >
+                        −
+                      </button>
+                    </li>
+                  </ul>
+                )}
+              </div>
+
+              {activeSite && activeDetails && (
+                <div
+                  id={DETAILS_ID}
+                  role="region"
+                  aria-label={t("pickupStoreDetailsAria", { name: activeSite.name })}
+                  className="mt-2 flex flex-col gap-1 rounded-xl border bg-white p-2.5 text-[12.5px] leading-snug"
+                  style={{ borderColor: PICKUP.border, color: TEXT_SOFT }}
+                >
+                  <p className="font-bold" style={{ color: INK }}>
+                    {activeSite.name}
+                  </p>
+                  {activeDetails.address && (
+                    <p>
+                      <span className="font-semibold">{t("pickupStoreAddress")}:</span> {activeDetails.address}
+                    </p>
+                  )}
+                  {activeDetails.hours && (
+                    <p>
+                      <span className="font-semibold">{t("pickupStoreHours")}:</span> {activeDetails.hours}
+                    </p>
+                  )}
+                  {activeDetails.mapUrl && (
+                    <a
+                      href={activeDetails.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t("pickupStoreMapAria", { name: activeSite.name })}
+                      className="inline-flex w-fit items-center gap-1 font-semibold underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-[#075FD8]"
+                      style={{ color: PICKUP.fg }}
+                    >
+                      <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                      {t("pickupStoreMap")}
+                    </a>
+                  )}
+                </div>
               )}
             </div>
           </div>

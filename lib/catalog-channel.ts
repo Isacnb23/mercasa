@@ -37,6 +37,30 @@ export function splitSites(sites: readonly PickupSite[], preview = PICKUP_SITES_
   return { shown: sites.slice(0, preview), hidden: sites.slice(preview) };
 }
 
+// Enlace de mapa: solo http(s) (nada de javascript: ni data:). Cualquier otra cosa se descarta.
+export function safeMapUrl(url: string | undefined): string | null {
+  const value = url?.trim();
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Lo que se muestra al tocar una tienda; null si no trae ningún dato (no hay nada que desplegar).
+export interface SiteDetails {
+  address: string | null;
+  hours: string | null;
+  mapUrl: string | null;
+}
+
+export function siteDetails(site: PickupSite): SiteDetails | null {
+  const details = { address: site.address?.trim() || null, hours: site.hours?.trim() || null, mapUrl: safeMapUrl(site.mapUrl) };
+  return details.address || details.hours || details.mapUrl ? details : null;
+}
+
 // Recorre las categorías (nivel con `products`) de una lista de familias/nodos.
 function forEachCategory(nodes: readonly HierarchyNode[], visit: (category: HierarchyNode) => void): void {
   for (const node of nodes) {
@@ -108,7 +132,16 @@ function parseAvailability(raw: unknown): ProductAvailability {
     ? (p.sites as unknown[])
         .map((s) => s as Record<string, unknown>)
         .filter((s) => str(s.siteId).trim() !== "")
-        .map((s) => ({ siteId: str(s.siteId).trim(), name: str(s.name).trim() || str(s.siteId).trim() }))
+        .map((s): PickupSite => {
+          const siteId = str(s.siteId).trim();
+          const site: PickupSite = { siteId, name: str(s.name).trim() || siteId };
+          // Solo los campos que vienen con contenido: una tienda a medio configurar no rompe nada.
+          for (const key of ["city", "address", "hours", "mapUrl"] as const) {
+            const value = str(s[key]).trim();
+            if (value) site[key] = value;
+          }
+          return site;
+        })
     : [];
   return {
     delivery: { available: d.available === true, unit: typeof d.unit === "string" ? d.unit : null },

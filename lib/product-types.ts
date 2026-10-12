@@ -3,10 +3,20 @@
 // en un archivo separado, sin `import "server-only"`, para que un client
 // component pueda importar el tipo sin arrastrar el módulo server-only al
 // bundle del navegador.
-/** Tienda donde hay existencia para retiro (nombre configurado en homex-api; hoy provisional: el código). */
+/**
+ * Tienda donde hay existencia para retiro (datos configurados en homex-api: lista oficial de sucursales).
+ * Los campos opcionales solo están si el servidor los trae; la web omite los que falten.
+ */
 export interface PickupSite {
   siteId: string;
   name: string;
+  /** Ciudad o zona ("Cartago, El Guarco"). */
+  city?: string;
+  address?: string;
+  /** Horario de la tienda (no una ventana de retiro). */
+  hours?: string;
+  /** Enlace de Google Maps (solo http/https; ver safeMapUrl). */
+  mapUrl?: string;
 }
 
 /**
