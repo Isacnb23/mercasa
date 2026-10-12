@@ -4,7 +4,7 @@ import { createContext, forwardRef, useCallback, useContext, useEffect, useLayou
 import { createPortal } from "react-dom";
 import Image, { type StaticImageData } from "next/image";
 import HTMLFlipBook from "react-pageflip";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Boxes,
   Check,
@@ -20,7 +20,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { HierarchyNode, ProductSummary } from "@/lib/product-types";
+import type { HierarchyNode, ProductAvailability, ProductSummary } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
 import { useCart } from "@/lib/cart-context";
@@ -45,6 +45,18 @@ import { shouldLoadPageImages } from "@/lib/image-window";
 import CategoryMenu from "./CategoryMenu";
 import { activeCategoryId as computeActiveCategoryId, planJump, visiblePageIndexes, type MenuSection } from "@/lib/category-nav";
 import { createBookNavigator, type BookLike } from "@/lib/book-navigator";
+import {
+  anchorOf,
+  chooseBookLayout,
+  COLUMNS,
+  DEFAULT_LAYOUT,
+  findAnchor,
+  pageSize,
+  rowsFor,
+  sameLayout,
+  type BookLayout,
+  type PageAnchor,
+} from "@/lib/book-density";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -137,9 +149,12 @@ const BOOK_WIDTH = 600;
 const BOOK_HEIGHT = 820;
 const BOOK_MIN_WIDTH = 220;
 
-// 9 por página (3x3) — cada página del libro es solo la mitad de un spread,
-// bastante más angosta que una página de pantalla completa suelta.
-const PRODUCTS_PER_GRID_PAGE = 9;
+// Ancho máximo de una hoja (el `maxWidth` que se le pasa a react-pageflip) y ancho máximo del panel (el
+// `max-width` de .catalog-panel en product-catalog-overlay.css): con ellos se calcula el espacio real del libro.
+const BOOK_MAX_PAGE_WIDTH = 860;
+const PANEL_MAX_WIDTH = 1400;
+// Tarjetas por hoja: 9 (3x3) o, como último recurso en hojas muy chicas, 6 (3x2). Lo decide el tamaño REAL de la
+// hoja (ver lib/book-density.ts y el efecto de la hoja de prueba en ProductCatalogModal).
 
 // Renglones por página impresa: son compactos, entran muchos más por hoja A4.
 const PRINT_PAGE_SIZE = 15;
@@ -250,7 +265,7 @@ type BookPage =
   | { kind: "portfolio-info" }
   | { kind: "portfolio-visual" }
   | { kind: "subfamily-divider"; subFamily: HierarchyNode; photo: StaticImageData }
-  | { kind: "category"; category: HierarchyNode; products: ProductSummary[]; part: number; totalParts: number };
+  | { kind: "category"; category: HierarchyNode; products: ProductSummary[]; part: number; totalParts: number; perPage: number };
 
 // react-pageflip muestra las páginas de a pares (spread) después de la
 // portada — portfolio-info/portfolio-visual son DOS entradas para que
@@ -260,7 +275,7 @@ type BookPage =
 // aunque una categoría caiga en índice par (page-flip la muestra como la
 // página derecha del spread) — no hace falta rellenar con páginas en
 // blanco para forzar paridad, eso solo infla el conteo de páginas.
-function buildBookPages(family: HierarchyNode, photoOffset: number): BookPage[] {
+function buildBookPages(family: HierarchyNode, photoOffset: number, perPage: number): BookPage[] {
   const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
 
   const subFamilies = family.children
@@ -284,14 +299,15 @@ function buildBookPages(family: HierarchyNode, photoOffset: number): BookPage[] 
     }
     for (const category of categories) {
       const products = category.products ?? [];
-      const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
+      const totalParts = Math.max(1, Math.ceil(products.length / perPage));
       for (let part = 0; part < totalParts; part++) {
         pages.push({
           kind: "category",
           category,
-          products: products.slice(part * PRODUCTS_PER_GRID_PAGE, (part + 1) * PRODUCTS_PER_GRID_PAGE),
+          products: products.slice(part * perPage, (part + 1) * perPage),
           part: part + 1,
           totalParts,
+          perPage,
         });
       }
     }
@@ -348,7 +364,8 @@ function findSubFamilyForCategory(allFamilies: HierarchyNode[], categoryId: stri
 function buildFilteredBookPages(
   filterCategories: { category: HierarchyNode }[],
   allFamilies: HierarchyNode[],
-  photoOffset: number
+  photoOffset: number,
+  perPage: number
 ): BookPage[] {
   const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
   let lastSubFamilyId: string | null = null;
@@ -365,14 +382,15 @@ function buildFilteredBookPages(
       });
       lastSubFamilyId = subFamily.id;
     }
-    const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
+    const totalParts = Math.max(1, Math.ceil(products.length / perPage));
     for (let part = 0; part < totalParts; part++) {
       pages.push({
         kind: "category",
         category,
-        products: products.slice(part * PRODUCTS_PER_GRID_PAGE, (part + 1) * PRODUCTS_PER_GRID_PAGE),
+        products: products.slice(part * perPage, (part + 1) * perPage),
         part: part + 1,
         totalParts,
+        perPage,
       });
     }
   }
@@ -432,6 +450,8 @@ interface PageFlipController {
   flipPrev: () => void;
   flip: (page: number) => void;
   getCurrentPageIndex: () => number;
+  /** Vuelve a medir el área del libro y a dimensionar las hojas. */
+  update: () => void;
 }
 
 // Catálogo interactivo de UNA familia (independiente — no hay pantalla
@@ -574,15 +594,21 @@ export default function ProductCatalogModal({
   // `onInit` es el evento real de la librería que marca cuándo terminó.
   const [isBookReady, setIsBookReady] = useState(false);
 
+  // Densidad de las hojas (tarjetas por hoja y nivel de compactación): se elige según el tamaño real de la hoja.
+  // Al cambiar las tarjetas por hoja el libro tiene otras páginas: `anchor` recuerda dónde estaba el lector.
+  const [layout, setLayout] = useState<BookLayout>(DEFAULT_LAYOUT);
+  const [anchor, setAnchor] = useState<PageAnchor | null>(null);
+  const perPage = layout.perPage;
+
   const photoOffset = useMemo(() => photoOffsetFor(displayFamily.id), [displayFamily.id]);
   const bookPages = useMemo(() => {
     const content = isFiltered
-      ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset)
-      : buildBookPages(family, photoOffset);
+      ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset, perPage)
+      : buildBookPages(family, photoOffset, perPage);
     // Con showCover la portada va sola y el resto en pares: si el total es par, la última página quedaría sola
     // con la hoja derecha vacía. Se cierra con una contraportada intencional para que todo spread esté completo.
     return content.length % 2 === 0 ? [...content, { kind: "back" } as BookPage] : content;
-  }, [isFiltered, filterCategories, family, photoOffset, allFamilies]);
+  }, [isFiltered, filterCategories, family, photoOffset, allFamilies, perPage]);
   const totalPages = bookPages.length;
   // Páginas de contenido (sin la contraportada): lo que cuenta el indicador "Página n de total".
   const contentPageCount = bookPages.filter((page) => page.kind !== "back").length;
@@ -623,7 +649,15 @@ export default function ProductCatalogModal({
   }, [bookPages]);
 
   const initialPageIndex = !isFiltered && !channelChanged && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
+  // Tras cambiar las tarjetas por hoja el libro se vuelve a montar en la página que contiene el mismo producto.
+  const startPage = anchor ? findAnchor(bookPages, anchor, perPage) : initialPageIndex;
   const [currentPage, setCurrentPage] = useState(initialPageIndex);
+  // Al cambiar las tarjetas por hoja la página actual se recalcula en el mismo render (estado derivado), no en un efecto.
+  const [seenPerPage, setSeenPerPage] = useState(perPage);
+  if (seenPerPage !== perPage) {
+    setSeenPerPage(perPage);
+    setCurrentPage(startPage);
+  }
 
   // Precios (solo con sesión): de las páginas del spread actual y las vecinas (precarga de la siguiente).
   const { openProfile } = useAuth();
@@ -664,7 +698,26 @@ export default function ProductCatalogModal({
     // decidir si muestra una página sola o el spread de dos — si no lo
     // igualamos acá, calculamos la caja con la proporción de dos páginas
     // aunque el libro adentro termine renderizando una sola.
-    function fit(availableWidth: number, availableHeight: number) {
+    // El alto disponible es el del área (entre encabezado y pie). El ANCHO posible NO es el ancho actual del área:
+    // el panel se acota al ancho del libro que ya se calculó (ver panelMaxWidth), y si el alto crece después (el
+    // aviso de precios desaparece, la ventana se agranda) un libro limitado por ese ancho viejo no podría crecer
+    // nunca. Se usa el ancho que el área tendría con el panel libre: lo que cabe en la ventana (con el tope del
+    // panel) menos las flechas.
+    const panel = el.closest<HTMLElement>(".catalog-panel");
+    const backdrop = panel?.parentElement ?? null;
+
+    function freeWidth() {
+      const current = el!.clientWidth;
+      if (!panel || !backdrop) return current;
+      const style = getComputedStyle(backdrop);
+      const room = backdrop.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const chrome = (el!.parentElement?.clientWidth ?? current) - current; // flechas prev/next y sus márgenes
+      return Math.max(current, Math.min(room, PANEL_MAX_WIDTH) - chrome);
+    }
+
+    function fit() {
+      const availableWidth = freeWidth();
+      const availableHeight = el!.clientHeight;
       const isPortrait = availableWidth < BOOK_MIN_WIDTH * 2;
       setIsPortraitBook(isPortrait);
       const ratio = isPortrait ? BOOK_WIDTH / BOOK_HEIGHT : (BOOK_WIDTH * 2) / BOOK_HEIGHT;
@@ -674,15 +727,14 @@ export default function ProductCatalogModal({
         height = availableHeight;
         width = height * ratio;
       }
-      setBookBox({ width, height });
+      // Sin cambios reales no se vuelve a renderizar (evita ciclos con el ancho del panel).
+      setBookBox((prev) => (Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5 ? prev : { width, height }));
     }
 
-    fit(el.clientWidth, el.clientHeight);
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      fit(width, height);
-    });
+    fit();
+    const observer = new ResizeObserver(fit);
     observer.observe(el);
+    if (backdrop) observer.observe(backdrop);
     return () => observer.disconnect();
   }, []);
 
@@ -864,10 +916,75 @@ export default function ProductCatalogModal({
   const panelMaxWidth =
     measuredPanelWidth != null ? Math.max(640, headerMinWidth ?? 0, measuredPanelWidth) : undefined;
 
+  // Densidad de las hojas según su tamaño REAL (no según umbrales de la ventana). Se monta, oculta, una hoja de
+  // categoría "peor caso" (título de dos líneas; nombres y empaques largos; precios, etiquetas de los dos canales y
+  // "Desde ₡X IVA incluido") del tamaño que tendrán las hojas reales, y se queda con el nivel más holgado en el que
+  // su rejilla no desborda (ver lib/book-density.ts). Es el mismo componente que pinta las hojas reales, así que
+  // lo que mide es lo que se verá.
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isFading, setIsFading] = useState(false);
+  const probeRef = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const layoutRef = useRef({ layout, bookPages, currentPage });
+  useLayoutEffect(() => {
+    layoutRef.current = { layout, bookPages, currentPage };
+  });
+
+  useLayoutEffect(() => {
+    const root = probeRef.current;
+    if (!root) return;
+
+    function measureLayout() {
+      const size = pageSize(bookBox, isPortraitBook, { width: BOOK_WIDTH, height: BOOK_HEIGHT }, BOOK_MAX_PAGE_WIDTH);
+      // Un poco menos que la hoja real: margen para el redondeo de la librería del libro.
+      const width = Math.max(1, Math.floor(size.width) - 1);
+      const height = Math.max(1, Math.floor(size.height) - 2);
+      const fits = (candidate: BookLayout) => {
+        const sheet = root!.querySelector<HTMLElement>(`[data-probe="${candidate.perPage}"]`);
+        const grid = sheet?.querySelector<HTMLElement>("[data-probe-grid]");
+        if (!sheet || !grid) return true;
+        sheet.style.width = `${width}px`;
+        sheet.style.height = `${height}px`;
+        sheet.setAttribute("data-density", String(candidate.level));
+        if (grid.scrollHeight > grid.clientHeight) return false;
+        return Array.from(grid.children).every((card) => card.scrollHeight <= card.clientHeight && card.scrollWidth <= card.clientWidth);
+      };
+      const next = chooseBookLayout(fits);
+      const current = layoutRef.current;
+      if (sameLayout(current.layout, next)) return;
+      if (next.perPage !== current.layout.perPage) {
+        // Otras páginas: el libro se vuelve a montar (key) en la página que contiene el mismo producto.
+        setAnchor(anchorOf(current.bookPages[current.currentPage], current.layout.perPage));
+        setIsBookReady(false);
+        setJumpTarget(null);
+        setIsNavigating(false);
+        setIsFading(false);
+      }
+      setLayout(next);
+    }
+
+    measureLayout();
+    // Las fuentes del sitio cargan después: cambian el ancho de los textos y con él el alto de las tarjetas.
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) measureLayout();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookBox, isPortraitBook, locale]);
+
+  // react-pageflip mide el área del libro en su propio evento `resize` de la ventana, ANTES de que React aplique el
+  // tamaño nuevo: las hojas quedaban un paso atrás del libro (con otro tamaño que el de la hoja de prueba de
+  // arriba). Tras aplicar cada tamaño nuevo se le pide que vuelva a medir.
+  useLayoutEffect(() => {
+    if (isBookReady) bookRef.current?.pageFlip()?.update();
+  }, [bookBox.width, bookBox.height, isPortraitBook, isBookReady]);
+
   // Menú "Ir a categoría": categoría elegida (manda mientras su primera página siga a la vista), categoría
   // actual según las páginas VISIBLES del spread (la página derecha también cuenta: una categoría que empieza en
   // una página par queda a la derecha y antes se marcaba la anterior) y secciones para el menú.
-  const [jumpTarget, setJumpTarget] = useState<string | null>(null);
   const pageCategory = useMemo(
     () => bookPages.map((page) => (page.kind === "category" ? page.category.id : null)),
     [bookPages]
@@ -985,8 +1102,6 @@ export default function ProductCatalogModal({
   // animando se espera a que vuelva a reposo; un spread de distancia se anima, más lejos se va directo con
   // turnToPage tras un fundido breve (sin fundido con prefers-reduced-motion). Mientras navega se ignoran las
   // flechas, la rueda y los clics en la esquina.
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [isFading, setIsFading] = useState(false);
   const viewRef = useRef({ currentPage, totalPages, portrait: isPortraitBook });
   useEffect(() => {
     viewRef.current = { currentPage, totalPages, portrait: isPortraitBook };
@@ -1030,6 +1145,7 @@ export default function ProductCatalogModal({
     if (next === channel) return;
     setChannel(next);
     setChannelChanged(true);
+    setAnchor(null);
     setCurrentPage(0);
     setIsBookReady(false);
     setJumpTarget(null);
@@ -1124,6 +1240,7 @@ export default function ProductCatalogModal({
       >
         <div
           className={`catalog-panel${isClosing ? " is-closing" : ""}`}
+          data-density={layout.level}
           style={{ background: PAGE_BG, ...(panelMaxWidth != null ? { maxWidth: panelMaxWidth } : {}) }}
         >
           {/* Barra superior: identidad de familia + ir a categoría + PDF +
@@ -1359,6 +1476,7 @@ export default function ProductCatalogModal({
               pasando la página con el efecto de libro real (drawShadow,
               flippingTime) como antes. */}
           <div className="catalog-shell" ref={shellRef} onWheel={handleBookWheel}>
+            <DensityProbe icon={Icon} probeRef={probeRef} />
             {/* Ocultas debajo de `sm` (ver mobile-fixes-ronda2.md, punto 2):
                 cada flecha son 40px + márgenes (~52px por lado, ~104px las
                 dos) — en un panel mobile angosto (~370px) eso le comía
@@ -1472,7 +1590,7 @@ export default function ProductCatalogModal({
                   (precios, clic en un producto) llega a las páginas por contexto, no por props. */}
               <BookLiveContext.Provider value={liveBook}>
               <HTMLFlipBook
-                key={channel}
+                key={`${channel}-${perPage}`}
                 ref={bookRef}
                 width={BOOK_WIDTH}
                 height={BOOK_HEIGHT}
@@ -1481,7 +1599,7 @@ export default function ProductCatalogModal({
                 maxWidth={860}
                 minHeight={300}
                 maxHeight={1160}
-                startPage={initialPageIndex}
+                startPage={startPage}
                 drawShadow
                 flippingTime={700}
                 usePortrait
@@ -1976,7 +2094,43 @@ function BookPageContent({
     );
   }
 
-  // page.kind === "category": header con identidad de familia/categoría +
+  return (
+    <CategorySheet
+      family={family}
+      page={page}
+      icon={Icon}
+      loadImages={loadImages}
+      priceFor={priceFor}
+      pickupPriceFor={pickupPriceFor}
+      onProductClick={onProductClick}
+    />
+  );
+}
+
+// Hoja de categoría: encabezado con identidad de familia/categoría + línea de acento + rejilla de tarjetas de
+// producto. La usan las hojas reales del libro y la hoja de prueba oculta que decide la densidad (probe).
+function CategorySheet({
+  family,
+  page,
+  icon: Icon,
+  loadImages,
+  priceFor,
+  pickupPriceFor,
+  onProductClick,
+  probe = false,
+}: {
+  family: HierarchyNode;
+  page: Extract<BookPage, { kind: "category" }>;
+  icon: LucideIcon;
+  loadImages: boolean;
+  priceFor: (id: string) => PriceView;
+  pickupPriceFor: (id: string) => PickupPriceView;
+  onProductClick: (product: ProductSummary) => void;
+  probe?: boolean;
+}) {
+  const t = useTranslations("Products");
+  const perPage = page.perPage;
+  // Rama "category" de BookPageContent: header con identidad de familia/categoría +
   // línea de acento, grilla de tarjetas de producto con foto real (fallback
   // a ícono de familia).
   return (
@@ -2030,12 +2184,15 @@ function BookPageContent({
       <div
         className="grid min-h-0 flex-1 grid-cols-3 items-stretch overflow-y-auto overscroll-contain"
         data-lenis-prevent
+        data-per-page={perPage}
+        data-probe-grid={probe ? "" : undefined}
         style={{
           marginTop: "clamp(4px, 1.4cqh, 14px)",
-          gap: "clamp(4px, 1cqh, 12px)",
-          // 3 filas iguales que se reparten el alto de la hoja (cada una al menos lo que mide su contenido): las
-          // tarjetas de una misma fila y de las tres filas tienen la misma altura, con o sin etiquetas.
-          gridTemplateRows: "repeat(3, minmax(min-content, 1fr))",
+          gap: "var(--pc-gap, clamp(4px, 1cqh, 12px))",
+          // Filas iguales (3 con 9 tarjetas, 2 con 6) que se reparten el alto de la hoja (cada una al menos lo que
+          // mide su contenido): las tarjetas de una misma fila y de todas las filas tienen la misma altura, con o
+          // sin etiquetas.
+          gridTemplateRows: `repeat(${rowsFor(perPage)}, minmax(min-content, 1fr))`,
         }}
       >
         {page.products.map((product) => (
@@ -2049,16 +2206,72 @@ function BookPageContent({
             onClick={() => onProductClick(product)}
           />
         ))}
-        {/* Última página de la categoría con pocas tarjetas: la fila vacía no es un error, la categoría terminó. */}
-        {page.part === page.totalParts && page.products.length <= 6 && (
+        {/* Última página de la categoría con una fila vacía como mínimo: no es un error, la categoría terminó. */}
+        {page.part === page.totalParts && page.products.length <= perPage - COLUMNS && (
           <p
             className="col-span-3 self-center text-center text-[11px] font-medium"
-            style={{ gridRow: 3, color: "#5C6B7D" }}
+            style={{ gridRow: rowsFor(perPage), color: "#5C6B7D" }}
           >
             {t("catalog.categoryEnd")}
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// Hoja de prueba (peor caso) para elegir la densidad; ver el efecto de ProductCatalogModal. Nunca se ve ni se
+// enfoca: invisible, inerte y fuera del árbol de accesibilidad.
+const PROBE_BOTH: ProductAvailability = { delivery: { available: true }, pickup: { available: true, sites: [] } };
+const PROBE_PICKUP_ONLY: ProductAvailability = { delivery: { available: false }, pickup: { available: true, sites: [] } };
+const PROBE_NAME = "Helado Premium Cremoso Sabor Vainilla con Trozos de Chocolate Belga y Galleta Familiar Extra Grande";
+// Por columna: (0) los dos canales con precio en ambos, (1) los dos canales con precio de domicilio y retiro por
+// consultar (las dos etiquetas), (2) solo retiro con precio variable ("Desde ₡X IVA incluido").
+const PROBE_PRODUCTS: ProductSummary[] = Array.from({ length: 9 }, (_, i) => ({
+  id: `probe-${i}`,
+  name: PROBE_NAME,
+  packSize: "CAJA 24 x 355 ML",
+  availability: i % 3 === 2 ? PROBE_PICKUP_ONLY : PROBE_BOTH,
+}));
+const PROBE_PRICE: PriceView = { kind: "price", total: 899990, unit: "DISPLAY" };
+const PROBE_PICKUP_PRICE: PickupPriceView = { kind: "price", total: 899990, unit: "DISPLAY", varies: true, bySite: [] };
+const probePriceFor = (id: string): PriceView => (id.endsWith("2") || id.endsWith("5") || id.endsWith("8") ? { kind: "hidden" } : PROBE_PRICE);
+const probePickupPriceFor = (id: string): PickupPriceView => {
+  const column = Number(id.slice(-1)) % 3;
+  return column === 1 ? { kind: "consult" } : PROBE_PICKUP_PRICE;
+};
+
+function DensityProbe({ icon, probeRef }: { icon: LucideIcon; probeRef: React.RefObject<HTMLDivElement | null> }) {
+  const family: HierarchyNode = { id: "probe", name: "Alimentos", itemCount: 9, children: [] };
+  return (
+    <div
+      ref={probeRef}
+      aria-hidden
+      inert
+      className="pointer-events-none absolute left-0 top-0"
+      style={{ visibility: "hidden", zIndex: -1 }}
+    >
+      {([9, 6] as const).map((per) => (
+        <div key={per} data-probe={per} className="book-probe absolute left-0 top-0 overflow-hidden">
+          <CategorySheet
+            probe
+            family={family}
+            page={{
+              kind: "category",
+              category: { id: "probe-category", name: "Helados, Postres y Cremas Congeladas Premium", itemCount: 30, children: [] },
+              products: PROBE_PRODUCTS.slice(0, per),
+              part: 12,
+              totalParts: 12,
+              perPage: per,
+            }}
+            icon={icon}
+            loadImages={false}
+            priceFor={probePriceFor}
+            pickupPriceFor={probePickupPriceFor}
+            onProductClick={() => {}}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -2131,8 +2344,8 @@ function ProductCard({
       style={{
         borderColor: RULE,
         boxShadow: "0 2px 8px rgba(8,43,92,0.06)",
-        padding: "clamp(4px, 1.1cqh, 8px)",
-        gap: "clamp(2px, 0.6cqh, 5px)",
+        padding: "var(--pc-card-pad, clamp(4px, 1.1cqh, 8px))",
+        gap: "var(--pc-card-gap, clamp(2px, 0.6cqh, 5px))",
       }}
     >
       {canAddToCart(product) && (

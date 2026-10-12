@@ -75,11 +75,11 @@ export default function PriceTag({ view, size = "card" }: { view: PriceView; siz
 
   return (
     <span className="flex flex-col items-center leading-tight">
-      <span className="whitespace-nowrap">
-        <span className="font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
+      <span className="flex flex-wrap items-baseline justify-center gap-x-[3px]">
+        <span className="whitespace-nowrap font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
           {price}
-        </span>{" "}
-        <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+        </span>
+        <span className="whitespace-nowrap font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
           {t("priceVatSuffix")}
         </span>
       </span>
@@ -139,8 +139,8 @@ export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "p
     // Con ícono de tienda y la palabra "tienda": esta línea ya hace de etiqueta del canal, así que la tarjeta no
     // repite la etiqueta "Retiro en tienda" cuando hay precio.
     return (
-      <span className="inline-flex items-center gap-[3px] whitespace-nowrap font-semibold leading-tight" style={{ color: PICKUP_INK, fontSize: "clamp(8.5px, 1.75cqh, 9.5px)" }}>
-        <Store className="h-[9px] w-[9px] shrink-0" strokeWidth={2.2} aria-hidden />
+      <span className="inline-flex items-start justify-center gap-[3px] text-center font-semibold leading-tight" style={{ color: PICKUP_INK, fontSize: "clamp(8.5px, 1.75cqh, 9.5px)" }}>
+        <Store className="mt-px h-[9px] w-[9px] shrink-0" strokeWidth={2.2} aria-hidden />
         {text}
       </span>
     );
@@ -149,16 +149,16 @@ export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "p
   const unit = view.unit.trim() ? unitLabel(view.unit, locale) : "";
   return (
     <span className="flex flex-col items-center leading-tight">
-      <span className="whitespace-nowrap">
+      <span className="flex flex-wrap items-baseline justify-center gap-x-[3px]">
         {view.varies && (
-          <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
-            {t("priceFromPrefix")}{" "}
+          <span className="whitespace-nowrap font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+            {t("priceFromPrefix")}
           </span>
         )}
-        <span className="font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
+        <span className="whitespace-nowrap font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
           {amount}
-        </span>{" "}
-        <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+        </span>
+        <span className="whitespace-nowrap font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
           {t("priceVatSuffix")}
         </span>
       </span>

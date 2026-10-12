@@ -48,7 +48,7 @@ export function ChannelBadges({
 
   // Con ícono Y texto (no dependen solo del color). Un poco más grandes que antes y con aire respecto al borde.
   // Tamaño y aire en CSS (.pc-badge) para poder compactarlos en pantallas bajas sin perder la rejilla 3×3.
-  const badge = "pc-badge inline-flex items-center gap-[3px] whitespace-nowrap rounded-full border font-semibold leading-none";
+  const badge = "pc-badge inline-flex items-center gap-[3px] rounded-full border font-semibold leading-none";
   const size = {};
 
   return (

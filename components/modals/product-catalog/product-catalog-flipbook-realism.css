@@ -56,7 +56,8 @@
    puros, así se achican junto con la página real en vez de desbordarla.
    `size` (no solo `block-size`) porque también necesitamos el ancho para
    media-queries de contenedor si hicieran falta más adelante. */
-.page-content {
+.page-content,
+.book-probe {
   container-type: size;
   container-name: catalog-page;
 }

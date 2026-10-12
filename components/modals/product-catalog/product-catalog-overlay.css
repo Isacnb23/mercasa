@@ -26,10 +26,10 @@
 .catalog-panel {
   width: 100%;
   max-width: 1400px;
-  height: 90vh;
-  max-height: 90vh;
+  height: 96vh;
+  max-height: 96vh;
   /* dvh: 100vh incluye las barras del navegador y recortaba el pie. */
-  height: min(90dvh, calc(100dvh - 1rem));
+  height: min(96dvh, calc(100dvh - 1rem));
   max-height: calc(100dvh - 1rem);
   background: #ffffff;
   border-radius: 16px;
@@ -242,43 +242,60 @@
   }
 }
 
-/* Nombre de producto en la tarjeta del libro: hasta 3 líneas cuando el alto lo permite y solo 2 en pantallas bajas
-   (hasta 700 px de alto); el nombre completo queda en el tooltip y en el detalle del producto. La foto/ícono se
-   achica con la hoja chica (hasta 800 px de alto o angosta). */
-.catalog-panel {
+/* Densidad de las hojas del libro. NO depende de umbrales de la ventana: ProductCatalogModal mide una hoja de prueba
+   "peor caso" del tamaño real de las hojas (ver lib/book-density.ts) y fija data-density (1, 2 o 3) en el panel.
+   Nivel 1: nombre de 3 líneas y etiquetas normales. Nivel 2: nombre de 2 líneas y foto un poco más chica. Nivel 3:
+   además etiquetas compactas y menos relleno. (Con 6 tarjetas por hoja se repiten los mismos niveles, con filas más
+   altas.) El nombre completo siempre queda en el tooltip y en el detalle del producto.
+   Cada nivel define TODAS las variables (`initial` = valor por defecto de quien las usa): la hoja de prueba lleva su
+   propio data-density dentro del panel y, si no, heredaría las del nivel que el panel tenga en ese momento. */
+.catalog-panel,
+[data-density="1"] {
   --pc-name-lines: 3;
+  --pc-img: initial;
+  --pc-gap: initial;
+  --pc-card-pad: initial;
+  --pc-card-gap: initial;
+  --pc-badge-pad: initial;
+  --pc-badge-font: initial;
+  --pc-badge-mb: initial;
+  --pc-badge-ws: initial;
 }
 
-@media (max-height: 800px), (max-width: 639px) {
-  .catalog-panel {
-    --pc-img: 5.4cqh;
-  }
+[data-density="2"] {
+  --pc-name-lines: 2;
+  --pc-img: 5.4cqh;
+  --pc-gap: initial;
+  --pc-card-pad: initial;
+  --pc-card-gap: initial;
+  --pc-badge-pad: initial;
+  --pc-badge-font: initial;
+  --pc-badge-mb: initial;
+  --pc-badge-ws: initial;
 }
 
-@media (max-height: 700px) {
-  .catalog-panel {
-    --pc-name-lines: 2;
-  }
+[data-density="3"] {
+  --pc-name-lines: 2;
+  --pc-img: 5cqh;
+  --pc-gap: 3px;
+  --pc-card-pad: 3px;
+  --pc-card-gap: 1px;
+  --pc-badge-pad: 1px 5px;
+  --pc-badge-font: 9px;
+  --pc-badge-mb: 0px;
+  /* En hojas minúsculas la etiqueta puede partirse en dos líneas en vez de salirse de la tarjeta. */
+  --pc-badge-ws: normal;
 }
 
-/* Etiquetas de canal de la tarjeta ("A domicilio" / "Retiro en tienda"): legibles y con aire al borde; en pantallas
-   bajas (hasta 700 px de alto) se compactan para que la rejilla 3×3 siga entrando sin barra interna. */
+/* Etiquetas de canal de la tarjeta ("A domicilio" / "Retiro en tienda"): legibles y con aire al borde. */
 .pc-badge {
-  padding: 2px 6px;
-  font-size: clamp(9px, 1.85cqh, 10.5px);
+  padding: var(--pc-badge-pad, 2px 6px);
+  font-size: var(--pc-badge-font, clamp(9px, 1.85cqh, 10.5px));
+  white-space: var(--pc-badge-ws, nowrap);
+  text-align: center;
+  max-width: 100%;
 }
 
 .pc-badges {
-  margin-bottom: 2px;
-}
-
-@media (max-height: 700px) {
-  .pc-badge {
-    padding: 1px 5px;
-    font-size: 9px;
-  }
-
-  .pc-badges {
-    margin-bottom: 0;
-  }
+  margin-bottom: var(--pc-badge-mb, 2px);
 }
