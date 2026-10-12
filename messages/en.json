@@ -352,6 +352,10 @@
     "addToCartCta": "Add to cart",
     "addToDeliveryCta": "Add to delivery",
     "addToPickupCta": "Add to store pickup",
+    "chooseOptionsAria": "Choose size and channel for {name}",
+    "chooseOptionsCta": "Choose size and channel",
+    "stockKnownDelivery": "{count, plural, =0 {Out of stock for delivery} other {Available for delivery: #}}",
+    "pickupUnitUnavailable": "This size is not available for store pickup.",
     "addedConfirmation": "Added!",
     "quickAddAria": "Add {name} to cart",
     "increaseAria": "Increase quantity of {name}",
@@ -447,7 +451,9 @@
       "summaryPickup": "Pickup",
       "summaryPickupStore": "Store",
       "noAddressForDelivery": "Add a delivery address in your profile to see prices and totals for what goes to your door.",
-      "pickupOnlyNote": "No delivery: no address or date needed."
+      "pickupOnlyNote": "No delivery: no address or date needed.",
+      "onlyAvailable": "{max, plural, =0 {No stock available} one {Only # available} other {Only # available}}",
+      "linePickupNotAvailable": "Not available for store pickup"
     },
     "checkout": {
       "sectionAria": "Minimum order and delivery date",

@@ -18,6 +18,9 @@ export interface CatalogUnit {
   baseUnitId: string;
   available: number;
   isDefault: boolean;
+  // ¿Se puede retirar en tienda esta presentación? (con el precio de cmer, todas las del producto si tiene retiro;
+  // la existencia depende de la tienda y la valida el servidor al armar el pedido). false si el servidor no lo dice.
+  pickupAvailable: boolean;
 }
 
 // Precio de catálogo de un producto: SIN IVA, con la unidad de venta del dato (la del listado). Solo
@@ -164,6 +167,7 @@ function parseUnits(raw: unknown): CatalogUnit[] | null | false {
       baseUnitId: typeof u.baseUnitId === "string" ? u.baseUnitId : "",
       available: u.available,
       isDefault: u.isDefault === true,
+      pickupAvailable: (entry as { pickupAvailable?: unknown }).pickupAvailable === true,
     });
   }
   return units;
@@ -185,6 +189,22 @@ function parsePickup(raw: unknown): PickupPrice | null {
         .map((s) => ({ siteId: s.siteId, unitPrice: s.unitPrice, tax: s.tax }))
     : [];
   return { unitPrice: p.unitPrice, tax: p.tax, unit: p.unit, varies: p.varies === true && bySite.length > 1, bySite };
+}
+
+// ¿El precio de retiro es el MISMO que el de domicilio (mismo total con IVA y misma unidad)? Con el precio de cmer
+// (Pickup:PriceSource = cmer) siempre lo es: la tarjeta y el modal muestran entonces un solo precio por presentación,
+// con las etiquetas de canal. Si el origen del precio es fmcm y difiere, se siguen mostrando los dos.
+export function samePrice(
+  delivery: { kind: string; total?: number; unit?: string },
+  pickup: { kind: string; total?: number; unit?: string; varies?: boolean }
+): boolean {
+  return (
+    delivery.kind === "price" &&
+    pickup.kind === "price" &&
+    pickup.varies !== true &&
+    delivery.total === pickup.total &&
+    (delivery.unit ?? "").trim().toUpperCase() === (pickup.unit ?? "").trim().toUpperCase()
+  );
 }
 
 // Valida la respuesta de /api/catalog/prices; null si no tiene la forma esperada.

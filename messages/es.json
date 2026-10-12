@@ -352,6 +352,10 @@
     "addToCartCta": "Agregar al carrito",
     "addToDeliveryCta": "Agregar a domicilio",
     "addToPickupCta": "Agregar a retiro en tienda",
+    "chooseOptionsAria": "Elegir presentación y canal de {name}",
+    "chooseOptionsCta": "Elegí presentación y canal",
+    "stockKnownDelivery": "{count, plural, =0 {Sin existencia a domicilio} other {Disponibles a domicilio: #}}",
+    "pickupUnitUnavailable": "Esta presentación no está disponible para retiro en tienda.",
     "addedConfirmation": "¡Agregado!",
     "quickAddAria": "Agregar {name} al carrito",
     "increaseAria": "Aumentar cantidad de {name}",
@@ -447,7 +451,9 @@
       "summaryPickup": "Retiro",
       "summaryPickupStore": "Tienda",
       "noAddressForDelivery": "Agregá una dirección de entrega en tu perfil para ver precios y totales de lo que va a domicilio.",
-      "pickupOnlyNote": "Sin envío: no hace falta dirección ni fecha."
+      "pickupOnlyNote": "Sin envío: no hace falta dirección ni fecha.",
+      "onlyAvailable": "{max, plural, =0 {No hay existencia disponible} one {Solo hay # disponible} other {Solo hay # disponibles}}",
+      "linePickupNotAvailable": "No se retira en tienda"
     },
     "checkout": {
       "sectionAria": "Pedido mínimo y fecha de entrega",

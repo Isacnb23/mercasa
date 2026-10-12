@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, Minus, Plus, ShoppingCart, Store, X, type LucideIcon } from "lucide-react";
+import { ImageOff, Minus, Plus, X, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
@@ -9,12 +9,14 @@ import type { CartChannel } from "@/lib/cart-types";
 import ProductImage from "./ProductImage";
 import PriceTag from "./PriceTag";
 import PresentationPanel, { type PanelLabels } from "./PresentationPanel";
-import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
+import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
 import { formatColones } from "@/lib/checkout-format";
 import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { canAddToCart } from "@/lib/catalog-channel";
+import { channelButtonState } from "@/lib/add-rules";
+import { AddNote, ChannelButtons } from "./AddToCartButtons";
 import { ChannelAvailability } from "./ChannelBadges";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
@@ -83,10 +85,12 @@ export default function ProductDetailModal({
     closeButtonRef.current?.focus();
   }, []);
 
+  // Cada botón (AddToCartButtons) se habilita solo si la presentación elegida está disponible en ese canal.
+
   const handleAddToCart = (channel: CartChannel) => {
-    if (!canAddToCart(product, channel)) return;
+    if (!channelButtonState(product, channel, selected).enabled) return;
     // La presentación por defecto no se guarda: así una misma presentación nunca queda en dos líneas.
-    const unit = channel === "delivery" && selected && !selected.isDefault ? selected.unitId : undefined;
+    const unit = selected && !selected.isDefault ? selected.unitId : undefined;
     addItem(product, quantity, unit, channel);
     setJustAdded(channel);
     setQuantity(1);
@@ -200,13 +204,19 @@ export default function ProductDetailModal({
               <PriceTag view={price} size="detail" />
             ) : null}
 
-            <ChannelAvailability availability={product.availability} deliveryPrice={price} pickupPrice={pickupPrice} />
+            <ChannelAvailability
+              availability={product.availability}
+              deliveryPrice={price}
+              // Con el precio de cmer el de retiro es el mismo: no se repite como si fuera otro.
+              pickupPrice={samePrice(price, pickupPrice) ? { kind: "hidden" } : pickupPrice}
+            />
           </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
               — carrito de pedido sin precios, no e-commerce; el checkout
               real pasa por WhatsApp desde el drawer del carrito. Barra fija
               al pie del diálogo: SIEMPRE visible. La cantidad muestra la unidad elegida ("2 Cajas"). */}
+          <AddNote product={product} selected={selected} />
           {!deliverable && !pickupable ? null : (
           <div className="flex shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
             <div className="flex items-center gap-1.5">
@@ -237,33 +247,7 @@ export default function ProductDetailModal({
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
               </button>
             </div>
-            <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-              {deliverable && (
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("delivery")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-corp-blue px-4 py-2.5 text-[14.5px] font-semibold text-white outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                >
-                  <ShoppingCart className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  {justAdded === "delivery" ? tCart("addedConfirmation") : pickupable ? tCart("addToDeliveryCta") : tCart("addToCartCta")}
-                </button>
-              )}
-              {pickupable && (
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("pickup")}
-                  className={
-                    deliverable
-                      ? "flex flex-1 items-center justify-center gap-2 rounded-full border bg-white px-4 py-2.5 text-[14.5px] font-semibold outline-none transition hover:bg-[#FFF3CF] focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                      : "flex flex-1 items-center justify-center gap-2 rounded-full bg-corp-blue px-4 py-2.5 text-[14.5px] font-semibold text-white outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                  }
-                  style={deliverable ? { borderColor: "#EBCB6B", color: "#7A5300" } : undefined}
-                >
-                  <Store className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  {justAdded === "pickup" ? tCart("addedConfirmation") : tCart("addToPickupCta")}
-                </button>
-              )}
-            </div>
+            <ChannelButtons product={product} selected={selected} justAdded={justAdded} onAdd={handleAddToCart} />
           </div>
           )}
         </div>

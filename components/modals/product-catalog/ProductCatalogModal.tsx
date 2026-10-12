@@ -26,7 +26,9 @@ import { formatProductCount } from "@/lib/utils";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
-import type { PickupPriceView, PriceView } from "@/lib/catalog-prices";
+import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
+import { needsUnitsForPlus, plusAction } from "@/lib/add-rules";
+import { fetchItemUnits } from "@/lib/fetch-units";
 import { site } from "@/lib/data";
 import PriceTag, { PickupPriceTag } from "./PriceTag";
 import { ChannelBadges, ChannelFilterBar } from "./ChannelBadges";
@@ -2296,6 +2298,9 @@ function ProductCard({
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
   const { addItem } = useCart();
+  const { user } = useAuth();
+  // Mientras se averigua cuántas presentaciones tiene el producto al tocar el "+" (solo con sesión y un solo canal).
+  const [checkingUnits, setCheckingUnits] = useState(false);
   // Feedback al agregar desde la grilla (ver catalogo-feedback-agregar-
   // producto.md): antes el producto se agregaba en silencio, sin ninguna
   // confirmación visual acá (a diferencia del detalle, que ya mostraba
@@ -2351,14 +2356,41 @@ function ProductCard({
       {canAddToCart(product) && (
       <button
         type="button"
-        onClick={(e) => {
+        disabled={checkingUnits}
+        aria-busy={checkingUnits}
+        onClick={async (e) => {
           e.stopPropagation();
-          addItem(product, 1);
+          // Regla del "+": un solo canal y una sola presentación -> agrega directo; varias presentaciones o los dos
+          // canales -> abre el detalle para elegir (no agrega nada sin preguntar). Con un solo canal y sesión se
+          // consulta cuántas presentaciones tiene; sin saberlo (sin sesión o si falla) se agrega la por defecto.
+          let unitCount: number | null = null;
+          if (user && needsUnitsForPlus(product)) {
+            setCheckingUnits(true);
+            const units = await fetchItemUnits(product.id);
+            setCheckingUnits(false);
+            unitCount = units ? units.length : null;
+          }
+          const action = plusAction(product, unitCount);
+          if (action === "open-detail") {
+            onClick();
+            return;
+          }
+          addItem(product, 1, undefined, action === "add-pickup" ? "pickup" : "delivery");
           setJustAdded(true);
           setTimeout(() => setJustAdded(false), 1400);
         }}
-        aria-label={tCart("quickAddAria", { name: product.name })}
-        title={justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}
+        aria-label={
+          hasDelivery(product) && hasPickup(product)
+            ? tCart("chooseOptionsAria", { name: product.name })
+            : tCart("quickAddAria", { name: product.name })
+        }
+        title={
+          justAdded
+            ? tCart("addedConfirmation")
+            : hasDelivery(product) && hasPickup(product)
+              ? tCart("chooseOptionsCta")
+              : tCart("addToCartCta")
+        }
         className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all duration-300 hover:opacity-85"
         style={{ background: justAdded ? INK : ACCENT, transform: justAdded ? "scale(1.18)" : "scale(1)" }}
       >
@@ -2413,13 +2445,17 @@ function ProductCard({
       {hasDelivery(product) ? (
         <>
           <PriceTag view={price} />
-          {hasPickup(product) && <PickupPriceTag view={pickupPrice} role="secondary" />}
+          {/* Con el precio de cmer el de retiro es el mismo: un solo precio por presentación y las dos etiquetas. */}
+          {hasPickup(product) && !samePrice(price, pickupPrice) && <PickupPriceTag view={pickupPrice} role="secondary" />}
         </>
       ) : (
         <PickupPriceTag view={pickupPrice} role="primary" />
       )}
       <span className="mt-auto" />
-      <ChannelBadges product={product} omitPickup={hasDelivery(product) && hasPickup(product) && pickupPrice.kind === "price"} />
+      <ChannelBadges
+        product={product}
+        omitPickup={hasDelivery(product) && hasPickup(product) && pickupPrice.kind === "price" && !samePrice(price, pickupPrice)}
+      />
     </div>
   );
 }

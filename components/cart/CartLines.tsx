@@ -8,6 +8,7 @@ import { cartLineKey } from "@/lib/cart-logic";
 import { unitLabel } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { groupFor, lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
+import { canIncrease, clampToMax, shouldWarnMax } from "@/lib/add-rules";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, MUTED, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import ProductImage from "@/components/modals/product-catalog/ProductImage";
@@ -38,9 +39,13 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
   const errorsByItem = preview ? lineErrorsByItem(preview, channel) : new Map<string, string[]>();
   // Cada línea del carrito (ítem + presentación) con su línea validada por el servidor, en SU grupo.
   const linesByKey = matchPreviewLines(items, group?.lines ?? []);
-  // Presentaciones vendibles de los ítems de domicilio (solo con sesión y dirección): permiten cambiarlas. Las de
-  // retiro (fmcm) todavía no se ofrecen para cambiar: se usa la presentación por defecto o la guardada.
-  const { unitsFor } = useCatalogUnits(expectPrices && channel === "delivery" ? items.map((i) => i.id) : []);
+  // Presentaciones vendibles de los ítems (solo con sesión): permiten cambiarlas. En el retiro solo las que el servidor
+  // marca como retirables (con el precio de cmer, todas las del producto).
+  const { unitsFor: allUnitsFor } = useCatalogUnits(expectPrices ? items.map((i) => i.id) : []);
+  const unitsFor = (id: string) => {
+    const all = allUnitsFor(id);
+    return channel === "pickup" ? (all?.filter((u) => u.pickupAvailable) ?? null) : all;
+  };
 
   const errorLabel = (code: string): string | null => {
     switch (code) {
@@ -54,6 +59,10 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
         return tOrder("lineUnitNotAvailable");
       case "price_not_available":
         return tOrder("linePriceNotAvailable");
+      case "insufficient_stock":
+        return tOrder("lineUnavailable");
+      case "pickup_not_available":
+        return tOrder("linePickupNotAvailable");
       default:
         return null;
     }
@@ -64,7 +73,7 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
       {items.map((item) => {
         const lineKey = cartLineKey(item.id, item.unitId, item.channel);
         const line = linesByKey.get(`${item.id.trim().toUpperCase()}|${(item.unitId ?? "").trim().toUpperCase()}`);
-        const units = channel === "delivery" ? unitsFor(item.id) : undefined;
+        const units = unitsFor(item.id);
         const defaultUnit = units?.find((u) => u.isDefault);
         const currentUnit = item.unitId ?? defaultUnit?.unitId ?? line?.unitId ?? "";
         const unitName = currentUnit ? unitLabel(currentUnit, locale) : "";
@@ -73,9 +82,11 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
         const codes = errorsByItem.get(item.id.toLowerCase()) ?? [];
         const messages = codes.map(errorLabel).filter((m): m is string => !!m);
         // Sin existencia suficiente: cuánto SÍ se puede pedir de esta presentación (lo calcula el servidor).
-        if (codes.includes("item_unavailable") && line?.maxAvailable != null) {
+        if ((codes.includes("item_unavailable") || codes.includes("insufficient_stock")) && line?.maxAvailable != null) {
           messages.push(tOrder("lineMax", { max: line.maxAvailable }));
         }
+        // Tope de cantidad: no pasa de lo que el servidor dice que hay (maxAvailable de esta presentación).
+        const max = line?.maxAvailable ?? null;
         const name = line?.name || item.name;
 
         return (
@@ -175,14 +186,21 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
                 </span>
                 <button
                   type="button"
-                  onClick={() => onQuantity(item, item.quantity + 1)}
+                  onClick={() => onQuantity(item, clampToMax(item.quantity + 1, max))}
+                  disabled={!canIncrease(item.quantity, max)}
                   aria-label={t("increaseAria", { name })}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full motion-safe:transition motion-safe:duration-150 hover:bg-white ${FOCUS_RING}`}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full motion-safe:transition motion-safe:duration-150 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${FOCUS_RING}`}
                   style={{ color: INK }}
                 >
                   <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
                 </button>
               </div>
+
+              {max !== null && shouldWarnMax(item.quantity, max) && (
+                <p role="status" className="min-w-0 flex-1 text-[12px] font-medium leading-snug" style={{ color: "#8A5A00" }}>
+                  {tOrder("onlyAvailable", { max })}
+                </p>
+              )}
 
               {expectPrices && priced && line && (
                 <p
