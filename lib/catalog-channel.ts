@@ -14,9 +14,18 @@ export const hasDelivery = (p: Pick<ProductSummary, "availability">): boolean =>
 export const hasPickup = (p: Pick<ProductSummary, "availability">): boolean => p.availability?.pickup.available ?? false;
 export const isPickupOnly = (p: Pick<ProductSummary, "availability">): boolean => !hasDelivery(p) && hasPickup(p);
 
-// Solo lo que se consigue A domicilio (cmer) se puede pedir en la web. Un producto solo de retiro NUNCA llega
-// al carrito ni a Order/Validate (ahí fmcm no existe y daría item_not_found).
-export const canAddToCart = hasDelivery;
+// Fase 2: se puede agregar al carrito lo que se consigue en el canal pedido (sin canal: en cualquiera de los dos).
+// Un producto solo de retiro entra al grupo de retiro; uno solo de domicilio, al de domicilio.
+export function canAddToCart(p: Pick<ProductSummary, "availability">, channel?: "delivery" | "pickup"): boolean {
+  if (channel === "delivery") return hasDelivery(p);
+  if (channel === "pickup") return hasPickup(p);
+  return hasDelivery(p) || hasPickup(p);
+}
+
+// Canal al que agrega el "+" de la tarjeta: domicilio si el producto lo tiene (también cuando está en ambos); si
+// solo es de retiro, retiro. En el detalle del producto, "¿Cómo lo querés?" ofrece un botón por canal.
+export const defaultAddChannel = (p: Pick<ProductSummary, "availability">): "delivery" | "pickup" =>
+  hasDelivery(p) ? "delivery" : "pickup";
 
 export function matchesChannel(p: Pick<ProductSummary, "availability">, channel: CatalogChannel): boolean {
   if (channel === "delivery") return hasDelivery(p);

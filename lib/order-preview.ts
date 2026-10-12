@@ -1,13 +1,14 @@
 "use client";
 
 // Vista previa del pedido calculada por el SERVIDOR (POST /api/checkout/order/validate). Del navegador
-// salen solo itemId y cantidad (+ dirección, fecha y método de pago); precios, descuentos, impuestos,
+// salen solo itemId, presentación y cantidad (+ dirección, fecha, tienda de retiro y método de pago); precios, descuentos, impuestos,
 // totales y el mínimo vuelven de la respuesta y nunca se calculan acá. Nada se guarda en localStorage ni
 // cookies: todo vive en memoria del componente.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-context";
 import { buildOrderRequest, orderRequestKey, parseOrderPreview } from "./order-logic";
 import { isServiceUnavailableStatus } from "./login-errors";
+import type { CartChannel } from "./cart-types";
 import type { OrderPreview, PaymentMethod } from "./order-types";
 
 export type OrderPreviewStatus = "idle" | "loading" | "ready" | "error";
@@ -18,10 +19,12 @@ export type OrderPreviewError = "session" | "unavailable" | "invalid" | "unknown
 export const ORDER_PREVIEW_DEBOUNCE_MS = 400;
 
 interface Params {
-  cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string }>;
+  cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string; channel?: CartChannel }>;
   addressId: number | null;
   deliveryDate: string | null;
   paymentMethod: PaymentMethod | null;
+  // Tienda de retiro (la elegida o la propuesta); null = sin grupo de retiro.
+  pickupSiteId: string | null;
 }
 
 interface State {
@@ -50,17 +53,19 @@ function errorFor(status: number): OrderPreviewError {
   return "unknown";
 }
 
-export function useOrderPreview({ cartItems, addressId, deliveryDate, paymentMethod }: Params): OrderPreviewResult {
+export function useOrderPreview({ cartItems, addressId, deliveryDate, paymentMethod, pickupSiteId }: Params): OrderPreviewResult {
   const { user } = useAuth();
   const accountNum = user?.accountNum ?? null;
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<State>({ accountNum: null, requestKey: null, status: "error", preview: null, error: null });
 
   // Cuerpo del pedido como texto: su valor (no la identidad del arreglo) decide si hay que volver a pedir.
+  // Sin sesión, sin líneas o sin ningún grupo armable (ej. solo domicilio y sin dirección) no se pide nada.
   const body = useMemo(() => {
-    if (!accountNum || addressId === null || cartItems.length === 0) return null;
-    return orderRequestKey(buildOrderRequest(cartItems, addressId, deliveryDate, paymentMethod));
-  }, [accountNum, addressId, cartItems, deliveryDate, paymentMethod]);
+    if (!accountNum || cartItems.length === 0) return null;
+    const request = buildOrderRequest(cartItems, { addressId, deliveryDate, paymentMethod, pickupSiteId });
+    return request.delivery || request.pickup ? orderRequestKey(request) : null;
+  }, [accountNum, addressId, cartItems, deliveryDate, paymentMethod, pickupSiteId]);
 
   const requestKey = body && accountNum ? `${accountNum}|${body}#${attempt}` : null;
 

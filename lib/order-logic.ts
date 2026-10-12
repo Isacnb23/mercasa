@@ -1,12 +1,17 @@
 // Lógica pura del pedido (sin React ni Next): armado del cuerpo, sanitización, lectura de la respuesta
 // del servidor y reglas de avance entre pasos. La usan la ruta de servidor, el hook y los componentes, y
 // se prueba con el test runner de Node (lib/__tests__).
+import type { CartChannel } from "./cart-types";
 import type {
   CheckoutStep,
   OrderLineInput,
   OrderPreview,
   OrderPreviewError,
+  OrderPreviewGroup,
   OrderPreviewLine,
+  OrderPreviewPickupGroup,
+  OrderPreviewSite,
+  OrderPreviewTotals,
   OrderRequest,
   PaymentMethod,
 } from "./order-types";
@@ -14,26 +19,40 @@ import type {
 export const MAX_ORDER_LINES = 100;
 export const MAX_ITEM_ID_LENGTH = 50;
 export const MAX_UNIT_ID_LENGTH = 20;
+export const MAX_SITE_ID_LENGTH = 16;
+// Dos grupos de hasta 100 líneas.
 export const MAX_ORDER_BODY_BYTES = 64 * 1024;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Arma el cuerpo del pedido SOLO con itemId, presentación elegida (si la hay) y cantidad (+ selecciones). Es el único camino por el que el
-// navegador le habla a la ruta de validación: aunque un ítem del carrito tuviera otros campos, no salen.
-export function buildOrderRequest(
-  cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string }>,
-  addressId: number,
-  deliveryDate: string | null,
-  paymentMethod: PaymentMethod | null
-): OrderRequest {
+type CartLineLike = { id: string; quantity: number; unitId?: string; channel?: CartChannel };
+
+const toLine = (item: CartLineLike): OrderLineInput =>
+  item.unitId ? { itemId: item.id, unitId: item.unitId, quantity: item.quantity } : { itemId: item.id, quantity: item.quantity };
+
+export interface OrderSelection {
+  // Dirección activa; sin ella no se arma el grupo de domicilio.
+  addressId: number | null;
+  deliveryDate: string | null;
+  paymentMethod: PaymentMethod | null;
+  // Tienda de retiro; sin ella no se arma el grupo de retiro.
+  pickupSiteId: string | null;
+}
+
+// Arma el cuerpo del pedido SOLO con itemId, presentación elegida (si la hay) y cantidad (+ selecciones). Cada
+// línea va al grupo de su canal (sin canal = domicilio). Es el único camino por el que el navegador le habla a la
+// ruta de validación: aunque un ítem del carrito tuviera otros campos, no salen.
+export function buildOrderRequest(cartItems: ReadonlyArray<CartLineLike>, selection: OrderSelection): OrderRequest {
+  const deliveryLines = cartItems.filter((i) => (i.channel ?? "delivery") === "delivery").map(toLine);
+  const pickupLines = cartItems.filter((i) => i.channel === "pickup").map(toLine);
+
   return {
-    addressId,
-    deliveryDate,
-    paymentMethod,
-    items: cartItems.map(
-      (item): OrderLineInput =>
-        item.unitId ? { itemId: item.id, unitId: item.unitId, quantity: item.quantity } : { itemId: item.id, quantity: item.quantity }
-    ),
+    paymentMethod: selection.paymentMethod,
+    delivery:
+      deliveryLines.length > 0 && selection.addressId !== null
+        ? { addressId: selection.addressId, deliveryDate: selection.deliveryDate, lines: deliveryLines }
+        : null,
+    pickup: pickupLines.length > 0 && selection.pickupSiteId ? { siteId: selection.pickupSiteId, lines: pickupLines } : null,
   };
 }
 
@@ -41,25 +60,9 @@ export function orderRequestKey(request: OrderRequest): string {
   return JSON.stringify(request);
 }
 
-// Valida y limpia lo que llega del navegador a la ruta de servidor. Descarta cualquier campo que no sea
-// de la lista (precios, totales, descuentos, mínimo...) y devuelve null si el cuerpo es inválido.
-export function sanitizeOrderRequest(raw: unknown): OrderRequest | null {
-  if (typeof raw !== "object" || raw === null) return null;
-  const body = raw as Record<string, unknown>;
-
-  const addressId = body.addressId;
-  if (typeof addressId !== "number" || !Number.isSafeInteger(addressId) || addressId <= 0) return null;
-
-  const deliveryDate = body.deliveryDate ?? null;
-  if (deliveryDate !== null && (typeof deliveryDate !== "string" || !ISO_DATE.test(deliveryDate))) return null;
-
-  const paymentMethod = body.paymentMethod ?? null;
-  if (paymentMethod !== null && (typeof paymentMethod !== "string" || paymentMethod.length > 20)) return null;
-
-  const items = body.items;
+function cleanLines(items: unknown): OrderLineInput[] | null {
   if (!Array.isArray(items) || items.length < 1 || items.length > MAX_ORDER_LINES) return null;
-
-  const cleanItems: OrderLineInput[] = [];
+  const clean: OrderLineInput[] = [];
   for (const item of items) {
     if (typeof item !== "object" || item === null) return null;
     const { itemId, unitId, quantity } = item as Record<string, unknown>;
@@ -67,35 +70,64 @@ export function sanitizeOrderRequest(raw: unknown): OrderRequest | null {
     if (typeof quantity !== "number" || !Number.isSafeInteger(quantity)) return null;
     if (unitId !== undefined && unitId !== null && (typeof unitId !== "string" || unitId.length > MAX_UNIT_ID_LENGTH)) return null;
     const unit = typeof unitId === "string" && unitId.trim() !== "" ? unitId.trim() : null;
-    cleanItems.push(unit ? { itemId, unitId: unit, quantity } : { itemId, quantity });
+    clean.push(unit ? { itemId, unitId: unit, quantity } : { itemId, quantity });
+  }
+  return clean;
+}
+
+// Valida y limpia lo que llega del navegador a la ruta de servidor. Descarta cualquier campo que no sea
+// de la lista (precios, totales, descuentos, mínimo...) y devuelve null si el cuerpo es inválido. Hace falta al
+// menos un grupo y cada grupo presente necesita entre 1 y 100 líneas válidas.
+export function sanitizeOrderRequest(raw: unknown): OrderRequest | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const body = raw as Record<string, unknown>;
+
+  const paymentMethod = body.paymentMethod ?? null;
+  if (paymentMethod !== null && (typeof paymentMethod !== "string" || paymentMethod.length > 20)) return null;
+
+  let delivery: OrderRequest["delivery"] = null;
+  if (body.delivery !== undefined && body.delivery !== null) {
+    if (typeof body.delivery !== "object") return null;
+    const g = body.delivery as Record<string, unknown>;
+    const addressId = g.addressId;
+    if (typeof addressId !== "number" || !Number.isSafeInteger(addressId) || addressId <= 0) return null;
+    const deliveryDate = g.deliveryDate ?? null;
+    if (deliveryDate !== null && (typeof deliveryDate !== "string" || !ISO_DATE.test(deliveryDate))) return null;
+    const lines = cleanLines(g.lines);
+    if (!lines) return null;
+    delivery = { addressId, deliveryDate: deliveryDate as string | null, lines };
   }
 
-  return {
-    addressId,
-    deliveryDate: deliveryDate as string | null,
-    paymentMethod: paymentMethod as PaymentMethod | null,
-    items: cleanItems,
-  };
+  let pickup: OrderRequest["pickup"] = null;
+  if (body.pickup !== undefined && body.pickup !== null) {
+    if (typeof body.pickup !== "object") return null;
+    const g = body.pickup as Record<string, unknown>;
+    const siteId = g.siteId;
+    if (typeof siteId !== "string" || siteId.trim() === "" || siteId.length > MAX_SITE_ID_LENGTH) return null;
+    const lines = cleanLines(g.lines);
+    if (!lines) return null;
+    pickup = { siteId: siteId.trim(), lines };
+  }
+
+  if (!delivery && !pickup) return null;
+  return { paymentMethod: paymentMethod as PaymentMethod | null, delivery, pickup };
 }
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-// Lee la respuesta del servidor; null si no tiene la forma esperada (nunca se inventan valores).
-export function parseOrderPreview(raw: unknown): OrderPreview | null {
-  if (typeof raw !== "object" || raw === null) return null;
-  const r = raw as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+type Raw = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  if (!Array.isArray(r.lines) || !Array.isArray(r.errors)) return null;
-  const totals = r.totals;
+function parseTotals(totals: unknown): OrderPreviewTotals | null {
   if (typeof totals !== "object" || totals === null) return null;
-  if (![totals.subtotal, totals.discount, totals.tax, totals.total].every(isNumber)) return null;
-  if (!isNumber(r.minimumAmount) || !isNumber(r.shortfall)) return null;
-  if (typeof r.canOrder !== "boolean" || typeof r.belowMinimum !== "boolean") return null;
-  const delivery = r.delivery;
-  if (typeof delivery !== "object" || delivery === null) return null;
+  const t = totals as Raw;
+  if (![t.subtotal, t.discount, t.tax, t.total].every(isNumber)) return null;
+  return { subtotal: t.subtotal, discount: t.discount, tax: t.tax, total: t.total };
+}
 
-  const lines = [];
-  for (const line of r.lines) {
+function parseLines(rawLines: unknown): OrderPreviewLine[] | null {
+  if (!Array.isArray(rawLines)) return null;
+  const lines: OrderPreviewLine[] = [];
+  for (const line of rawLines as Raw[]) {
     if (typeof line !== "object" || line === null) return null;
     if (typeof line.itemId !== "string" || !isNumber(line.quantity)) return null;
     if (![line.unitPrice, line.discount, line.tax, line.lineTotal].every(isNumber)) return null;
@@ -110,11 +142,16 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
       tax: line.tax,
       lineTotal: line.lineTotal,
       available: line.available === true,
+      maxAvailable: isNumber(line.maxAvailable) ? line.maxAvailable : null,
     });
   }
+  return lines;
+}
 
+function parseErrors(rawErrors: unknown): OrderPreviewError[] | null {
+  if (!Array.isArray(rawErrors)) return null;
   const errors: OrderPreviewError[] = [];
-  for (const error of r.errors) {
+  for (const error of rawErrors as Raw[]) {
     if (typeof error !== "object" || error === null || typeof error.code !== "string") return null;
     errors.push({
       code: error.code,
@@ -122,10 +159,88 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
       message: typeof error.message === "string" ? error.message : "",
     });
   }
+  return errors;
+}
+
+function parseGroup(raw: unknown): OrderPreviewGroup | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const g = raw as Raw;
+  const lines = parseLines(g.lines);
+  const errors = parseErrors(g.errors);
+  const totals = parseTotals(g.totals);
+  if (!lines || !errors || !totals) return null;
+  if (typeof g.canOrder !== "boolean" || typeof g.belowMinimum !== "boolean" || !isNumber(g.shortfall)) return null;
+  if (g.minimumAmount !== null && g.minimumAmount !== undefined && !isNumber(g.minimumAmount)) return null;
+  return {
+    lines,
+    totals,
+    minimumAmount: isNumber(g.minimumAmount) ? g.minimumAmount : null,
+    belowMinimum: g.belowMinimum,
+    shortfall: g.shortfall,
+    canOrder: g.canOrder,
+    errors,
+  };
+}
+
+function parsePickupGroup(raw: unknown): OrderPreviewPickupGroup | null {
+  const base = parseGroup(raw);
+  if (!base) return null;
+  const g = raw as Raw;
+  const sites: OrderPreviewSite[] = [];
+  for (const s of Array.isArray(g.sites) ? (g.sites as Raw[]) : []) {
+    if (typeof s !== "object" || s === null || typeof s.siteId !== "string") return null;
+    const text = (v: unknown) => (typeof v === "string" ? v : "");
+    sites.push({
+      siteId: s.siteId,
+      unavailableItems: isNumber(s.unavailableItems) ? s.unavailableItems : 0,
+      name: text(s.name),
+      city: text(s.city),
+      address: text(s.address),
+      hours: text(s.hours),
+      mapUrl: text(s.mapUrl),
+    });
+  }
+  return { ...base, siteId: typeof g.siteId === "string" ? g.siteId : "", sites };
+}
+
+// Lee la respuesta del servidor; null si no tiene la forma esperada (nunca se inventan valores).
+export function parseOrderPreview(raw: unknown): OrderPreview | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Raw;
+
+  const lines = parseLines(r.lines);
+  const errors = parseErrors(r.errors);
+  const totals = parseTotals(r.totals);
+  if (!lines || !errors || !totals) return null;
+  if (!isNumber(r.minimumAmount) || !isNumber(r.shortfall)) return null;
+  if (typeof r.canOrder !== "boolean" || typeof r.belowMinimum !== "boolean") return null;
+  const delivery = r.delivery;
+  if (typeof delivery !== "object" || delivery === null) return null;
+
+  const hasGroups = r.deliveryGroup != null || r.pickupGroup != null;
+  let deliveryGroup: OrderPreviewGroup | null = null;
+  let pickupGroup: OrderPreviewPickupGroup | null = null;
+  if (hasGroups) {
+    if (r.deliveryGroup != null && !(deliveryGroup = parseGroup(r.deliveryGroup))) return null;
+    if (r.pickupGroup != null && !(pickupGroup = parsePickupGroup(r.pickupGroup))) return null;
+  } else {
+    // Respuesta de la forma anterior (un solo grupo, domicilio): sus campos de arriba SON el grupo.
+    deliveryGroup = {
+      lines,
+      totals,
+      minimumAmount: r.minimumAmount,
+      belowMinimum: r.belowMinimum,
+      shortfall: r.shortfall,
+      canOrder: r.canOrder,
+      errors,
+    };
+  }
+
+  const grandTotals = parseTotals(r.grandTotals) ?? totals;
 
   return {
     lines,
-    totals: { subtotal: totals.subtotal, discount: totals.discount, tax: totals.tax, total: totals.total },
+    totals,
     freight: isNumber(r.freight) ? r.freight : null,
     freightPending: r.freightPending !== false,
     minimumAmount: r.minimumAmount,
@@ -138,12 +253,21 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
     },
     canOrder: r.canOrder,
     errors,
+    deliveryGroup,
+    pickupGroup,
+    grandTotals,
   };
+}
+
+// Grupo del canal (null si el pedido no lo trae).
+export function groupFor(preview: OrderPreview, channel: CartChannel): OrderPreviewGroup | null {
+  return channel === "pickup" ? preview.pickupGroup : preview.deliveryGroup;
 }
 
 // Une cada línea del carrito con su línea validada por el servidor. Las líneas con presentación explícita
 // buscan la suya por unidad; la que no tiene unidad (la por defecto) toma la línea del mismo ítem que
-// ninguna otra reclamó. La clave es la de cartLineKey (ítem|unidad, en mayúsculas).
+// ninguna otra reclamó. La clave es la de cartLineKey sin canal (ítem|unidad, en mayúsculas); se llama una vez por
+// grupo con las líneas del canal.
 export function matchPreviewLines(
   cartItems: ReadonlyArray<{ id: string; unitId?: string }>,
   lines: ReadonlyArray<OrderPreviewLine>
@@ -172,10 +296,10 @@ export function matchPreviewLines(
   return result;
 }
 
-// Códigos de error por línea (con itemId) agrupados por ítem.
-export function lineErrorsByItem(preview: OrderPreview): Map<string, string[]> {
+// Códigos de error por línea (con itemId) del grupo de ese canal, agrupados por ítem.
+export function lineErrorsByItem(preview: OrderPreview, channel: CartChannel = "delivery"): Map<string, string[]> {
   const map = new Map<string, string[]>();
-  for (const error of preview.errors) {
+  for (const error of groupFor(preview, channel)?.errors ?? []) {
     if (!error.itemId) continue;
     const key = error.itemId.toLowerCase();
     map.set(key, [...(map.get(key) ?? []), error.code]);
@@ -183,31 +307,56 @@ export function lineErrorsByItem(preview: OrderPreview): Map<string, string[]> {
   return map;
 }
 
+// ¿Algún grupo tiene errores por línea?
 export function hasLineErrors(preview: OrderPreview): boolean {
-  return preview.errors.some((e) => !!e.itemId);
+  return [preview.deliveryGroup, preview.pickupGroup].some((g) => g?.errors.some((e) => !!e.itemId));
 }
 
+// Error sin línea (price_list_missing, método de pago...) en el resumen de arriba o en cualquier grupo.
 export function hasError(preview: OrderPreview, code: string): boolean {
-  return preview.errors.some((e) => e.code === code);
+  return (
+    preview.errors.some((e) => e.code === code) ||
+    [preview.deliveryGroup, preview.pickupGroup].some((g) => g?.errors.some((e) => e.code === code))
+  );
+}
+
+export interface OrderGroupsPresent {
+  delivery: boolean;
+  pickup: boolean;
 }
 
 // ¿Se puede pasar al paso siguiente? Reglas del flujo:
-//   cart     -> sin errores por línea, con lista de precios y por encima del mínimo.
-//   delivery -> fecha elegida y válida (o zona por coordinar).
+//   cart     -> sin errores por línea, con lista de precios y por encima del mínimo de CADA grupo presente.
+//   delivery -> con grupo de domicilio: fecha elegida y válida (o zona por coordinar); con grupo de retiro: tienda
+//               elegida y con respuesta del servidor. Sin ese grupo no se pide nada de él.
 //   payment  -> método de pago elegido.
+//   summary  -> canOrder global.
+// `present` dice qué grupos tiene el carrito (por defecto solo domicilio, como antes de la fase 2).
 export function canAdvance(
   step: CheckoutStep,
   preview: OrderPreview | null,
-  selection: { deliveryDate: string | null; paymentMethod: PaymentMethod | null }
+  selection: { deliveryDate: string | null; paymentMethod: PaymentMethod | null },
+  present: OrderGroupsPresent = { delivery: true, pickup: false }
 ): boolean {
   if (!preview) return false;
   switch (step) {
-    case "cart":
-      return preview.lines.length > 0 && !hasLineErrors(preview) && !hasError(preview, "price_list_missing") && !preview.belowMinimum;
-    case "delivery":
-      return preview.delivery.requiresCoordination
-        ? selection.deliveryDate === null && preview.delivery.valid
-        : selection.deliveryDate !== null && preview.delivery.valid;
+    case "cart": {
+      const groups = [present.delivery ? preview.deliveryGroup : undefined, present.pickup ? preview.pickupGroup : undefined];
+      if (present.delivery && !preview.deliveryGroup) return false;
+      if (present.pickup && !preview.pickupGroup) return false;
+      const hasLines = groups.some((g) => g && g.lines.length > 0);
+      const belowMinimum = groups.some((g) => g?.belowMinimum);
+      return hasLines && !hasLineErrors(preview) && !hasError(preview, "price_list_missing") && !belowMinimum;
+    }
+    case "delivery": {
+      const deliveryOk = !present.delivery
+        ? true
+        : preview.delivery.requiresCoordination
+          ? selection.deliveryDate === null && preview.delivery.valid
+          : selection.deliveryDate !== null && preview.delivery.valid;
+      const pickupOk = !present.pickup ? true : !!preview.pickupGroup && preview.pickupGroup.siteId !== "";
+      return deliveryOk && pickupOk;
+    }
     case "payment":
       return selection.paymentMethod !== null;
     case "summary":

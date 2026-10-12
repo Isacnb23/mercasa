@@ -8,7 +8,8 @@ import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { unitLabel } from "@/lib/presentations";
 import type { OrderPreview, PaymentMethod } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
-import OrderSummary from "./OrderSummary";
+import OrderSummary, { GrandTotal } from "./OrderSummary";
+import type { OrderPreviewLine } from "@/lib/order-types";
 
 export type SubmitState =
   | { status: "idle" }
@@ -32,6 +33,7 @@ interface Props {
 // línea todavía no están habilitados) y el drawer ofrece enviar la cotización por WhatsApp.
 export default function ConfirmStep({ preview, stale, deliveryDate, paymentMethod, termsAccepted, onTermsChange, submit }: Props) {
   const t = useTranslations("Cart.order");
+  const tCatalog = useTranslations("Products.catalog");
   const locale = useLocale();
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +64,8 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
     );
   }
 
-  const money = (n: number) => formatColones(n, locale, 2);
+  const both = !!preview.deliveryGroup && !!preview.pickupGroup;
+  const pickupSite = preview.pickupGroup?.sites.find((x) => x.siteId === preview.pickupGroup?.siteId) ?? null;
   const dateLabel = deliveryDate ? formatDeliveryDate(deliveryDate, locale) : null;
   const orderingOff = submit.status === "error" && (submit.code === "ordering_disabled" || submit.code === "ordering_not_available");
 
@@ -90,37 +93,62 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </p>
       )}
 
-      <section aria-labelledby="summary-lines-title">
-        <h3 id="summary-lines-title" className="mb-3 font-display text-[15px] font-semibold" style={{ color: INK }}>
-          {t("summaryTitle")}
-        </h3>
-        <ul className="flex flex-col divide-y rounded-2xl border bg-white" style={{ borderColor: RULE }}>
-          {preview.lines.map((line) => (
-            <li key={`${line.itemId}|${line.unitId}`} className="flex items-start justify-between gap-3 px-4 py-3" style={{ borderColor: RULE }}>
-              <span className="min-w-0 flex-1 text-[13.5px] leading-snug" style={{ color: INK }}>
-                <span className="line-clamp-2 font-medium">{line.name}</span>
-                <span className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
-                  {t("summaryQty", { quantity: line.quantity })}
-                  {line.unitId ? ` · ${unitLabel(line.unitId, locale)}` : ""}
-                </span>
-              </span>
-              <span className="shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: INK }}>
-                {money(line.lineTotal)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {preview.deliveryGroup && (
+        <GroupBlock
+          title={both ? t("groupDeliveryTitle") : t("summaryTitle")}
+          id="summary-delivery"
+          lines={preview.deliveryGroup.lines}
+          locale={locale}
+        >
+          <dl className="flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3.5 text-[13.5px]" style={{ borderColor: RULE }}>
+            <div>
+              <dt className="text-[11px] font-bold uppercase" style={{ color: TEXT_MUTED, letterSpacing: "0.12em" }}>
+                {t("summaryDelivery")}
+              </dt>
+              <dd className="m-0 mt-1 font-semibold" style={{ color: INK }}>
+                {preview.delivery.requiresCoordination ? t("summaryCoordination") : (dateLabel ?? "—")}
+              </dd>
+            </div>
+          </dl>
+          <OrderSummary preview={preview} channel="delivery" stale={stale} showMinimum={false} />
+        </GroupBlock>
+      )}
+
+      {preview.pickupGroup && (
+        <GroupBlock
+          title={t("groupPickupTitle")}
+          id="summary-pickup"
+          lines={preview.pickupGroup.lines}
+          locale={locale}
+        >
+          {pickupSite && (
+            <dl className="flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3.5 text-[13.5px]" style={{ borderColor: RULE }}>
+              <div>
+                <dt className="text-[11px] font-bold uppercase" style={{ color: TEXT_MUTED, letterSpacing: "0.12em" }}>
+                  {t("summaryPickupStore")}
+                </dt>
+                <dd className="m-0 mt-1 font-semibold" style={{ color: INK }}>
+                  {pickupSite.name || pickupSite.siteId}
+                  {pickupSite.city ? ` · ${pickupSite.city}` : ""}
+                </dd>
+                {pickupSite.address && (
+                  <dd className="m-0 mt-0.5 text-[12.5px]" style={{ color: TEXT_MUTED }}>
+                    {pickupSite.address}
+                  </dd>
+                )}
+                {pickupSite.hours && (
+                  <dd className="m-0 mt-0.5 text-[12.5px]" style={{ color: TEXT_MUTED }}>
+                    {tCatalog("pickupStoreHours")}: {pickupSite.hours}
+                  </dd>
+                )}
+              </div>
+            </dl>
+          )}
+          <OrderSummary preview={preview} channel="pickup" stale={stale} showMinimum={false} />
+        </GroupBlock>
+      )}
 
       <dl className="flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3.5 text-[13.5px]" style={{ borderColor: RULE }}>
-        <div>
-          <dt className="text-[11px] font-bold uppercase" style={{ color: TEXT_MUTED, letterSpacing: "0.12em" }}>
-            {t("summaryDelivery")}
-          </dt>
-          <dd className="m-0 mt-1 font-semibold" style={{ color: INK }}>
-            {preview.delivery.requiresCoordination ? t("summaryCoordination") : (dateLabel ?? "—")}
-          </dd>
-        </div>
         <div>
           <dt className="text-[11px] font-bold uppercase" style={{ color: TEXT_MUTED, letterSpacing: "0.12em" }}>
             {t("summaryPayment")}
@@ -131,7 +159,14 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </div>
       </dl>
 
-      <OrderSummary preview={preview} stale={stale} showMinimum={false} />
+      {both && (
+        <>
+          <GrandTotal preview={preview} stale={stale} />
+          <p className="px-1 text-[12.5px] leading-snug" style={{ color: TEXT_MUTED }}>
+            {t("groupsSeparateNote")}
+          </p>
+        </>
+      )}
 
       <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-snug" style={{ color: INK }}>
         <input
@@ -153,5 +188,46 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </span>
       </label>
     </div>
+  );
+}
+
+// Un grupo del pedido (se confirma como un pedido aparte): título, líneas con su total y lo que el caller agrega.
+function GroupBlock({
+  title,
+  id,
+  lines,
+  locale,
+  children,
+}: {
+  title: string;
+  id: string;
+  lines: OrderPreviewLine[];
+  locale: string;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("Cart.order");
+  return (
+    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
+      <h3 id={`${id}-title`} className="font-display text-[15px] font-semibold" style={{ color: INK }}>
+        {title}
+      </h3>
+      <ul className="flex flex-col divide-y rounded-2xl border bg-white" style={{ borderColor: RULE }}>
+        {lines.map((line) => (
+          <li key={`${line.itemId}|${line.unitId}`} className="flex items-start justify-between gap-3 px-4 py-3" style={{ borderColor: RULE }}>
+            <span className="min-w-0 flex-1 text-[13.5px] leading-snug" style={{ color: INK }}>
+              <span className="line-clamp-2 font-medium">{line.name}</span>
+              <span className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
+                {t("summaryQty", { quantity: line.quantity })}
+                {line.unitId ? ` · ${unitLabel(line.unitId, locale)}` : ""}
+              </span>
+            </span>
+            <span className="shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: INK }}>
+              {formatColones(line.lineTotal, locale, 2)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {children}
+    </section>
   );
 }

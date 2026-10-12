@@ -3,28 +3,34 @@
 import { AlertCircle, Receipt } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { formatColones } from "@/lib/checkout-format";
-import { hasError } from "@/lib/order-logic";
+import type { CartChannel } from "@/lib/cart-types";
+import { groupFor, hasError } from "@/lib/order-logic";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 
 interface Props {
   preview: OrderPreview;
+  // Grupo que se resume (por defecto domicilio, como antes de la fase 2).
+  channel?: CartChannel;
   // Se está recalculando: los valores mostrados son los últimos del servidor (se atenúan).
   stale: boolean;
   // Con false no se muestra el avance hacia el mínimo (resumen de solo lectura).
   showMinimum?: boolean;
 }
 
-// Resumen del pedido con TODOS los números del servidor: subtotal, descuento, impuesto y total (estimado: los
-// descuentos y promociones se aplican al confirmar), el flete pendiente del AIF y el avance hacia el pedido
-// mínimo. Nada se calcula en el navegador, salvo la proporción de la barra de progreso (total / mínimo) que
-// es solo visual.
-export default function OrderSummary({ preview, stale, showMinimum = true }: Props) {
+// Resumen de UN grupo del pedido con TODOS los números del servidor: subtotal, descuento, impuesto y total
+// (estimado: los descuentos y promociones se aplican al confirmar), el flete pendiente del AIF (solo domicilio) y
+// el avance hacia el pedido mínimo (solo si el grupo tiene mínimo). Nada se calcula en el navegador, salvo la
+// proporción de la barra de progreso (total / mínimo) que es solo visual.
+export default function OrderSummary({ preview, channel = "delivery", stale, showMinimum = true }: Props) {
   const t = useTranslations("Cart.order");
   const tCheckout = useTranslations("Cart.checkout");
   const locale = useLocale();
   const money = (n: number) => formatColones(n, locale, 2);
-  const priceListMissing = hasError(preview, "price_list_missing");
+  const group = groupFor(preview, channel);
+  const priceListMissing = channel === "delivery" && hasError(preview, "price_list_missing");
+
+  if (!group) return null;
 
   if (priceListMissing) {
     return (
@@ -39,7 +45,8 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
     );
   }
 
-  const ratio = preview.minimumAmount > 0 ? Math.min(preview.totals.total / preview.minimumAmount, 1) : 1;
+  const minimum = group.minimumAmount;
+  const ratio = minimum !== null && minimum > 0 ? Math.min(group.totals.total / minimum, 1) : 1;
 
   return (
     <div className="flex flex-col gap-4" aria-busy={stale}>
@@ -52,13 +59,15 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
         </p>
 
         <dl className="mt-3 flex flex-col gap-1.5 text-[13.5px]" style={{ color: TEXT_MUTED }}>
-          <Row label={t("subtotal")} value={money(preview.totals.subtotal)} />
-          <Row label={t("discount")} value={money(preview.totals.discount)} />
-          <Row label={t("tax")} value={money(preview.totals.tax)} />
-          <Row
-            label={t("freight")}
-            value={preview.freight !== null ? money(preview.freight) : preview.freightPending ? t("freightPending") : "—"}
-          />
+          <Row label={t("subtotal")} value={money(group.totals.subtotal)} />
+          <Row label={t("discount")} value={money(group.totals.discount)} />
+          <Row label={t("tax")} value={money(group.totals.tax)} />
+          {channel === "delivery" && (
+            <Row
+              label={t("freight")}
+              value={preview.freight !== null ? money(preview.freight) : preview.freightPending ? t("freightPending") : "—"}
+            />
+          )}
         </dl>
 
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t pt-3" style={{ borderColor: RULE }}>
@@ -66,7 +75,7 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
             {t("total")}
           </span>
           <span className="font-display text-[24px] font-semibold tabular-nums leading-none" style={{ color: INK }}>
-            {money(preview.totals.total)}
+            {money(group.totals.total)}
           </span>
         </div>
 
@@ -78,10 +87,16 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
         </p>
       </div>
 
-      {showMinimum && (
+      {showMinimum && minimum === null && (
+        <p className="px-1 text-[12.5px] leading-snug" style={{ color: TEXT_MUTED }}>
+          {t("noMinimum")}
+        </p>
+      )}
+
+      {showMinimum && minimum !== null && (
         <div
           className="rounded-2xl border bg-white px-4 py-3.5 motion-safe:transition-opacity motion-safe:duration-150"
-          style={{ borderColor: preview.belowMinimum ? "#E8C98A" : RULE, opacity: stale ? 0.55 : 1 }}
+          style={{ borderColor: group.belowMinimum ? "#E8C98A" : RULE, opacity: stale ? 0.55 : 1 }}
         >
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: BEIGE }} aria-hidden>
@@ -91,7 +106,7 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
               {tCheckout("minimumLabel")}
             </p>
             <p className="shrink-0 font-display text-[20px] font-semibold leading-none tabular-nums" style={{ color: INK }}>
-              {formatColones(preview.minimumAmount, locale)}
+              {formatColones(minimum, locale)}
             </p>
           </div>
 
@@ -110,13 +125,32 @@ export default function OrderSummary({ preview, stale, showMinimum = true }: Pro
             />
           </div>
 
-          <p className="mt-2 text-[12.5px] leading-snug" style={{ color: preview.belowMinimum ? "#8A5A00" : TEXT_MUTED }} aria-live="polite">
-            {preview.belowMinimum
-              ? t("minimumShortfall", { amount: money(preview.shortfall) })
+          <p className="mt-2 text-[12.5px] leading-snug" style={{ color: group.belowMinimum ? "#8A5A00" : TEXT_MUTED }} aria-live="polite">
+            {group.belowMinimum
+              ? t("minimumShortfall", { amount: money(group.shortfall) })
               : t("minimumReached")}
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// Total general cuando el pedido trae los dos grupos (cada uno se confirma como un pedido aparte).
+export function GrandTotal({ preview, stale }: { preview: OrderPreview; stale: boolean }) {
+  const t = useTranslations("Cart.order");
+  const locale = useLocale();
+  return (
+    <div
+      className="flex items-baseline justify-between gap-3 rounded-2xl px-4 py-3.5 motion-safe:transition-opacity motion-safe:duration-150"
+      style={{ background: BEIGE, opacity: stale ? 0.55 : 1 }}
+    >
+      <span className="text-[14px] font-semibold" style={{ color: INK }}>
+        {t("grandTotalLabel")}
+      </span>
+      <span className="font-display text-[22px] font-semibold tabular-nums leading-none" style={{ color: INK }}>
+        {formatColones(preview.grandTotals.total, locale, 2)}
+      </span>
     </div>
   );
 }

@@ -2,18 +2,20 @@
 
 import { AlertCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { CartItem } from "@/lib/cart-types";
+import type { CartChannel, CartItem } from "@/lib/cart-types";
 import { formatColones } from "@/lib/checkout-format";
 import { cartLineKey } from "@/lib/cart-logic";
 import { unitLabel } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
-import { lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
+import { groupFor, lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, MUTED, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import ProductImage from "@/components/modals/product-catalog/ProductImage";
 
 interface Props {
+  // Líneas de UN grupo del carrito (todas del mismo canal).
   items: CartItem[];
+  channel: CartChannel;
   // Respuesta del servidor (puede estar desactualizada mientras se recalcula). Null = sin precios todavía.
   preview: OrderPreview | null;
   // ¿Se esperan precios (sesión + dirección)? Con false no se muestran ni esqueletos de precio.
@@ -28,15 +30,17 @@ interface Props {
 // servidor); si una línea aún no tiene precio vigente (recién agregada o cambiando la cantidad) se muestra un
 // esqueleto, nunca un valor inventado. Los errores por línea ("No disponible", "Cantidad inválida"...) se
 // muestran junto al producto, que se puede quitar.
-export default function CartLines({ items, preview, expectPrices, onQuantity, onRemove, onChangeUnit }: Props) {
+export default function CartLines({ items, channel, preview, expectPrices, onQuantity, onRemove, onChangeUnit }: Props) {
   const t = useTranslations("Cart");
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
-  const errorsByItem = preview ? lineErrorsByItem(preview) : new Map<string, string[]>();
-  // Cada línea del carrito (ítem + presentación) con su línea validada por el servidor.
-  const linesByKey = matchPreviewLines(items, preview?.lines ?? []);
-  // Presentaciones vendibles de los ítems del carrito (solo con sesión y dirección): permiten cambiarlas.
-  const { unitsFor } = useCatalogUnits(expectPrices ? items.map((i) => i.id) : []);
+  const group = preview ? groupFor(preview, channel) : null;
+  const errorsByItem = preview ? lineErrorsByItem(preview, channel) : new Map<string, string[]>();
+  // Cada línea del carrito (ítem + presentación) con su línea validada por el servidor, en SU grupo.
+  const linesByKey = matchPreviewLines(items, group?.lines ?? []);
+  // Presentaciones vendibles de los ítems de domicilio (solo con sesión y dirección): permiten cambiarlas. Las de
+  // retiro (fmcm) todavía no se ofrecen para cambiar: se usa la presentación por defecto o la guardada.
+  const { unitsFor } = useCatalogUnits(expectPrices && channel === "delivery" ? items.map((i) => i.id) : []);
 
   const errorLabel = (code: string): string | null => {
     switch (code) {
@@ -48,6 +52,8 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
         return tOrder("lineNotFound");
       case "unit_not_available":
         return tOrder("lineUnitNotAvailable");
+      case "price_not_available":
+        return tOrder("linePriceNotAvailable");
       default:
         return null;
     }
@@ -56,9 +62,9 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
   return (
     <ul className="flex flex-col gap-3">
       {items.map((item) => {
-        const lineKey = cartLineKey(item.id, item.unitId);
-        const line = linesByKey.get(lineKey);
-        const units = unitsFor(item.id);
+        const lineKey = cartLineKey(item.id, item.unitId, item.channel);
+        const line = linesByKey.get(`${item.id.trim().toUpperCase()}|${(item.unitId ?? "").trim().toUpperCase()}`);
+        const units = channel === "delivery" ? unitsFor(item.id) : undefined;
         const defaultUnit = units?.find((u) => u.isDefault);
         const currentUnit = item.unitId ?? defaultUnit?.unitId ?? line?.unitId ?? "";
         const unitName = currentUnit ? unitLabel(currentUnit, locale) : "";
@@ -66,6 +72,10 @@ export default function CartLines({ items, preview, expectPrices, onQuantity, on
         const priced = !!line && line.quantity === item.quantity && line.unitPrice > 0;
         const codes = errorsByItem.get(item.id.toLowerCase()) ?? [];
         const messages = codes.map(errorLabel).filter((m): m is string => !!m);
+        // Sin existencia suficiente: cuánto SÍ se puede pedir de esta presentación (lo calcula el servidor).
+        if (codes.includes("item_unavailable") && line?.maxAvailable != null) {
+          messages.push(tOrder("lineMax", { max: line.maxAvailable }));
+        }
         const name = line?.name || item.name;
 
         return (

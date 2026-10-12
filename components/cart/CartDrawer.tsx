@@ -6,9 +6,11 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
+import { itemsInChannel, resolvePickupSite } from "@/lib/cart-logic";
+import type { CartChannel } from "@/lib/cart-types";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { ORDERING_ENABLED } from "@/lib/feature-flags";
-import { canAdvance, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
+import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
 import { useOrderPreview } from "@/lib/order-preview";
 import { submitOrder } from "@/lib/order-submit";
 import type { CheckoutStep, PaymentMethod } from "@/lib/order-types";
@@ -17,7 +19,8 @@ import CartLines from "@/components/cart/CartLines";
 import CheckoutStepper from "@/components/cart/CheckoutStepper";
 import ConfirmStep, { type SubmitState } from "@/components/cart/ConfirmStep";
 import DeliveryStep from "@/components/cart/DeliveryStep";
-import OrderSummary from "@/components/cart/OrderSummary";
+import OrderSummary, { GrandTotal } from "@/components/cart/OrderSummary";
+import PickupSiteSelector from "@/components/cart/PickupSiteSelector";
 import PaymentStep from "@/components/cart/PaymentStep";
 import { RetryLine } from "@/components/cart/checkout-bits";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
@@ -41,15 +44,18 @@ import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 // ContactSection/CustomerClassSection (buildWhatsappHref): una lista para que un vendedor cotice, no una
 // transacción. Puede incluir el total estimado validado por el servidor y la fecha elegida; nunca la dirección.
 function buildOrderMessage(
-  items: { name: string; packSize?: string; quantity: number; unitId?: string }[],
+  items: { name: string; packSize?: string; quantity: number; unitId?: string; channel?: CartChannel }[],
   t: ReturnType<typeof useTranslations>,
   extraLines: string[],
-  locale: string
+  locale: string,
+  pickupLabel: string
 ) {
   const lines = items.map((item) => {
     const pack = item.packSize ? ` (${item.packSize})` : "";
     const unit = item.unitId ? ` ${unitLabel(item.unitId, locale)}` : "";
-    return `- ${item.name}${pack} x${item.quantity}${unit}`;
+    // Las líneas de retiro en tienda se marcan para que el vendedor las distinga de las de domicilio.
+    const channel = item.channel === "pickup" ? ` [${pickupLabel}]` : "";
+    return `- ${item.name}${pack} x${item.quantity}${unit}${channel}`;
   });
   const extra = extraLines.length > 0 ? `${extraLines.join("\n")}\n\n` : "";
   return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${extra}${t("whatsappOutro")}`;
@@ -61,7 +67,7 @@ export default function CartDrawer() {
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
   const { user, openProfile } = useAuth();
-  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount } = useCart();
+  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite } = useCart();
   const { addressId } = useActiveAddress();
   const { status: addressesStatus } = useAddresses();
 
@@ -76,23 +82,34 @@ export default function CartDrawer() {
   const [chosenDate, setChosenDate] = useState<{ addressId: number; date: string } | null>(null);
   const selectedDate = chosenDate && chosenDate.addressId === addressId ? chosenDate.date : null;
 
-  // Vista previa del servidor: precios, totales, mínimo y errores. Sin sesión o sin dirección no se llama.
-  const order = useOrderPreview({ cartItems: items, addressId, deliveryDate: selectedDate, paymentMethod });
-  const preview = order.preview;
-  const expectPrices = !!user && addressId !== null;
+  // Dos grupos: domicilio y retiro en tienda (una línea por producto, presentación y canal).
+  const deliveryItems = itemsInChannel(items, "delivery");
+  const pickupItems = itemsInChannel(items, "pickup");
+  const present = { delivery: deliveryItems.length > 0, pickup: pickupItems.length > 0 };
+  // Tienda de retiro: la elegida o, sin elección, una propuesta donde haya existencia de lo que lleva el cliente.
+  const pickupSite = resolvePickupSite(items, pickupSiteId);
 
-  // Flujo de 4 pasos solo con la bandera encendida, sesión y dirección; si no, "cotización por WhatsApp".
-  const flow = ORDERING_ENABLED && expectPrices;
+  // Vista previa del servidor: precios, totales, mínimo y errores por grupo. Sin sesión no se llama; el grupo de
+  // domicilio necesita además una dirección y el de retiro, una tienda.
+  const order = useOrderPreview({ cartItems: items, addressId, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite });
+  const preview = order.preview;
+  const expectDelivery = !!user && addressId !== null;
+  const expectPickup = !!user && present.pickup && pickupSite !== null;
+  const expectPrices = expectDelivery || expectPickup;
+
+  // Flujo de 4 pasos solo con la bandera encendida y sesión, y (si hay domicilio) con dirección; si no, "cotización
+  // por WhatsApp". Un carrito solo de retiro no necesita dirección.
+  const flow = ORDERING_ENABLED && expectPrices && (!present.delivery || expectDelivery) && (!present.pickup || expectPickup);
   const currentStep: CheckoutStep = flow && items.length > 0 ? step : "cart";
   const selection = { deliveryDate: selectedDate, paymentMethod };
 
   const selectedLabel = selectedDate ? formatDeliveryDate(selectedDate, locale) : null;
   const extraLines: string[] = [];
   if (preview && !order.stale) {
-    extraLines.push(tOrder("whatsappTotalLine", { total: formatColones(preview.totals.total, locale, 2) }));
+    extraLines.push(tOrder("whatsappTotalLine", { total: formatColones(preview.grandTotals.total, locale, 2) }));
   }
   if (selectedLabel) extraLines.push(tCheckout("whatsappDeliveryLine", { date: selectedLabel }));
-  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale));
+  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale, tOrder("groupPickupTitle")));
 
   const goTo = (target: CheckoutStep) => {
     setSubmit({ status: "idle" });
@@ -125,20 +142,63 @@ export default function CartDrawer() {
   const done = submit.status === "done";
 
   // ----- Contenido del paso "Carrito" (también es todo el cuerpo en modo cotización por WhatsApp) -----
+  const groupSection = (channel: CartChannel) => {
+    const groupItems = channel === "delivery" ? deliveryItems : pickupItems;
+    if (groupItems.length === 0) return null;
+    const expect = channel === "delivery" ? expectDelivery : expectPickup;
+    const groupCount = groupItems.reduce((sum, item) => sum + item.quantity, 0);
+    const group = preview ? groupFor(preview, channel) : null;
+    const titleId = `cart-group-${channel}`;
+
+    return (
+      <section key={channel} aria-labelledby={titleId} className="mb-7 last:mb-0">
+        <h3 id={titleId} className="mb-3 flex items-baseline justify-between gap-3 font-display text-[16px] font-semibold" style={{ color: INK }}>
+          {channel === "delivery" ? tOrder("groupDeliveryTitle") : tOrder("groupPickupTitle")}
+          <span className="text-[12.5px] font-semibold" style={{ color: TEXT_MUTED }}>
+            {t("itemsCount", { count: groupCount })}
+          </span>
+        </h3>
+
+        {channel === "pickup" && preview?.pickupGroup && (
+          <div className="mb-3">
+            <PickupSiteSelector
+              sites={preview.pickupGroup.sites}
+              selectedId={preview.pickupGroup.siteId}
+              proposed={pickupSiteId === null}
+              onSelect={setPickupSite}
+            />
+          </div>
+        )}
+
+        <CartLines
+          items={groupItems}
+          channel={channel}
+          preview={preview}
+          expectPrices={expect}
+          onQuantity={(item, quantity) => setQuantity(item.id, quantity, item.unitId, item.channel)}
+          onRemove={(item) => removeItem(item.id, item.unitId, item.channel)}
+          onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId, item.channel)}
+        />
+
+        {expect && preview && group && !order.error && (
+          <div className="mt-4">
+            <OrderSummary preview={preview} channel={channel} stale={order.stale} />
+          </div>
+        )}
+      </section>
+    );
+  };
+
   const cartStep = (
     <>
-      <p className="mb-3 text-[12.5px] font-semibold" style={{ color: TEXT_MUTED }}>
-        {t("itemsCount", { count: totalCount })}
-      </p>
+      {groupSection("delivery")}
+      {groupSection("pickup")}
 
-      <CartLines
-        items={items}
-        preview={preview}
-        expectPrices={expectPrices}
-        onQuantity={(item, quantity) => setQuantity(item.id, quantity, item.unitId)}
-        onRemove={(item) => removeItem(item.id, item.unitId)}
-        onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId)}
-      />
+      {expectPrices && preview && present.delivery && present.pickup && (
+        <div className="mb-2 mt-2">
+          <GrandTotal preview={preview} stale={order.stale} />
+        </div>
+      )}
 
       {expectPrices && (
         <div className="mt-6">
@@ -152,9 +212,7 @@ export default function CartDrawer() {
                 <RetryLine message="" retryLabel={tCheckout("retry")} onRetry={order.retry} />
               )}
             </div>
-          ) : preview ? (
-            <OrderSummary preview={preview} stale={order.stale} />
-          ) : order.status === "loading" ? (
+          ) : !preview && order.status === "loading" ? (
             <div role="status" className="rounded-2xl border bg-white px-4 py-4" style={{ borderColor: RULE }}>
               <span className="sr-only">{tOrder("recalculating")}</span>
               <div className="flex flex-col gap-2.5" aria-hidden>
@@ -167,9 +225,9 @@ export default function CartDrawer() {
         </div>
       )}
 
-      {user && addressId === null && addressesStatus === "ready" && (
+      {user && present.delivery && addressId === null && addressesStatus === "ready" && (
         <p className="mt-6 rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed" style={{ background: BEIGE, color: TEXT_MUTED }}>
-          {tOrder("noAddressForPrices")}
+          {present.pickup ? tOrder("noAddressForDelivery") : tOrder("noAddressForPrices")}
         </p>
       )}
 
@@ -181,16 +239,17 @@ export default function CartDrawer() {
   // ----- Motivo por el que no se puede continuar desde el carrito -----
   let cartBlockedReason: string | null = null;
   if (flow && currentStep === "cart" && preview && !order.stale) {
+    const belowMinimum = [preview.deliveryGroup, preview.pickupGroup].find((g) => g?.belowMinimum);
     if (hasLineErrors(preview)) cartBlockedReason = tOrder("blockedLineErrors");
     else if (hasError(preview, "price_list_missing")) cartBlockedReason = null; // el resumen ya lo explica
-    else if (preview.belowMinimum) {
-      cartBlockedReason = tOrder("minimumShortfall", { amount: formatColones(preview.shortfall, locale, 2) });
+    else if (belowMinimum) {
+      cartBlockedReason = tOrder("minimumShortfall", { amount: formatColones(belowMinimum.shortfall, locale, 2) });
     }
   }
   // Carrito y entrega exigen una respuesta fresca del servidor (precios, mínimo, fecha válida); el pago solo depende
   // del método elegido, así que no se bloquea mientras se vuelve a validar.
   const advanceOk =
-    canAdvance(currentStep, preview, selection) && order.status !== "error" && (currentStep === "payment" || (!order.stale && order.status === "ready"));
+    canAdvance(currentStep, preview, selection, present) && order.status !== "error" && (currentStep === "payment" || (!order.stale && order.status === "ready"));
 
   const quoteButton = (
     <a
@@ -268,6 +327,12 @@ export default function CartDrawer() {
               selectedDate={selectedDate}
               onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, date })}
               onChangeAddress={changeAddress}
+              showDelivery={present.delivery}
+              pickup={
+                present.pickup
+                  ? { group: preview?.pickupGroup ?? null, proposed: pickupSiteId === null, onSelectSite: setPickupSite }
+                  : null
+              }
             />
           )}
 
