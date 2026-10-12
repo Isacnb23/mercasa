@@ -9,8 +9,10 @@ import { unitLabel } from "@/lib/presentations";
 
 const INK = "#082B5C";
 const MUTED = "#5C6B7D";
-// Precio de la tarjeta: una línea (no parte "IVA incluido" a una segunda) y se achica con la hoja del libro.
-const CARD_PRICE_SIZE = "clamp(9px, 1.95cqh, 11px)";
+// Precio de la tarjeta: el monto en negrita y, en la MISMA línea, "IVA incluido" como texto secundario más
+// chico y de menor contraste (#5C6B7D sobre blanco: 5,6:1, AA); se achica con la hoja del libro.
+const CARD_PRICE_SIZE = "clamp(9.5px, 2cqh, 11.5px)";
+const CARD_SECONDARY_SIZE = "clamp(8.5px, 1.65cqh, 9.5px)";
 
 // Precio de catálogo: "₡X IVA incluido" (precio TOTAL con IVA por unidad, en colones enteros, como MercasaVIP;
 // el carrito y los totales del pedido siguen con su propia fórmula) y la unidad de venta si el dato la trae.
@@ -73,11 +75,16 @@ export default function PriceTag({ view, size = "card" }: { view: PriceView; siz
 
   return (
     <span className="flex flex-col items-center leading-tight">
-      <span className="whitespace-nowrap font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
-        {t("priceVatIncluded", { price })}
+      <span className="whitespace-nowrap">
+        <span className="font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
+          {price}
+        </span>{" "}
+        <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+          {t("priceVatSuffix")}
+        </span>
       </span>
       {unit && (
-        <span className="whitespace-nowrap text-[9px] font-medium" style={{ color: MUTED }}>
+        <span className="whitespace-nowrap font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
           {t("priceUnit", { unit })}
         </span>
       )}
@@ -127,6 +134,7 @@ export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "p
   }
 
   const text = pickupPriceText(view, role, labels, (amount) => formatColones(amount, locale));
+  const amount = formatColones(view.total, locale);
   if (role === "secondary") {
     // Con ícono de tienda y la palabra "tienda": esta línea ya hace de etiqueta del canal, así que la tarjeta no
     // repite la etiqueta "Retiro en tienda" cuando hay precio.
@@ -141,11 +149,21 @@ export function PickupPriceTag({ view, role }: { view: PickupPriceView; role: "p
   const unit = view.unit.trim() ? unitLabel(view.unit, locale) : "";
   return (
     <span className="flex flex-col items-center leading-tight">
-      <span className={`font-bold ${view.varies ? "" : "whitespace-nowrap"}`} style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
-        {text}
+      <span className="whitespace-nowrap">
+        {view.varies && (
+          <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+            {t("priceFromPrefix")}{" "}
+          </span>
+        )}
+        <span className="font-bold" style={{ color: INK, fontSize: CARD_PRICE_SIZE }}>
+          {amount}
+        </span>{" "}
+        <span className="font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
+          {t("priceVatSuffix")}
+        </span>
       </span>
       {unit && (
-        <span className="whitespace-nowrap text-[9px] font-medium" style={{ color: MUTED }}>
+        <span className="whitespace-nowrap font-medium" style={{ color: MUTED, fontSize: CARD_SECONDARY_SIZE }}>
           {t("priceUnit", { unit })}
         </span>
       )}

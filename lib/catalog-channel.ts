@@ -61,6 +61,25 @@ export function siteDetails(site: PickupSite): SiteDetails | null {
   return details.address || details.hours || details.mapUrl ? details : null;
 }
 
+// ---- Selección de la tienda en el detalle (por clic, toque o Enter/Espacio; nunca por hover) ----
+
+// undefined = el usuario todavía no eligió (rige el valor por defecto); null = cerró el panel a propósito.
+export type SiteChoice = string | null | undefined;
+
+// Con UNA sola tienda con datos no hay nada que elegir: su panel va abierto por defecto. Con varias, ninguna.
+export function defaultSiteId(sites: readonly PickupSite[]): string | null {
+  return sites.length === 1 && siteDetails(sites[0]) ? sites[0].siteId : null;
+}
+
+// Tienda seleccionada ahora (la elección del usuario si sigue existiendo en este producto; si no, ninguna).
+export function resolveSelectedSite(choice: SiteChoice, sites: readonly PickupSite[]): string | null {
+  if (choice === undefined) return defaultSiteId(sites);
+  return choice !== null && sites.some((s) => s.siteId === choice) ? choice : null;
+}
+
+// Tocar otra tienda cambia el panel; tocar la ya seleccionada lo cierra.
+export const toggleSite = (selected: string | null, siteId: string): string | null => (selected === siteId ? null : siteId);
+
 // Recorre las categorías (nivel con `products`) de una lista de familias/nodos.
 function forEachCategory(nodes: readonly HierarchyNode[], visit: (category: HierarchyNode) => void): void {
   for (const node of nodes) {

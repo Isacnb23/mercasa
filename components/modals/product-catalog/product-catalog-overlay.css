@@ -242,15 +242,43 @@
   }
 }
 
-/* Nombre de producto en la tarjeta del libro: líneas visibles según el espacio. Con la hoja chica (pantalla de hasta 800 px de alto
-   o angosta) caben 2; el nombre completo queda en el tooltip y en el detalle del producto. */
+/* Nombre de producto en la tarjeta del libro: hasta 3 líneas cuando el alto lo permite y solo 2 en pantallas bajas
+   (hasta 700 px de alto); el nombre completo queda en el tooltip y en el detalle del producto. La foto/ícono se
+   achica con la hoja chica (hasta 800 px de alto o angosta). */
 .catalog-panel {
   --pc-name-lines: 3;
 }
 
 @media (max-height: 800px), (max-width: 639px) {
   .catalog-panel {
-    --pc-name-lines: 2;
     --pc-img: 5.4cqh;
+  }
+}
+
+@media (max-height: 700px) {
+  .catalog-panel {
+    --pc-name-lines: 2;
+  }
+}
+
+/* Etiquetas de canal de la tarjeta ("A domicilio" / "Retiro en tienda"): legibles y con aire al borde; en pantallas
+   bajas (hasta 700 px de alto) se compactan para que la rejilla 3×3 siga entrando sin barra interna. */
+.pc-badge {
+  padding: 2px 6px;
+  font-size: clamp(9px, 1.85cqh, 10.5px);
+}
+
+.pc-badges {
+  margin-bottom: 2px;
+}
+
+@media (max-height: 700px) {
+  .pc-badge {
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+
+  .pc-badges {
+    margin-bottom: 0;
   }
 }

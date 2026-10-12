@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MapPin, Store, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { PickupSite, ProductAvailability, ProductSummary } from "@/lib/product-types";
@@ -13,8 +13,11 @@ import {
   differingPickupUnit,
   hasDelivery,
   hasPickup,
+  resolveSelectedSite,
   siteDetails,
   splitSites,
+  toggleSite,
+  type SiteChoice,
   type CatalogChannel,
 } from "@/lib/catalog-channel";
 import { unitLabel } from "@/lib/presentations";
@@ -43,20 +46,22 @@ export function ChannelBadges({
   const pickup = hasPickup(product) && !omitPickup;
   if (!delivery && !pickup) return null;
 
-  const badge = "inline-flex items-center gap-[2px] whitespace-nowrap rounded-full border font-semibold leading-none";
-  const size = { padding: "1.5px 4px", fontSize: "clamp(8px, 1.7cqh, 9px)" };
+  // Con ícono Y texto (no dependen solo del color). Un poco más grandes que antes y con aire respecto al borde.
+  // Tamaño y aire en CSS (.pc-badge) para poder compactarlos en pantallas bajas sin perder la rejilla 3×3.
+  const badge = "pc-badge inline-flex items-center gap-[3px] whitespace-nowrap rounded-full border font-semibold leading-none";
+  const size = {};
 
   return (
-    <span className="flex flex-wrap items-center justify-center gap-x-[3px] gap-y-[2px]">
+    <span className="pc-badges flex flex-wrap items-center justify-center gap-x-1 gap-y-[2px]">
       {delivery && (
         <span className={badge} style={{ ...size, color: DELIVERY.fg, background: DELIVERY.bg, borderColor: DELIVERY.border }}>
-          <Truck className="h-[9px] w-[9px] shrink-0" strokeWidth={2.2} aria-hidden />
+          <Truck className="h-[10px] w-[10px] shrink-0" strokeWidth={2.2} aria-hidden />
           {t("channelDelivery")}
         </span>
       )}
       {pickup && (
         <span className={badge} style={{ ...size, color: PICKUP.fg, background: PICKUP.bg, borderColor: PICKUP.border }}>
-          <Store className="h-[9px] w-[9px] shrink-0" strokeWidth={2.2} aria-hidden />
+          <Store className="h-[10px] w-[10px] shrink-0" strokeWidth={2.2} aria-hidden />
           {t("channelPickup")}
         </span>
       )}
@@ -86,9 +91,9 @@ export function ChannelAvailability({
   const pickupUnit = pickupPrice.kind === "price" && pickupPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(pickupPrice.unit, locale) }) : null;
   const deliveryUnit = deliveryPrice.kind === "price" && deliveryPrice.unit.trim() ? t("priceUnit", { unit: unitLabel(deliveryPrice.unit, locale) }) : null;
   const [expanded, setExpanded] = useState(false);
-  // Tienda fijada (toque/Enter) y tienda bajo el cursor; el panel muestra la del cursor y, sin ella, la fijada.
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // Tienda elegida por selección (clic, toque, Enter/Espacio); NUNCA por hover. undefined = sin elegir todavía.
+  const [choice, setChoice] = useState<SiteChoice>(undefined);
+  const groupRef = useRef<HTMLDivElement>(null);
 
   const delivery = hasDelivery({ availability });
   const pickup = hasPickup({ availability });
@@ -97,13 +102,26 @@ export function ChannelAvailability({
   const sites = availability?.pickup.sites ?? [];
   const { shown, hidden } = splitSites(sites);
   const unit = differingPickupUnit(availability);
-  const activeSite = sites.find((s) => s.siteId === (hoveredId ?? pinnedId)) ?? null;
+  const selectedId = resolveSelectedSite(choice, sites);
+  const activeSite = sites.find((s) => s.siteId === selectedId) ?? null;
   const activeDetails = activeSite ? siteDetails(activeSite) : null;
+  const hasSiteDetails = sites.some((s) => siteDetails(s));
+
+  // Esc cierra el panel y devuelve el foco al botón de la tienda (el de la lista que está a la vista).
+  const onGroupKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "Escape" || !selectedId) return;
+    e.stopPropagation(); // no cierra además el modal del producto
+    setChoice(null);
+    const buttons = groupRef.current?.querySelectorAll<HTMLButtonElement>("button[data-site-id]") ?? [];
+    for (const button of buttons) {
+      if (button.dataset.siteId === selectedId && !button.closest("[inert]")) button.focus();
+    }
+  };
 
   const chip = "inline-flex items-center rounded-full border px-2.5 py-1 text-[12.5px] font-semibold leading-none";
   const chipStyle = { color: PICKUP.fg, background: PICKUP.bg, borderColor: PICKUP.border };
 
-  // Nombre de la tienda y su ciudad/zona. Con datos que desplegar es un botón (toque, Enter o cursor); sin
+  // Nombre de la tienda y su ciudad/zona. Con datos que mostrar es un botón (clic, toque, Enter o Espacio); sin
   // ellos, una etiqueta quieta.
   const renderSiteChip = (site: PickupSite, price: number | null) => {
     const label = (
@@ -121,17 +139,16 @@ export function ChannelAvailability({
         </li>
       );
     }
-    const open = pinnedId === site.siteId;
+    const open = selectedId === site.siteId;
     return (
       <li key={site.siteId} className="max-w-full">
         <button
           type="button"
-          onClick={() => setPinnedId(open ? null : site.siteId)}
-          onPointerEnter={(e) => {
-            if (e.pointerType === "mouse") setHoveredId(site.siteId);
-          }}
+          data-site-id={site.siteId}
+          onClick={() => setChoice(toggleSite(selectedId, site.siteId))}
           aria-expanded={open}
-          aria-controls={activeSite?.siteId === site.siteId ? DETAILS_ID : undefined}
+          aria-controls={DETAILS_ID}
+          aria-label={t("pickupStoreSelectAria", { name: site.name })}
           className={`${siteChip} cursor-pointer outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[#075FD8]`}
           style={open ? { ...chipStyle, borderColor: PICKUP.fg } : chipStyle}
         >
@@ -173,27 +190,26 @@ export function ChannelAvailability({
             <Store className="h-4 w-4" strokeWidth={2} style={{ color: PICKUP.fg }} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] leading-snug" style={{ color: TEXT_SOFT }}>
-              <span className="font-semibold" style={{ color: PICKUP.fg }}>
-                {t("channelPickup")}
-              </span>{" "}
-              · {t("howPickupText")}
-              {pickupText && (
-                <span className="mt-0.5 block font-bold" style={{ color: INK }}>
-                  {pickupText}
-                  {pickupUnit && <span className="ml-1.5 font-medium" style={{ color: TEXT_SOFT }}>{pickupUnit}</span>}
-                </span>
-              )}
-              {/* Sin precio (sin sesión) la unidad de retiro, si difiere de la de domicilio, va en su propia línea. */}
-              {!pickupText && unit && (
-                <span className="mt-0.5 block">{t("howPickupUnit", { unit: unitLabel(unit, locale) })}.</span>
-              )}
+            {/* Encabezado de la opción y debajo su precio y sus tiendas, sin repetir la frase. */}
+            <p className="text-[13px] font-semibold leading-snug" style={{ color: PICKUP.fg }}>
+              {t("channelPickup")}
             </p>
+            {pickupText && (
+              <p className="mt-0.5 text-[13px] font-bold leading-snug" style={{ color: INK }}>
+                {pickupText}
+                {pickupUnit && <span className="ml-1.5 font-medium" style={{ color: TEXT_SOFT }}>{pickupUnit}</span>}
+              </p>
+            )}
+            {/* Sin precio (sin sesión) la unidad de retiro, si difiere de la de domicilio, va en su propia línea. */}
+            {!pickupText && unit && (
+              <p className="mt-0.5 text-[13px] leading-snug" style={{ color: TEXT_SOFT }}>
+                {t("howPickupUnit", { unit: unitLabel(unit, locale) })}.
+              </p>
+            )}
 
-            {/* Hover (mouse) o toque/Enter fijan la tienda activa; sus datos salen en un solo panel debajo de la
-                lista, así el tamaño de la lista corta/completa no cambia. Si salís con el cursor del bloque entero
-                (chips + panel) se vuelve a la tienda fijada, para poder llegar al enlace del mapa. */}
-            <div className="mt-1.5" onPointerLeave={() => setHoveredId(null)}>
+            {/* La selección (no el hover) elige la tienda; sus datos salen en UN panel de alto fijo debajo de la
+                lista (con scroll interno si hace falta), así el modal no salta al abrir, cambiar o cerrar. */}
+            <div ref={groupRef} className="mt-1.5" onKeyDown={onGroupKeyDown}>
               <div className="grid" role="group" aria-label={t("pickupSitesAria")}>
                 <ul
                   className="col-start-1 row-start-1 flex flex-wrap content-start gap-1.5"
@@ -247,14 +263,18 @@ export function ChannelAvailability({
                 )}
               </div>
 
-              {activeSite && activeDetails && (
+              {hasSiteDetails && (
                 <div
                   id={DETAILS_ID}
                   role="region"
-                  aria-label={t("pickupStoreDetailsAria", { name: activeSite.name })}
-                  className="mt-2 flex flex-col gap-1 rounded-xl border bg-white p-2.5 text-[12.5px] leading-snug"
+                  aria-label={activeSite ? t("pickupStoreDetailsAria", { name: activeSite.name }) : t("pickupSitesAria")}
+                  className="mt-2 flex h-36 flex-col gap-1 overflow-y-auto rounded-xl border bg-white p-2.5 text-[12.5px] leading-snug"
                   style={{ borderColor: PICKUP.border, color: TEXT_SOFT }}
+                  data-lenis-prevent
                 >
+                  {!(activeSite && activeDetails) && <p>{t("pickupStoreHint")}</p>}
+                  {activeSite && activeDetails && (
+                    <>
                   <p className="font-bold" style={{ color: INK }}>
                     {activeSite.name}
                   </p>
@@ -280,6 +300,8 @@ export function ChannelAvailability({
                       <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
                       {t("pickupStoreMap")}
                     </a>
+                  )}
+                    </>
                   )}
                 </div>
               )}

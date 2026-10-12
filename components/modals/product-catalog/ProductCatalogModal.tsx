@@ -2049,6 +2049,15 @@ function BookPageContent({
             onClick={() => onProductClick(product)}
           />
         ))}
+        {/* Última página de la categoría con pocas tarjetas: la fila vacía no es un error, la categoría terminó. */}
+        {page.part === page.totalParts && page.products.length <= 6 && (
+          <p
+            className="col-span-3 self-center text-center text-[11px] font-medium"
+            style={{ gridRow: 3, color: "#5C6B7D" }}
+          >
+            {t("catalog.categoryEnd")}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -2158,6 +2167,9 @@ function ProductCard({
           size="s"
           defer={!loadImage}
           className="h-full w-full object-contain p-1.5"
+          // Mismo cuadro que una foto, pero el ícono de reemplazo ocupa menos y en un tono suave: no le gana
+          // protagonismo a las fotos reales de las tarjetas vecinas.
+          errorIconClassName="h-[58%] w-[58%] text-[#9AB0C8]"
         />
       </div>
       {/* Nombre: hasta 3 líneas (con el nombre completo en el tooltip y, al hacer clic, en el detalle del
