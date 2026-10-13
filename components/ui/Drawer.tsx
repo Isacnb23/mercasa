@@ -7,6 +7,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
+import { getFocusable, trapTarget } from "@/lib/focus-trap";
 import { BODY_BG, FOCUS_RING, INK, RULE, TEXT_MUTED } from "./drawer-tokens";
 
 const subscribeNoop = () => () => {};
@@ -24,6 +25,7 @@ interface DrawerShellProps {
 export function DrawerShell({ isOpen, onClose, label, name, children }: DrawerShellProps) {
   const reduceMotion = useReducedMotion();
   const openerRef = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   // false en el servidor y en la hidratación, true ya en el navegador: el portal necesita
   // `document`, que no existe en el pase de servidor.
@@ -51,17 +53,33 @@ export function DrawerShell({ isOpen, onClose, label, name, children }: DrawerSh
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Al abrir se recuerda el elemento con foco (el botón que abrió el drawer) y al cerrar
-  // el foco vuelve ahí.
+  // Al abrir se recuerda el elemento con foco (el botón que abrió el drawer), el foco pasa
+  // al primer elemento interactivo del panel (o al panel mismo si no hay) y al cerrar vuelve
+  // al elemento que lo abrió.
   useEffect(() => {
     if (!isOpen) return;
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const panel = panelRef.current;
+    if (panel) (getFocusable(panel)[0] ?? panel).focus({ preventScroll: true });
     return () => {
       const opener = openerRef.current;
       openerRef.current = null;
       if (opener && document.contains(opener)) opener.focus();
     };
   }, [isOpen]);
+
+  // Tab y Shift+Tab no sacan el foco del panel mientras está abierto.
+  const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const target = trapTarget<HTMLElement>(getFocusable(panel), active === panel ? null : active, e.shiftKey, panel);
+    if (target) {
+      e.preventDefault();
+      target.focus();
+    }
+  };
 
   if (!mounted) return null;
 
@@ -87,12 +105,15 @@ export function DrawerShell({ isOpen, onClose, label, name, children }: DrawerSh
           />
           <motion.div
             key={`${name}-panel`}
+            ref={panelRef}
+            tabIndex={-1}
+            onKeyDown={handlePanelKeyDown}
             role="dialog"
             aria-modal="true"
             aria-label={label}
             {...panelMotion}
             transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
-            className="fixed inset-y-0 right-0 z-[310] flex w-full max-w-[440px] flex-col overflow-hidden bg-white shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-l-[28px]"
+            className="fixed inset-y-0 right-0 z-[310] flex w-full max-w-[440px] flex-col overflow-hidden bg-white outline-none shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-l-[28px]"
           >
             {children}
           </motion.div>

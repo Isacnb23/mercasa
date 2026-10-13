@@ -19,8 +19,7 @@ import {
   addToCart,
   CART_STORAGE_KEY,
   changeLineUnit,
-  LEGACY_CART_STORAGE_KEY,
-  readStoredCart,
+  loadPersistedCart,
   removeLine,
   serializeCart,
   setLineQuantity,
@@ -51,21 +50,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [pickupSiteId, setPickupSiteId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  // Evita pisar localStorage con el array vacío inicial ANTES de que
-  // termine de leerse lo persistido (el primer render en el cliente siempre
-  // arranca en []) — sin esto, recargar la página borraba el carrito
-  // guardado en vez de restaurarlo.
-  const hasHydrated = useRef(false);
+  // Evita pisar localStorage con el array vacío inicial ANTES de que termine de leerse lo persistido (el primer render
+  // en el cliente siempre arranca en []). Es estado (no ref) para que el guardado espere al render que ya trae los
+  // datos leídos: con una ref el efecto de guardado corría en el mismo commit que la lectura, con `items` todavía en
+  // [], y escribía el vacío encima del carrito guardado.
+  const [hydrated, setHydrated] = useState(false);
+  // La lectura ocurre una sola vez: con StrictMode (next dev) los efectos corren dos veces y la segunda lectura
+  // encontraba lo que la primera pasada había guardado (el vacío). La ref sobrevive a esa doble ejecución.
+  const hydrationStarted = useRef(false);
 
   useEffect(() => {
+    if (hydrationStarted.current) return;
+    hydrationStarted.current = true;
     try {
       // v2 si existe; si no, el carrito v1 (sin canal) se migra: todas sus líneas pasan a domicilio sin perderse. La
       // clave v1 no se borra (un carrito viejo nunca se pierde por esta migración).
-      const v2 = window.localStorage.getItem(CART_STORAGE_KEY);
-      const v1 = v2 ? null : window.localStorage.getItem(LEGACY_CART_STORAGE_KEY);
-      const stored = readStoredCart(v2 ? JSON.parse(v2) : null, v1 ? JSON.parse(v1) : null);
+      const stored = loadPersistedCart(window.localStorage);
+      if (!stored) return;
       // Hidratar desde localStorage solo se puede hacer en el cliente tras el primer render (el servidor y el primer
-      // render del cliente parten de []), por eso es un efecto: no hay otra fuente de estos datos.
+      // render del cliente parten de []), por eso es un efecto: no hay otra fuente de estos datos. La regla
+      // set-state-in-effect avisa aquí y no hay arreglo limpio: leer localStorage en el render o en el inicializador
+      // de useState rompería la hidratación (el servidor no lo tiene), y useSyncExternalStore no sirve para un
+      // estado que el usuario luego edita. Por eso el disable se queda, acotado a esta línea.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(stored.items);
       setPickupSiteId(stored.pickupSiteId);
@@ -73,18 +79,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // localStorage no disponible (modo privado, etc.) — el carrito sigue
       // funcionando en memoria para esta sesión de pestaña.
     } finally {
-      hasHydrated.current = true;
+      setHydrated(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!hasHydrated.current) return;
+    if (!hydrated) return;
     try {
       window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(serializeCart(items, pickupSiteId)));
     } catch {
       // idem arriba — no romper el carrito si falla el guardado.
     }
-  }, [items, pickupSiteId]);
+  }, [hydrated, items, pickupSiteId]);
 
   // No abre el drawer automáticamente (ver montar-carrito-en-base-al-
   // catalogo.md): agregar varios productos seguidos desde la grilla del

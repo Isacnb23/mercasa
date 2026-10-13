@@ -174,3 +174,15 @@ export function readStoredCart(v2: unknown, v1: unknown): StoredCartState {
 export function serializeCart(items: CartItem[], pickupSiteId: string | null) {
   return { version: 2, items, pickupSiteId };
 }
+
+// Lee el carrito guardado de un Storage (v2; si no hay, migra v1 sin borrarlo). Devuelve null si el almacenamiento no
+// está disponible o trae JSON inválido: quien llama sigue con el carrito vacío en memoria.
+export function loadPersistedCart(storage: Pick<Storage, "getItem">): StoredCartState | null {
+  try {
+    const v2 = storage.getItem(CART_STORAGE_KEY);
+    const v1 = v2 ? null : storage.getItem(LEGACY_CART_STORAGE_KEY);
+    return readStoredCart(v2 ? JSON.parse(v2) : null, v1 ? JSON.parse(v1) : null);
+  } catch {
+    return null;
+  }
+}
