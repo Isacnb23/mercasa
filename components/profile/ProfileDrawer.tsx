@@ -10,6 +10,7 @@ import RegistrationFlow from "@/components/registration/RegistrationFlow";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
 import {
   BEIGE,
+  BODY_BG,
   DANGER_BG,
   DANGER_TEXT,
   FIELD_CLASS,
@@ -44,6 +45,8 @@ export default function ProfileDrawer() {
   const [submitting, setSubmitting] = useState(false);
   const [addingAddress, setAddingAddress] = useState(false);
   const [registering, setRegistering] = useState(false);
+  // Pie del registro: hermano del cuerpo con scroll, pegado al borde inferior del panel (el flujo pinta ahí su botón).
+  const [registrationFooter, setRegistrationFooter] = useState<HTMLElement | null>(null);
 
   // Limpia el formulario cuando el drawer se cierra, para que la próxima
   // apertura (ya sea otro intento o tras cerrar sesión) no arrastre el
@@ -146,7 +149,7 @@ export default function ProfileDrawer() {
             )}
           </div>
         ) : registering ? (
-          <RegistrationFlow onBackToLogin={() => setRegistering(false)} />
+          <RegistrationFlow onBackToLogin={() => setRegistering(false)} footerTarget={registrationFooter} />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
@@ -220,6 +223,16 @@ export default function ProfileDrawer() {
           </form>
         )}
       </DrawerBody>
+
+      {/* Pie del registro: mismo crema del cuerpo, borde fino y un degradado suave arriba (sin sombra dura ni franja
+          blanca). Sin contenido (pasos 2 y 3) desaparece solo (empty:hidden). */}
+      {showingRegistration && (
+        <div
+          ref={setRegistrationFooter}
+          className="relative flex shrink-0 flex-col gap-2 border-t px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 empty:hidden before:pointer-events-none before:absolute before:inset-x-0 before:-top-6 before:h-6 before:bg-gradient-to-t before:from-[#FBF9F5] before:to-transparent"
+          style={{ background: BODY_BG, borderColor: RULE }}
+        />
+      )}
 
       {/* Cerrar sesión: acción secundaria y tenue en el pie, no un botón principal. */}
       {user && !isLoading && !addingAddress && (

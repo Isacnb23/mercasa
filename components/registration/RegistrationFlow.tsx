@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, Check, Circle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -46,6 +47,9 @@ const FIELD = "gap-2";
 const LABEL = "gap-1";
 const STEP_TOP = "mt-6";
 
+// El botón del paso 1 vive en el pie del panel (fuera del formulario en el DOM) y se asocia con form=.
+const START_FORM_ID = "registration-start-form";
+
 async function post(step: "start" | "verify" | "complete", body: unknown): Promise<{ status: number; body: unknown }> {
   try {
     const res = await fetch(`/api/register/${step}`, {
@@ -63,7 +67,15 @@ async function post(step: "start" | "verify" | "complete", body: unknown): Promi
 // Registro de clientes en 3 pasos, un objetivo por pantalla: (1) datos, (2) código del correo, (3) listo / en revisión.
 // Vive dentro del panel de perfil (no es una página aparte); `onBackToLogin` vuelve al formulario de ingreso.
 // La contraseña vive solo en el estado de este componente y se borra en cuanto el servidor acepta el paso 1.
-export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () => void }) {
+export default function RegistrationFlow({
+  onBackToLogin,
+  footerTarget,
+}: {
+  onBackToLogin: () => void;
+  // Elemento del panel (fuera de la zona con scroll) donde se pinta el pie con el botón del paso 1. Sin esta prop
+  // (undefined) el pie va al final del formulario; con null (el panel aún no lo montó) no se pinta nada todavía.
+  footerTarget?: HTMLElement | null;
+}) {
   const t = useTranslations("Registration");
 
   const [step, setStep] = useState<Step>(1);
@@ -219,6 +231,22 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
     }
   };
 
+  // Pie del paso 1: error del servidor + botón principal. Se pinta fuera del scroll (ver footerTarget).
+  const startFooter = (
+    <>
+      {formError && <FormAlert>{formErrorText(formError)}</FormAlert>}
+      <button
+        type="submit"
+        form={START_FORM_ID}
+        disabled={submitting}
+        className={PRIMARY_BUTTON}
+        style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+      >
+        {submitting ? t("step1.submitting") : t("step1.submit")}
+      </button>
+    </>
+  );
+
   return (
     <div className="w-full">
       <p className="text-[13px] font-semibold" style={{ color: TEXT_MUTED }} aria-label={t("stepsAria")}>
@@ -231,7 +259,7 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
       </div>
 
       {step === 1 && (
-        <form onSubmit={handleStart} noValidate className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+        <form id={START_FORM_ID} onSubmit={handleStart} noValidate className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
           <div>
             <h3
               ref={headingRef}
@@ -378,23 +406,11 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
 
           <CaptchaWidget onToken={setCaptchaToken} resetKey={captchaReset} />
 
-          {/* Pie fijo: el error y el botón principal siempre quedan a la vista dentro de la zona con scroll. */}
-          <div
-            className={`sticky bottom-0 -mx-5 -mb-6 flex flex-col ${FIELD} bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3`}
-            style={{ boxShadow: "0 -10px 28px -14px rgba(8,43,92,0.22)" }}
-          >
-            {formError && <FormAlert>{formErrorText(formError)}</FormAlert>}
-            <button
-              type="submit"
-              disabled={submitting}
-              className={PRIMARY_BUTTON}
-              style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
-            >
-              {submitting ? t("step1.submitting") : t("step1.submit")}
-            </button>
-          </div>
+          {footerTarget === undefined ? <div className={`flex flex-col ${FIELD}`}>{startFooter}</div> : null}
         </form>
       )}
+
+      {step === 1 && footerTarget ? createPortal(startFooter, footerTarget) : null}
 
       {step === 2 && (
         <form onSubmit={handleVerify} noValidate className={`${STEP_TOP} flex flex-col ${BLOCK}`}>

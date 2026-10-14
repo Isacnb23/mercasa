@@ -113,7 +113,7 @@ export function DrawerShell({ isOpen, onClose, label, name, children }: DrawerSh
             aria-label={label}
             {...panelMotion}
             transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
-            className="fixed right-0 top-0 z-[310] flex h-dvh max-h-dvh w-full max-w-[440px] flex-col overflow-hidden bg-white outline-none shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-tl-[28px]"
+            className="fixed inset-y-0 right-0 z-[310] flex max-h-dvh w-full max-w-[440px] flex-col overflow-hidden bg-white outline-none shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-tl-[28px]"
           >
             {children}
           </motion.div>
@@ -180,7 +180,7 @@ export function DrawerBody({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-lenis-prevent
-      className="flex-1 scroll-pb-28 scroll-pt-6 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5"
+      className="min-h-0 flex-1 scroll-pb-6 scroll-pt-6 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5"
       style={{ background: BODY_BG }}
     >
       {children}
