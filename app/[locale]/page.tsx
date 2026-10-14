@@ -11,6 +11,14 @@ import { ActiveSegmentProvider } from "@/components/sections/customer-class/Acti
 import Footer from "@/components/layout/Footer";
 import SectionReveal from "@/components/ui/SectionReveal";
 
+// Dinámica a propósito: la sección de productos y los segmentos leen el catálogo único de mercasa-api con
+// fetch(..., { cache: "no-store" }) (lib/mercasavip-catalog.ts), y eso no se puede prerenderizar (el build no tiene
+// la API ni debe congelar un catálogo). Sin esta línea Next intentaba prerenderizar /es y /en, el fetch lanzaba
+// "Dynamic server usage" y la lectura caía en silencio al respaldo solo-cmer. Los precios y la sesión no viven aquí:
+// se piden desde el navegador (/api/catalog/prices, /api/auth/session). El árbol del catálogo se guarda 15 min en
+// memoria del servidor, así que "dinámica" no significa una lectura por visita.
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   return (
     <>

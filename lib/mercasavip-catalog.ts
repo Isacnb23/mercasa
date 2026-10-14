@@ -191,20 +191,27 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 const FALLBACK_TTL_MS = 60 * 1000;
 let cachedTree: { data: HierarchyNode[]; expiresAt: number } | null = null;
 let inFlight: Promise<MercasaVipResult<HierarchyNode[]>> | null = null;
+// true mientras lo que se sirve es el respaldo solo-cmer (para registrar también cuando se recupera el catálogo único).
+let usingFallback = false;
 
 async function loadHierarchy(): Promise<MercasaVipResult<HierarchyNode[]>> {
   const unified = await fetchUnifiedCatalog();
   if (unified.ok) {
     const tree = buildProductHierarchy(unified.data);
+    if (usingFallback) console.info("[catalog] Catálogo único disponible otra vez: se deja el respaldo.");
+    usingFallback = false;
     cachedTree = { data: tree, expiresAt: Date.now() + CACHE_TTL_MS };
     return { ok: true, data: tree };
   }
 
-  console.warn(`[catalog] Catálogo único no disponible, se usa la lectura de respaldo (solo A domicilio): ${unified.error}`);
+  // RESPALDO EXPLÍCITO y registrado (sin datos personales: solo el motivo técnico): mientras dure, el catálogo es
+  // solo cmer y todo aparece como A domicilio; se vuelve a intentar el único cada FALLBACK_TTL_MS.
+  console.warn(`[catalog] RESPALDO ACTIVO: catálogo único no disponible, se muestra solo cmer / A domicilio y se reintenta en ${FALLBACK_TTL_MS / 1000} s. Motivo: ${unified.error}`);
   const legacy = await fetchInventoryItemsCMER();
   if (!legacy.ok) return legacy;
 
   const tree = buildProductHierarchy(legacy.data);
+  usingFallback = true;
   cachedTree = { data: tree, expiresAt: Date.now() + FALLBACK_TTL_MS };
   return { ok: true, data: tree };
 }
