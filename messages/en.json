@@ -732,11 +732,31 @@
       "submitting": "Sending..."
     },
     "fields": {
-      "name": { "label": "Full name or company name" },
-      "idNumber": { "label": "ID number (individual or company)", "hint": "Numbers only, with or without dashes. E.g. 3-0564-0580" },
-      "email": { "label": "Email address" },
-      "phone": { "label": "Phone", "hint": "8 digits. E.g. 8888-7777" },
-      "password": { "label": "Password" }
+      "name": {
+        "labelFisica": "Full name",
+        "labelJuridica": "Company name",
+        "hintFisica": "First name and at least one last name"
+      },
+      "idNumber": {
+        "label": "ID number",
+        "hintFisica": "9 digits. E.g. 1-1111-1111",
+        "hintJuridica": "10 digits, starts with 3. E.g. 3-000-000000"
+      },
+      "email": {
+        "label": "Email address"
+      },
+      "phone": {
+        "label": "Phone",
+        "hint": "8 digits. E.g. 8888-7777"
+      },
+      "password": {
+        "label": "Password"
+      },
+      "idType": {
+        "label": "ID type",
+        "fisica": "Individual",
+        "juridica": "Company"
+      }
     },
     "passwordRules": {
       "title": "Your password must have:",
@@ -754,10 +774,22 @@
       "privacyLink": "Privacy Policy"
     },
     "errors": {
-      "name": "Enter your full name (at least 3 letters).",
-      "idNumber": "Check the ID number: 9 digits (individual) or 10 digits starting with 3 (company).",
+      "name": {
+        "invalid": "Enter your full name (between 3 and 100 characters).",
+        "invalidCompany": "Enter the company name (3 to 100 characters; letters, numbers and . , & -).",
+        "digits": "The name cannot contain numbers.",
+        "surname": "Enter your first name and at least one last name."
+      },
+      "idNumber": {
+        "fisicaLength": "An individual ID has 9 digits.",
+        "fisicaPrefix": "An individual ID cannot start with 0.",
+        "juridica": "A company ID has 10 digits and starts with 3."
+      },
       "email": "Enter a valid email, for example name@company.com.",
-      "phone": "Enter an 8-digit phone number, for example 8888-7777.",
+      "phone": {
+        "length": "The phone has 8 digits. E.g. 8888-7777.",
+        "prefix": "The phone must start with 2, 4, 5, 6, 7 or 8."
+      },
       "password": "The password does not meet the requirements in the list.",
       "acceptedTerms": "You must accept the terms and the privacy policy.",
       "code": "Enter the 6 digits of the code.",
@@ -792,6 +824,10 @@
       "restartBody": "The registration expired. Start over.",
       "retry": "Retry",
       "home": "Back to sign in"
+    },
+    "suggestions": {
+      "email": "Did you mean {email}?",
+      "use": "Use it"
     }
   },
   "Legal": {

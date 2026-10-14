@@ -732,11 +732,31 @@
       "submitting": "Enviando..."
     },
     "fields": {
-      "name": { "label": "Nombre completo o razón social" },
-      "idNumber": { "label": "Cédula (física o jurídica)", "hint": "Solo números, con o sin guiones. Ej. 3-0564-0580" },
-      "email": { "label": "Correo electrónico" },
-      "phone": { "label": "Teléfono", "hint": "8 dígitos. Ej. 8888-7777" },
-      "password": { "label": "Contraseña" }
+      "name": {
+        "labelFisica": "Nombre completo",
+        "labelJuridica": "Razón social",
+        "hintFisica": "Nombre y al menos un apellido"
+      },
+      "idNumber": {
+        "label": "Número de cédula",
+        "hintFisica": "9 dígitos. Ej. 1-1111-1111",
+        "hintJuridica": "10 dígitos, empieza por 3. Ej. 3-000-000000"
+      },
+      "email": {
+        "label": "Correo electrónico"
+      },
+      "phone": {
+        "label": "Teléfono",
+        "hint": "8 dígitos. Ej. 8888-7777"
+      },
+      "password": {
+        "label": "Contraseña"
+      },
+      "idType": {
+        "label": "Tipo de cédula",
+        "fisica": "Persona física",
+        "juridica": "Persona jurídica"
+      }
     },
     "passwordRules": {
       "title": "Tu contraseña debe tener:",
@@ -754,10 +774,22 @@
       "privacyLink": "Política de Privacidad"
     },
     "errors": {
-      "name": "Escribí tu nombre completo (mínimo 3 letras).",
-      "idNumber": "Revisá la cédula: 9 dígitos (física) o 10 dígitos que empiecen por 3 (jurídica).",
+      "name": {
+        "invalid": "Escribí tu nombre completo (entre 3 y 100 caracteres).",
+        "invalidCompany": "Escribí la razón social (3 a 100 caracteres; letras, números y . , & -).",
+        "digits": "El nombre no puede llevar números.",
+        "surname": "Escribí tu nombre y al menos un apellido."
+      },
+      "idNumber": {
+        "fisicaLength": "La cédula física lleva 9 dígitos.",
+        "fisicaPrefix": "La cédula física no puede empezar por 0.",
+        "juridica": "La cédula jurídica lleva 10 dígitos y empieza por 3."
+      },
       "email": "Escribí un correo válido, por ejemplo nombre@empresa.com.",
-      "phone": "Escribí un teléfono de 8 dígitos, por ejemplo 8888-7777.",
+      "phone": {
+        "length": "El teléfono lleva 8 dígitos. Ej. 8888-7777.",
+        "prefix": "El teléfono debe empezar por 2, 4, 5, 6, 7 u 8."
+      },
       "password": "La contraseña no cumple los requisitos de la lista.",
       "acceptedTerms": "Tenés que aceptar los términos y la política de privacidad.",
       "code": "Escribí los 6 dígitos del código.",
@@ -792,6 +824,10 @@
       "restartBody": "El registro venció. Empezá de nuevo.",
       "retry": "Reintentar",
       "home": "Volver a iniciar sesión"
+    },
+    "suggestions": {
+      "email": "¿Quisiste decir {email}?",
+      "use": "Usar"
     }
   },
   "Legal": {

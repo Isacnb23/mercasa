@@ -20,17 +20,28 @@ import {
   CODE_LENGTH,
   EMPTY_VALUES,
   FIELD_ORDER,
+  ID_TYPES,
+  changeIdType,
   classifyRegisterError,
   completeOutcome,
   digitsOnly,
+  emailSuggestion,
+  fieldError,
+  formatIdNumber,
+  formatPhone,
   invalidFields,
   isCodeComplete,
+  normalizeEmail,
+  normalizeIdInput,
+  normalizePhoneInput,
   passwordChecks,
-  validateField,
+  serverErrorKind,
   type CompleteOutcome,
+  type IdType,
   type RegisterErrorKind,
   type RegistrationField,
   type RegistrationValues,
+  type ServerFieldCodes,
 } from "@/lib/registration";
 import CaptchaWidget from "./CaptchaWidget";
 
@@ -81,7 +92,9 @@ export default function RegistrationFlow({
   const [step, setStep] = useState<Step>(1);
   const [values, setValues] = useState<RegistrationValues>(EMPTY_VALUES);
   const [touched, setTouched] = useState<Partial<Record<RegistrationField, boolean>>>({});
-  const [serverFields, setServerFields] = useState<RegistrationField[]>([]);
+  // Códigos de error por campo que devolvió el servidor al enviar (campo -> código); vacío si no hubo.
+  const [serverCodes, setServerCodes] = useState<ServerFieldCodes>({});
+  const serverFields = Object.keys(serverCodes) as RegistrationField[];
   const [formError, setFormError] = useState<RegisterErrorKind | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -105,12 +118,45 @@ export default function RegistrationFlow({
     headingRef.current?.focus();
   }, [step]);
 
+  // Un error se muestra al salir del campo (blur) o al enviar, no en cada tecla; una vez mostrado se actualiza en vivo.
   const fieldInvalid = (field: RegistrationField) =>
-    (touched[field] || serverFields.includes(field)) && (!validateField(field, values) || serverFields.includes(field));
+    (touched[field] || serverFields.includes(field)) && (fieldError(field, values) !== null || serverFields.includes(field));
+
+  // Mensaje del campo según SU tipo de error (y el tipo de cédula); si solo lo rechazó el servidor, según su código.
+  const fieldErrorText = (field: RegistrationField): string => {
+    const kind = fieldError(field, values) ?? serverErrorKind(field, serverCodes[field], "invalid");
+    switch (field) {
+      case "name":
+        if (kind === "digits") return t("errors.name.digits");
+        if (kind === "surname") return t("errors.name.surname");
+        return values.idType === "juridica" ? t("errors.name.invalidCompany") : t("errors.name.invalid");
+      case "idNumber":
+        if (values.idType === "juridica") return t("errors.idNumber.juridica");
+        return kind === "prefix" ? t("errors.idNumber.fisicaPrefix") : t("errors.idNumber.fisicaLength");
+      case "email":
+        return t("errors.email");
+      case "phone":
+        return kind === "prefix" ? t("errors.phone.prefix") : t("errors.phone.length");
+      case "password":
+        return t("errors.password");
+      case "acceptedTerms":
+        return t("errors.acceptedTerms");
+    }
+  };
+
+  const suggestedEmail = emailSuggestion(values.email);
+
+  // Cambiar el tipo reajusta la máscara y conserva los dígitos que siguen siendo válidos; se vuelve a validar solo.
+  const changeType = (type: IdType) =>
+    setValues((v) => ({ ...v, idType: type, idNumber: changeIdType(v.idNumber, type) }));
 
   const setField = <K extends RegistrationField>(field: K, value: RegistrationValues[K]) => {
     setValues((v) => ({ ...v, [field]: value }));
-    setServerFields((f) => f.filter((x) => x !== field));
+    setServerCodes((c) => {
+      const next = { ...c };
+      delete next[field];
+      return next;
+    });
     setFormError(null);
   };
 
@@ -120,7 +166,7 @@ export default function RegistrationFlow({
     setStep(1);
     setValues((v) => ({ ...v, password: "" }));
     setTouched({});
-    setServerFields([]);
+    setServerCodes({});
     setFormError(null);
     setAttemptId("");
     setCode("");
@@ -147,12 +193,12 @@ export default function RegistrationFlow({
 
     setSubmitting(true);
     setFormError(null);
-    const res = await post("start", { ...values, captchaToken });
+    const res = await post("start", { ...values, email: normalizeEmail(values.email), captchaToken });
     setSubmitting(false);
 
     if (res.status === 200 && typeof (res.body as { attemptId?: unknown } | null)?.attemptId === "string") {
       setAttemptId((res.body as { attemptId: string }).attemptId);
-      setEmail(values.email.trim());
+      setEmail(normalizeEmail(values.email));
       setValues((v) => ({ ...v, password: "" }));
       setCode("");
       setCodeError(null);
@@ -162,9 +208,10 @@ export default function RegistrationFlow({
 
     const error = classifyRegisterError(res.status, res.body);
     setFormError(error.kind);
-    setServerFields(error.fields);
+    setServerCodes(Object.fromEntries(error.fields.map((field) => [field, error.fieldCodes[field] ?? ""])));
     setCaptchaReset((n) => n + 1);
-    if (error.fields.length > 0) document.getElementById(`reg-${error.fields[0]}`)?.focus();
+    const firstWithError = FIELD_ORDER.find((field) => error.fields.includes(field));
+    if (firstWithError) document.getElementById(`reg-${firstWithError}`)?.focus();
   };
 
   const runComplete = async (id: string) => {
@@ -274,27 +321,56 @@ export default function RegistrationFlow({
             </p>
           </div>
 
-          <TextField
-            field="name"
-            label={t("fields.name.label")}
-            autoComplete="name"
-            value={values.name}
-            invalid={fieldInvalid("name")}
-            error={t("errors.name")}
-            onChange={(v) => setField("name", v)}
-            onBlur={() => touch("name")}
-          />
+          <fieldset className={`flex flex-col ${FIELD}`}>
+            <legend className="text-[13px] font-semibold" style={{ color: INK }}>
+              {t("fields.idType.label")}
+            </legend>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {ID_TYPES.map((type) => (
+                <label key={type} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="idType"
+                    value={type}
+                    checked={values.idType === type}
+                    onChange={() => changeType(type)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    className="flex min-h-[44px] items-center justify-center rounded-xl border bg-white px-3 text-center text-[13.5px] font-semibold motion-safe:transition motion-safe:duration-150 peer-checked:border-[#082B5C] peer-checked:bg-[#EAF0F8] peer-focus-visible:ring-2 peer-focus-visible:ring-[#075FD8] peer-focus-visible:ring-offset-2"
+                    style={{ borderColor: RULE, color: INK }}
+                  >
+                    {type === "fisica" ? t("fields.idType.fisica") : t("fields.idType.juridica")}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <TextField
             field="idNumber"
             label={t("fields.idNumber.label")}
-            hint={t("fields.idNumber.hint")}
+            hint={values.idType === "fisica" ? t("fields.idNumber.hintFisica") : t("fields.idNumber.hintJuridica")}
+            placeholder={values.idType === "fisica" ? "0-0000-0000" : "3-000-000000"}
             inputMode="numeric"
             autoComplete="off"
-            value={values.idNumber}
+            value={formatIdNumber(values.idNumber, values.idType)}
             invalid={fieldInvalid("idNumber")}
-            error={t("errors.idNumber")}
-            onChange={(v) => setField("idNumber", v)}
+            error={fieldErrorText("idNumber")}
+            onChange={(v) => setField("idNumber", normalizeIdInput(v, values.idType))}
             onBlur={() => touch("idNumber")}
+          />
+          <TextField
+            field="name"
+            label={values.idType === "fisica" ? t("fields.name.labelFisica") : t("fields.name.labelJuridica")}
+            hint={values.idType === "fisica" ? t("fields.name.hintFisica") : undefined}
+            autoComplete={values.idType === "fisica" ? "name" : "organization"}
+            maxLength={100}
+            value={values.name}
+            invalid={fieldInvalid("name")}
+            error={fieldErrorText("name")}
+            onChange={(v) => setField("name", v)}
+            onBlur={() => touch("name")}
           />
           <TextField
             field="email"
@@ -302,23 +378,42 @@ export default function RegistrationFlow({
             type="email"
             inputMode="email"
             autoComplete="email"
+            maxLength={254}
             value={values.email}
             invalid={fieldInvalid("email")}
-            error={t("errors.email")}
-            onChange={(v) => setField("email", v)}
-            onBlur={() => touch("email")}
-          />
+            error={fieldErrorText("email")}
+            onChange={(v) => setField("email", v.toLowerCase())}
+            onBlur={() => {
+              setValues((s) => ({ ...s, email: normalizeEmail(s.email) }));
+              touch("email");
+            }}
+          >
+            {suggestedEmail && (
+              <p role="status" className="flex flex-wrap items-center gap-x-2 text-[13px]" style={{ color: TEXT_MUTED }}>
+                <span>{t("suggestions.email", { email: suggestedEmail })}</span>
+                <button
+                  type="button"
+                  onClick={() => setField("email", suggestedEmail)}
+                  className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+                  style={{ color: "#075FD8" }}
+                >
+                  {t("suggestions.use")}
+                </button>
+              </p>
+            )}
+          </TextField>
           <TextField
             field="phone"
             label={t("fields.phone.label")}
             hint={t("fields.phone.hint")}
+            placeholder="8888-7777"
             type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={values.phone}
+            inputMode="numeric"
+            autoComplete="tel-national"
+            value={formatPhone(values.phone)}
             invalid={fieldInvalid("phone")}
-            error={t("errors.phone")}
-            onChange={(v) => setField("phone", v)}
+            error={fieldErrorText("phone")}
+            onChange={(v) => setField("phone", normalizePhoneInput(v))}
             onBlur={() => touch("phone")}
           />
           <TextField
@@ -328,7 +423,7 @@ export default function RegistrationFlow({
             autoComplete="new-password"
             value={values.password}
             invalid={fieldInvalid("password")}
-            error={t("errors.password")}
+            error={fieldErrorText("password")}
             describedBy="reg-password-rules"
             onChange={(v) => setField("password", v)}
             onBlur={() => touch("password")}
@@ -389,7 +484,7 @@ export default function RegistrationFlow({
                 </Link>
               </span>
             </label>
-            {fieldInvalid("acceptedTerms") && <FieldError id="reg-acceptedTerms-error">{t("errors.acceptedTerms")}</FieldError>}
+            {fieldInvalid("acceptedTerms") && <FieldError id="reg-acceptedTerms-error">{fieldErrorText("acceptedTerms")}</FieldError>}
           </div>
 
           <p className="text-center text-[13.5px]" style={{ color: TEXT_MUTED }}>
@@ -548,6 +643,7 @@ function TextField({
   inputMode,
   autoComplete,
   maxLength,
+  placeholder,
   children,
 }: {
   field: RegistrationField | "code";
@@ -563,6 +659,7 @@ function TextField({
   inputMode?: "numeric" | "email" | "tel" | "text";
   autoComplete?: string;
   maxLength?: number;
+  placeholder?: string;
   children?: React.ReactNode;
 }) {
   const id = `reg-${field}`;
@@ -589,6 +686,7 @@ function TextField({
         inputMode={inputMode}
         autoComplete={autoComplete}
         maxLength={maxLength}
+        placeholder={placeholder}
         value={value}
         aria-invalid={invalid || undefined}
         aria-describedby={described}
