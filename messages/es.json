@@ -496,6 +496,7 @@
     "logoutCta": "Cerrar sesión",
     "addAddressCta": "Agregar dirección de entrega",
     "createAccountCta": "Crear cuenta",
+    "ordersCta": "Mis pedidos",
 
     "addresses": {
 
@@ -717,6 +718,51 @@
     "socialPending": "{label} (pendiente de link)",
     "termsLink": "Términos y Condiciones",
     "privacyLink": "Política de Privacidad"
+  },
+  "Orders": {
+    "title": "Mis pedidos",
+    "back": "Volver",
+    "backToList": "Volver a mis pedidos",
+    "listAria": "Tus pedidos",
+    "loading": "Cargando tus pedidos",
+    "loadingDetail": "Cargando el pedido",
+    "loadingMore": "Cargando...",
+    "more": "Ver más pedidos",
+    "retry": "Reintentar",
+    "loadError": "No pudimos cargar tus pedidos. Intentá de nuevo.",
+    "detailError": "No pudimos cargar este pedido. Intentá de nuevo.",
+    "notFound": "No encontramos ese pedido.",
+    "emptyTitle": "Todavía no tenés pedidos",
+    "emptyBody": "Cuando hagas tu primer pedido, lo vas a ver acá con su estado.",
+    "orderNumber": "Pedido {id}",
+    "createdOn": "Creado el",
+    "channelLabel": "Modalidad",
+    "channel": {
+      "delivery": "A domicilio",
+      "pickup": "Retiro en tienda"
+    },
+    "deliveryDate": "Fecha de entrega",
+    "deliveryAddress": "Dirección de entrega",
+    "pickupStore": "Tienda de retiro",
+    "total": "Total",
+    "linesTitle": "Productos",
+    "lineQty": "{quantity} × {unit}",
+    "unitPrice": "{price} c/u",
+    "noLines": "Estamos procesando tu pedido. Los productos aparecen cuando se confirme.",
+    "timelineTitle": "Seguimiento",
+    "status": {
+      "received": "Recibido",
+      "processing": "En proceso",
+      "postponed": "Postergado",
+      "cancelled": "Cancelado",
+      "approved": "Aprobado",
+      "invoiced": "Facturado",
+      "on_route": "En ruta",
+      "delivered": "Entregado",
+      "partial": "Entrega parcial",
+      "returned": "Devuelto",
+      "later": "Entrega posterior"
+    }
   },
   "Registration": {
     "eyebrow": "Registro",

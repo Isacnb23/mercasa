@@ -496,6 +496,7 @@
     "logoutCta": "Sign out",
     "addAddressCta": "Add delivery address",
     "createAccountCta": "Create account",
+    "ordersCta": "My orders",
 
     "addresses": {
 
@@ -717,6 +718,51 @@
     "socialPending": "{label} (link coming soon)",
     "termsLink": "Terms and Conditions",
     "privacyLink": "Privacy Policy"
+  },
+  "Orders": {
+    "title": "My orders",
+    "back": "Back",
+    "backToList": "Back to my orders",
+    "listAria": "Your orders",
+    "loading": "Loading your orders",
+    "loadingDetail": "Loading the order",
+    "loadingMore": "Loading...",
+    "more": "Show more orders",
+    "retry": "Retry",
+    "loadError": "We could not load your orders. Try again.",
+    "detailError": "We could not load this order. Try again.",
+    "notFound": "We could not find that order.",
+    "emptyTitle": "You do not have any orders yet",
+    "emptyBody": "When you place your first order, you will see it here with its status.",
+    "orderNumber": "Order {id}",
+    "createdOn": "Created on",
+    "channelLabel": "Method",
+    "channel": {
+      "delivery": "Home delivery",
+      "pickup": "Store pickup"
+    },
+    "deliveryDate": "Delivery date",
+    "deliveryAddress": "Delivery address",
+    "pickupStore": "Pickup store",
+    "total": "Total",
+    "linesTitle": "Products",
+    "lineQty": "{quantity} × {unit}",
+    "unitPrice": "{price} each",
+    "noLines": "We are processing your order. The products appear once it is confirmed.",
+    "timelineTitle": "Tracking",
+    "status": {
+      "received": "Received",
+      "processing": "In process",
+      "postponed": "Postponed",
+      "cancelled": "Cancelled",
+      "approved": "Approved",
+      "invoiced": "Invoiced",
+      "on_route": "On the way",
+      "delivered": "Delivered",
+      "partial": "Partially delivered",
+      "returned": "Returned",
+      "later": "Later delivery"
+    }
   },
   "Registration": {
     "eyebrow": "Sign up",

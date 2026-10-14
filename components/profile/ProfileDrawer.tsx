@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { AlertCircle, LogOut, Mail, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, ClipboardList, LogOut, Mail, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
@@ -23,6 +23,7 @@ import {
   TEXT_MUTED,
 } from "@/components/ui/drawer-tokens";
 import AddressFlow from "./AddressFlow";
+import OrdersPanel from "./OrdersPanel";
 import SavedAddresses from "./SavedAddresses";
 
 // Iniciales para el avatar: primera letra de las dos primeras palabras del nombre (o las
@@ -45,6 +46,10 @@ export default function ProfileDrawer() {
   const [submitting, setSubmitting] = useState(false);
   const [addingAddress, setAddingAddress] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [showingOrders, setShowingOrders] = useState(false);
+  // "Mis pedidos" solo se ofrece si el servidor no lo apagó (history_disabled). Se consulta una vez por cuenta al abrir el
+  // panel con sesión; mientras no se sabe, la entrada no se muestra.
+  const [historyProbe, setHistoryProbe] = useState<{ account: string; available: boolean } | null>(null);
   // Pie del registro: hermano del cuerpo con scroll, pegado al borde inferior del panel (el flujo pinta ahí su botón).
   const [registrationFooter, setRegistrationFooter] = useState<HTMLElement | null>(null);
 
@@ -60,8 +65,31 @@ export default function ProfileDrawer() {
       setError(null);
       setAddingAddress(false);
       setRegistering(false);
+      setShowingOrders(false);
     }
   }
+
+  const historyAvailable = user && historyProbe?.account === user.accountNum ? historyProbe.available : null;
+
+  useEffect(() => {
+    if (!user || !isOpen || historyAvailable !== null) return;
+    const account = user.accountNum;
+    let cancelled = false;
+
+    fetch("/api/customer/orders?page=1&pageSize=1", { cache: "no-store" })
+      .then(async (res) => {
+        const body = (await res.json().catch(() => null)) as { code?: unknown } | null;
+        // Solo "history_disabled" oculta la entrada; una falla pasajera no (el panel mostrará el error con reintento).
+        if (!cancelled) setHistoryProbe({ account, available: !(res.status === 503 && body?.code === "history_disabled") });
+      })
+      .catch(() => {
+        if (!cancelled) setHistoryProbe({ account, available: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isOpen, historyAvailable]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +138,8 @@ export default function ProfileDrawer() {
           <p className="py-6 text-center text-[13.5px]" style={{ color: TEXT_MUTED }} role="status">
             {t("loadingSession")}
           </p>
+        ) : user && showingOrders ? (
+          <OrdersPanel onBack={() => setShowingOrders(false)} />
         ) : user && addingAddress ? (
           <AddressFlow onClose={() => setAddingAddress(false)} />
         ) : user ? (
@@ -132,6 +162,19 @@ export default function ProfileDrawer() {
                 {user.email || t("noEmailRegistered")}
               </span>
             </div>
+
+            {/* Mis pedidos: solo si el servidor no respondió history_disabled. */}
+            {historyAvailable === true && (
+              <button
+                type="button"
+                onClick={() => setShowingOrders(true)}
+                className={SECONDARY_BUTTON}
+                style={{ borderColor: RULE, color: INK }}
+              >
+                <ClipboardList className="h-4 w-4" strokeWidth={2.2} aria-hidden />
+                {t("ordersCta")}
+              </button>
+            )}
 
             <SavedAddresses onAdd={() => setAddingAddress(true)} />
 
@@ -235,7 +278,7 @@ export default function ProfileDrawer() {
       )}
 
       {/* Cerrar sesión: acción secundaria y tenue en el pie, no un botón principal. */}
-      {user && !isLoading && !addingAddress && (
+      {user && !isLoading && !addingAddress && !showingOrders && (
         <DrawerFooter>
           <button
             type="button"
