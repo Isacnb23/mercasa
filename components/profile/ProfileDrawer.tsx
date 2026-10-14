@@ -5,6 +5,8 @@ import { AlertCircle, LogOut, Mail, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
+import { REGISTRATION_ENABLED } from "@/lib/feature-flags";
+import { Link } from "@/i18n/navigation";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
 import {
   BEIGE,
@@ -196,6 +198,18 @@ export default function ProfileDrawer() {
             >
               {submitting ? t("submitCtaLoading") : t("submitCta")}
             </button>
+
+            {/* Registro: solo con NEXT_PUBLIC_ENABLE_REGISTRATION=true (apagado por defecto). */}
+            {REGISTRATION_ENABLED && (
+              <Link
+                href="/registro"
+                onClick={closeProfile}
+                className={SECONDARY_BUTTON}
+                style={{ borderColor: RULE, color: INK }}
+              >
+                {t("createAccountCta")}
+              </Link>
+            )}
           </form>
         )}
       </DrawerBody>

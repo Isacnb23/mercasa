@@ -495,6 +495,7 @@
     "noEmailRegistered": "No email on file",
     "logoutCta": "Sign out",
     "addAddressCta": "Add delivery address",
+    "createAccountCta": "Create account",
 
     "addresses": {
 
@@ -716,6 +717,82 @@
     "socialPending": "{label} (link coming soon)",
     "termsLink": "Terms and Conditions",
     "privacyLink": "Privacy Policy"
+  },
+  "Registration": {
+    "metaTitle": "Create account",
+    "metaDescription": "Create your Mercasa customer account to see prices and place orders online.",
+    "stepsAria": "Registration progress",
+    "stepLabel": "Step {current} of {total}",
+    "haveAccount": "Already a customer?",
+    "haveAccountLink": "Go to the home page to sign in",
+    "step1": {
+      "title": "Create your account",
+      "intro": "Fill in your customer details. We will email you a code to confirm the address is yours.",
+      "submit": "Email me the code",
+      "submitting": "Sending..."
+    },
+    "fields": {
+      "name": { "label": "Full name or company name" },
+      "idNumber": { "label": "ID number (individual or company)", "hint": "Numbers only, with or without dashes. E.g. 3-0564-0580" },
+      "email": { "label": "Email address" },
+      "phone": { "label": "Phone", "hint": "8 digits. E.g. 8888-7777" },
+      "password": { "label": "Password" }
+    },
+    "passwordRules": {
+      "title": "Your password must have:",
+      "length": "Between 8 and 64 characters",
+      "upper": "One uppercase letter",
+      "lower": "One lowercase letter",
+      "digit": "One number",
+      "met": "met",
+      "pending": "pending"
+    },
+    "terms": {
+      "accept": "I accept the",
+      "termsLink": "Terms and Conditions",
+      "and": "and the",
+      "privacyLink": "Privacy Policy"
+    },
+    "errors": {
+      "name": "Enter your full name (at least 3 letters).",
+      "idNumber": "Check the ID number: 9 digits (individual) or 10 digits starting with 3 (company).",
+      "email": "Enter a valid email, for example name@company.com.",
+      "phone": "Enter an 8-digit phone number, for example 8888-7777.",
+      "password": "The password does not meet the requirements in the list.",
+      "acceptedTerms": "You must accept the terms and the privacy policy.",
+      "code": "Enter the 6 digits of the code.",
+      "form": {
+        "validation": "Check the highlighted fields.",
+        "duplicate": "We could not complete the registration. Try signing in or contact us to recover your account.",
+        "rateLimited": "Too many attempts. Wait a few minutes and try again.",
+        "captcha": "Complete the security check and try again.",
+        "captchaUnavailable": "The security check is not available right now. Try again later.",
+        "unavailable": "The service is not available right now. Try again in a few minutes."
+      }
+    },
+    "step2": {
+      "title": "Confirm your email",
+      "intro": "We sent a 6-digit code to {email}. Enter it here; it is valid for 10 minutes.",
+      "codeLabel": "Verification code",
+      "submit": "Confirm code",
+      "submitting": "Verifying...",
+      "restart": "Start over",
+      "codeInvalid": "The code is not correct. Check it and try again.",
+      "codeExpired": "The code expired or the number of attempts was exceeded. Start over."
+    },
+    "step3": {
+      "workingTitle": "Finishing your registration",
+      "workingBody": "One moment, we are finishing your registration...",
+      "pendingTitle": "We received your request!",
+      "pendingBody": "We are reviewing your details. Once your account is ready, you will be able to sign in with your ID number and password.",
+      "disabledTitle": "We are enabling online registration",
+      "disabledBody": "We confirmed your email, but we cannot create your account from the website yet. No account was created. Please try again soon or contact us.",
+      "errorTitle": "We could not finish the registration",
+      "retryBody": "The service is not available right now. You can retry in a few minutes.",
+      "restartBody": "The registration expired. Start over.",
+      "retry": "Retry",
+      "home": "Back to home"
+    }
   },
   "Legal": {
     "eyebrow": "Legal",

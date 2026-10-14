@@ -495,6 +495,7 @@
     "noEmailRegistered": "Sin correo registrado",
     "logoutCta": "Cerrar sesión",
     "addAddressCta": "Agregar dirección de entrega",
+    "createAccountCta": "Crear cuenta",
 
     "addresses": {
 
@@ -716,6 +717,82 @@
     "socialPending": "{label} (pendiente de link)",
     "termsLink": "Términos y Condiciones",
     "privacyLink": "Política de Privacidad"
+  },
+  "Registration": {
+    "metaTitle": "Crear cuenta",
+    "metaDescription": "Creá tu cuenta de cliente Mercasa para ver precios y hacer pedidos en línea.",
+    "stepsAria": "Progreso del registro",
+    "stepLabel": "Paso {current} de {total}",
+    "haveAccount": "¿Ya sos cliente?",
+    "haveAccountLink": "Ir al inicio para iniciar sesión",
+    "step1": {
+      "title": "Creá tu cuenta",
+      "intro": "Completá tus datos de cliente. Te enviaremos un código a tu correo para confirmar que es tuyo.",
+      "submit": "Enviarme el código",
+      "submitting": "Enviando..."
+    },
+    "fields": {
+      "name": { "label": "Nombre completo o razón social" },
+      "idNumber": { "label": "Cédula (física o jurídica)", "hint": "Solo números, con o sin guiones. Ej. 3-0564-0580" },
+      "email": { "label": "Correo electrónico" },
+      "phone": { "label": "Teléfono", "hint": "8 dígitos. Ej. 8888-7777" },
+      "password": { "label": "Contraseña" }
+    },
+    "passwordRules": {
+      "title": "Tu contraseña debe tener:",
+      "length": "Entre 8 y 64 caracteres",
+      "upper": "Una letra mayúscula",
+      "lower": "Una letra minúscula",
+      "digit": "Un número",
+      "met": "cumplido",
+      "pending": "pendiente"
+    },
+    "terms": {
+      "accept": "Acepto los",
+      "termsLink": "Términos y Condiciones",
+      "and": "y la",
+      "privacyLink": "Política de Privacidad"
+    },
+    "errors": {
+      "name": "Escribí tu nombre completo (mínimo 3 letras).",
+      "idNumber": "Revisá la cédula: 9 dígitos (física) o 10 dígitos que empiecen por 3 (jurídica).",
+      "email": "Escribí un correo válido, por ejemplo nombre@empresa.com.",
+      "phone": "Escribí un teléfono de 8 dígitos, por ejemplo 8888-7777.",
+      "password": "La contraseña no cumple los requisitos de la lista.",
+      "acceptedTerms": "Tenés que aceptar los términos y la política de privacidad.",
+      "code": "Escribí los 6 dígitos del código.",
+      "form": {
+        "validation": "Revisá los campos marcados.",
+        "duplicate": "No pudimos completar el registro. Probá iniciar sesión o escribinos para recuperar tu cuenta.",
+        "rateLimited": "Hiciste muchos intentos. Esperá unos minutos e intentá de nuevo.",
+        "captcha": "Confirmá la verificación de seguridad e intentá de nuevo.",
+        "captchaUnavailable": "La verificación de seguridad no está disponible ahora. Intentá más tarde.",
+        "unavailable": "El servicio no está disponible en este momento. Intentá de nuevo en unos minutos."
+      }
+    },
+    "step2": {
+      "title": "Confirmá tu correo",
+      "intro": "Enviamos un código de 6 dígitos a {email}. Escribilo acá; vale por 10 minutos.",
+      "codeLabel": "Código de verificación",
+      "submit": "Confirmar código",
+      "submitting": "Verificando...",
+      "restart": "Empezar de nuevo",
+      "codeInvalid": "El código no es correcto. Revisalo e intentá de nuevo.",
+      "codeExpired": "El código venció o se superó el número de intentos. Empezá de nuevo."
+    },
+    "step3": {
+      "workingTitle": "Terminando tu registro",
+      "workingBody": "Un momento, estamos terminando tu registro...",
+      "pendingTitle": "¡Recibimos tu solicitud!",
+      "pendingBody": "Estamos revisando tus datos. Cuando tu cuenta esté lista, vas a poder iniciar sesión con tu cédula y tu contraseña.",
+      "disabledTitle": "Estamos habilitando el registro en línea",
+      "disabledBody": "Confirmamos tu correo, pero todavía no podemos crear tu cuenta desde la web. No se creó ninguna cuenta. Volvé a intentarlo pronto o contactanos.",
+      "errorTitle": "No pudimos terminar el registro",
+      "retryBody": "El servicio no está disponible en este momento. Podés reintentar en unos minutos.",
+      "restartBody": "El registro venció. Empezá de nuevo.",
+      "retry": "Reintentar",
+      "home": "Volver al inicio"
+    }
   },
   "Legal": {
     "eyebrow": "Legal",
