@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, MapPin, Plus, RefreshCw } from "lucide-react";
+import { AlertCircle, Check, MapPin, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
 import type { SavedAddress } from "@/lib/auth-types";
@@ -44,7 +44,9 @@ function Skeletons({ label }: { label: string }) {
   );
 }
 
-export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
+// `onEdit`: abre el editor de esa dirección. El botón "Editar" va APARTE de la tarjeta (un botón dentro de otro botón no es
+// válido ni accesible) y su nombre accesible incluye cuál dirección es.
+export default function SavedAddresses({ onAdd, onEdit }: { onAdd: () => void; onEdit?: (address: SavedAddress) => void }) {
   const t = useTranslations("Profile.addresses");
   const { addresses, status, refreshAddresses } = useAddresses();
   const { addressId: activeId, setActiveAddressId } = useActiveAddress();
@@ -162,6 +164,21 @@ export default function SavedAddresses({ onAdd }: { onAdd: () => void }) {
                       </span>
                     )}
                   </button>
+                  {onEdit && (
+                    <div className="mt-1.5 flex justify-end">
+                      <button
+                        type="button"
+                        data-address-edit={address.addressId}
+                        aria-label={t("editAria", { name: address.name || t("unnamed") })}
+                        onClick={() => onEdit(address)}
+                        className={`flex min-h-[40px] items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold motion-safe:transition motion-safe:duration-150 hover:bg-[#F1ECE4] ${FOCUS_RING}`}
+                        style={{ color: INK }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                        {t("editCta")}
+                      </button>
+                    </div>
+                  )}
                 </li>
               );
             })}

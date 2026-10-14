@@ -21,6 +21,8 @@ export const ORDER_PREVIEW_DEBOUNCE_MS = 400;
 interface Params {
   cartItems: ReadonlyArray<{ id: string; quantity: number; unitId?: string; channel?: CartChannel }>;
   addressId: number | null;
+  // Cambia cuando se recarga la lista de direcciones (p. ej. se editó la activa): fuerza una nueva validación.
+  addressRevision?: number;
   deliveryDate: string | null;
   paymentMethod: PaymentMethod | null;
   // Tienda de retiro (la elegida o la propuesta); null = sin grupo de retiro.
@@ -53,7 +55,7 @@ function errorFor(status: number): OrderPreviewError {
   return "unknown";
 }
 
-export function useOrderPreview({ cartItems, addressId, deliveryDate, paymentMethod, pickupSiteId }: Params): OrderPreviewResult {
+export function useOrderPreview({ cartItems, addressId, addressRevision = 0, deliveryDate, paymentMethod, pickupSiteId }: Params): OrderPreviewResult {
   const { user } = useAuth();
   const accountNum = user?.accountNum ?? null;
   const [attempt, setAttempt] = useState(0);
@@ -67,7 +69,7 @@ export function useOrderPreview({ cartItems, addressId, deliveryDate, paymentMet
     return request.delivery || request.pickup ? orderRequestKey(request) : null;
   }, [accountNum, addressId, cartItems, deliveryDate, paymentMethod, pickupSiteId]);
 
-  const requestKey = body && accountNum ? `${accountNum}|${body}#${attempt}` : null;
+  const requestKey = body && accountNum ? `${accountNum}|${body}#${attempt}.${addressRevision}` : null;
 
   useEffect(() => {
     if (!body || !requestKey) return;

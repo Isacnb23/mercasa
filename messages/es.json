@@ -520,7 +520,11 @@
 
       "activeBadge": "Activa",
 
-      "unnamed": "Dirección sin nombre"
+      "unnamed": "Dirección sin nombre",
+      "editCta": "Editar",
+      "editAria": "Editar la dirección {name}",
+      "editedNotice": "Dirección actualizada.",
+      "notFoundNotice": "Esa dirección ya no existe. Actualizamos tu lista."
 
     },
     "address": {
@@ -552,7 +556,12 @@
       "sessionExpired": "Tu sesión venció. Iniciá sesión de nuevo para guardar la dirección.",
       "savedTitle": "¡Dirección guardada!",
       "savedBody": "Ya registramos tu dirección de entrega.",
-      "done": "Listo"
+      "done": "Listo",
+      "editTitle": "Editar dirección",
+      "saveChangesCta": "Guardar cambios",
+      "changePin": "Cambiar el punto en el mapa",
+      "editSaveError": "No pudimos guardar los cambios ahora. Intentá de nuevo en unos minutos.",
+      "editValidationError": "Revisá los datos de la dirección e intentá de nuevo."
     }
   },
   "Brands": {

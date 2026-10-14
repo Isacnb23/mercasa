@@ -520,7 +520,11 @@
 
       "activeBadge": "Active",
 
-      "unnamed": "Unnamed address"
+      "unnamed": "Unnamed address",
+      "editCta": "Edit",
+      "editAria": "Edit the address {name}",
+      "editedNotice": "Address updated.",
+      "notFoundNotice": "That address no longer exists. We refreshed your list."
 
     },
     "address": {
@@ -552,7 +556,12 @@
       "sessionExpired": "Your session expired. Sign in again to save the address.",
       "savedTitle": "Address saved!",
       "savedBody": "We've registered your delivery address.",
-      "done": "Done"
+      "done": "Done",
+      "editTitle": "Edit address",
+      "saveChangesCta": "Save changes",
+      "changePin": "Change the point on the map",
+      "editSaveError": "We could not save the changes right now. Try again in a few minutes.",
+      "editValidationError": "Check the address details and try again."
     }
   },
   "Brands": {

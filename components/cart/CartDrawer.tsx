@@ -68,7 +68,7 @@ export default function CartDrawer() {
   const locale = useLocale();
   const { user, openProfile } = useAuth();
   const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite } = useCart();
-  const { addressId } = useActiveAddress();
+  const { addressId, revision: addressRevision } = useActiveAddress();
   const { status: addressesStatus } = useAddresses();
 
   // Todo el estado del flujo vive en memoria del componente (nada en localStorage ni cookies).
@@ -79,8 +79,9 @@ export default function CartDrawer() {
 
   // Fecha de entrega elegida, atada a la dirección activa: si cambia la dirección, la elección anterior deja
   // de aplicar sin necesidad de un efecto que la borre.
-  const [chosenDate, setChosenDate] = useState<{ addressId: number; date: string } | null>(null);
-  const selectedDate = chosenDate && chosenDate.addressId === addressId ? chosenDate.date : null;
+  // La fecha elegida vale solo para esa dirección Y esa versión de ella: si se edita (cambian sus días de entrega), se vuelve a elegir.
+  const [chosenDate, setChosenDate] = useState<{ addressId: number; revision: number; date: string } | null>(null);
+  const selectedDate = chosenDate && chosenDate.addressId === addressId && chosenDate.revision === addressRevision ? chosenDate.date : null;
 
   // Dos grupos: domicilio y retiro en tienda (una línea por producto, presentación y canal).
   const deliveryItems = itemsInChannel(items, "delivery");
@@ -91,7 +92,7 @@ export default function CartDrawer() {
 
   // Vista previa del servidor: precios, totales, mínimo y errores por grupo. Sin sesión no se llama; el grupo de
   // domicilio necesita además una dirección y el de retiro, una tienda.
-  const order = useOrderPreview({ cartItems: items, addressId, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite });
+  const order = useOrderPreview({ cartItems: items, addressId, addressRevision, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite });
   const preview = order.preview;
   const expectDelivery = !!user && addressId !== null;
   const expectPickup = !!user && present.pickup && pickupSite !== null;
@@ -232,7 +233,7 @@ export default function CartDrawer() {
       )}
 
       {/* Sin el flujo de pasos: aviso de sesión o fechas de entrega (la elegida viaja en el WhatsApp). */}
-      {!flow && <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, date })} />}
+      {!flow && <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })} />}
     </>
   );
 
@@ -325,7 +326,7 @@ export default function CartDrawer() {
           {currentStep === "delivery" && (
             <DeliveryStep
               selectedDate={selectedDate}
-              onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, date })}
+              onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })}
               onChangeAddress={changeAddress}
               showDelivery={present.delivery}
               pickup={

@@ -60,6 +60,8 @@ interface AddressesState {
   status: AddressesStatus;
   addresses: SavedAddress[];
   selectedId: number | null;
+  // Sube cada vez que se carga o recarga la lista (p. ej. tras editar una dirección): el carrito lo usa para volver a validar.
+  revision: number;
 }
 
 interface AddressesContextValue {
@@ -68,6 +70,7 @@ interface AddressesContextValue {
   refreshAddresses: () => Promise<void>;
   activeAddress: SavedAddress | null;
   setActiveAddressId: (addressId: number) => void;
+  revision: number;
 }
 
 const AddressesContext = createContext<AddressesContextValue | null>(null);
@@ -81,6 +84,7 @@ export function AddressesProvider({ children }: { children: React.ReactNode }) {
     status: "idle",
     addresses: [],
     selectedId: null,
+    revision: 0,
   });
   const requestRef = useRef(0);
 
@@ -92,6 +96,7 @@ export function AddressesProvider({ children }: { children: React.ReactNode }) {
       status: accountNum ? "loading" : "idle",
       addresses: [],
       selectedId: null,
+      revision: s0Revision(state),
     });
   }
 
@@ -99,7 +104,7 @@ export function AddressesProvider({ children }: { children: React.ReactNode }) {
     const stored = readStoredId();
     const selectedId = addresses.some((a) => a.addressId === stored) ? stored : null;
     if (stored !== null && selectedId === null) writeStoredId(null);
-    setState((s) => (s.accountNum === forAccount ? { ...s, status: "ready", addresses, selectedId } : s));
+    setState((s) => (s.accountNum === forAccount ? { ...s, status: "ready", addresses, selectedId, revision: s.revision + 1 } : s));
   }, []);
 
   const applyFailed = useCallback((forAccount: string) => {
@@ -159,6 +164,7 @@ export function AddressesProvider({ children }: { children: React.ReactNode }) {
       refreshAddresses,
       activeAddress: pickActiveAddress(state.addresses, state.selectedId),
       setActiveAddressId,
+      revision: state.revision,
     }),
     [state, refreshAddresses, setActiveAddressId]
   );
@@ -172,9 +178,15 @@ export function useAddresses() {
   return ctx;
 }
 
+// Continúa la cuenta de revisiones al cambiar de sesión (nunca vuelve atrás: una respuesta vieja no puede coincidir).
+function s0Revision(state: { revision: number }): number {
+  return state.revision + 1;
+}
+
 // Dirección activa (la que más adelante usarán precios, promociones y pedido).
 // `address` es null sin sesión, mientras carga o si el cliente no tiene direcciones.
 export function useActiveAddress() {
-  const { activeAddress, setActiveAddressId } = useAddresses();
-  return { address: activeAddress, addressId: activeAddress?.addressId ?? null, setActiveAddressId };
+  const { activeAddress, setActiveAddressId, revision } = useAddresses();
+  // revision: cambia al recargar la lista (por ejemplo tras editar la dirección activa); precios y fechas de entrega se revalidan.
+  return { address: activeAddress, addressId: activeAddress?.addressId ?? null, setActiveAddressId, revision };
 }

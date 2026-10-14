@@ -90,12 +90,12 @@ export function useMinimumAmount(): Resource<MinimumAmountInfo> {
 
 // Fechas de entrega de una dirección. Se recalculan al cambiar `addressId` (la
 // dirección activa). "idle" sin sesión o sin dirección.
-export function useDeliveryDates(addressId: number | null): Resource<DeliveryDatesInfo> {
+export function useDeliveryDates(addressId: number | null, revision = 0): Resource<DeliveryDatesInfo> {
   const { user } = useAuth();
   const accountNum = user?.accountNum ?? null;
   const active = accountNum !== null && addressId !== null;
   return useCheckoutResource(
-    active ? `${accountNum}:${addressId}` : null,
+    active ? `${accountNum}:${addressId}:${revision}` : null,
     active ? `/api/checkout/delivery-dates?addressId=${addressId}` : null,
     parseDeliveryDates
   );
@@ -103,6 +103,6 @@ export function useDeliveryDates(addressId: number | null): Resource<DeliveryDat
 
 // Atajo para el carrito: fechas de la dirección ACTIVA.
 export function useActiveDeliveryDates(): Resource<DeliveryDatesInfo> {
-  const { addressId } = useActiveAddress();
-  return useDeliveryDates(addressId);
+  const { addressId, revision } = useActiveAddress();
+  return useDeliveryDates(addressId, revision);
 }

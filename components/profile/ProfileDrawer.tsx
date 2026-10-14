@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AlertCircle, ClipboardList, LogOut, Mail, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, ClipboardList, LogOut, Mail, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
+import type { SavedAddress } from "@/lib/auth-types";
+import type { AddressNotice } from "@/lib/addresses-edit";
 import { REGISTRATION_ENABLED } from "@/lib/feature-flags";
 import RegistrationFlow from "@/components/registration/RegistrationFlow";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
@@ -47,6 +49,10 @@ export default function ProfileDrawer() {
   const [addingAddress, setAddingAddress] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [showingOrders, setShowingOrders] = useState(false);
+  // Editar una dirección: la que se edita, el aviso al volver a la lista y la dirección cuyo botón recibe el foco al volver.
+  const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
+  const [addressNotice, setAddressNotice] = useState<AddressNotice | null>(null);
+  const lastEdited = useRef<number | null>(null);
   // "Mis pedidos" solo se ofrece si el servidor no lo apagó (history_disabled). Se consulta una vez por cuenta al abrir el
   // panel con sesión; mientras no se sabe, la entrada no se muestra.
   const [historyProbe, setHistoryProbe] = useState<{ account: string; available: boolean } | null>(null);
@@ -66,6 +72,8 @@ export default function ProfileDrawer() {
       setAddingAddress(false);
       setRegistering(false);
       setShowingOrders(false);
+      setEditingAddress(null);
+      setAddressNotice(null);
     }
   }
 
@@ -90,6 +98,21 @@ export default function ProfileDrawer() {
       cancelled = true;
     };
   }, [user, isOpen, historyAvailable]);
+
+  // Al volver del editor, el foco regresa al botón "Editar" de esa dirección (si aún existe).
+  useEffect(() => {
+    if (editingAddress !== null || lastEdited.current === null) return;
+    const id = lastEdited.current;
+    lastEdited.current = null;
+    document.querySelector<HTMLElement>(`[data-address-edit="${id}"]`)?.focus();
+  }, [editingAddress]);
+
+  // El aviso es breve: se quita solo.
+  useEffect(() => {
+    if (addressNotice === null) return;
+    const timer = setTimeout(() => setAddressNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [addressNotice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +163,14 @@ export default function ProfileDrawer() {
           </p>
         ) : user && showingOrders ? (
           <OrdersPanel onBack={() => setShowingOrders(false)} />
+        ) : user && editingAddress ? (
+          <AddressFlow
+            editing={editingAddress}
+            onClose={(result) => {
+              setEditingAddress(null);
+              if (result) setAddressNotice(result);
+            }}
+          />
         ) : user && addingAddress ? (
           <AddressFlow onClose={() => setAddingAddress(false)} />
         ) : user ? (
@@ -176,7 +207,28 @@ export default function ProfileDrawer() {
               </button>
             )}
 
-            <SavedAddresses onAdd={() => setAddingAddress(true)} />
+            {addressNotice && (
+              <p
+                role="status"
+                className="flex items-start gap-2 rounded-xl px-3.5 py-3 text-[13px] font-medium leading-snug"
+                style={{ background: addressNotice === "saved" ? "#E6F4EA" : BEIGE, color: addressNotice === "saved" ? "#1B6B3A" : INK }}
+              >
+                <CheckCircle2 className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                {addressNotice === "saved" ? t("addresses.editedNotice") : t("addresses.notFoundNotice")}
+              </p>
+            )}
+
+            <SavedAddresses
+              onAdd={() => {
+                setAddressNotice(null);
+                setAddingAddress(true);
+              }}
+              onEdit={(address) => {
+                lastEdited.current = address.addressId;
+                setAddressNotice(null);
+                setEditingAddress(address);
+              }}
+            />
 
             {/* Con la lista vacía el botón de agregar va dentro del estado vacío. */}
             {showAddButton && (
@@ -278,7 +330,7 @@ export default function ProfileDrawer() {
       )}
 
       {/* Cerrar sesión: acción secundaria y tenue en el pie, no un botón principal. */}
-      {user && !isLoading && !addingAddress && !showingOrders && (
+      {user && !isLoading && !addingAddress && !editingAddress && !showingOrders && (
         <DrawerFooter>
           <button
             type="button"

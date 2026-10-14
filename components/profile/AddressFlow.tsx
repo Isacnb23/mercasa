@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AlertCircle, ArrowLeft, CheckCircle2, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
+import type { SavedAddress } from "@/lib/auth-types";
+import { classifyDirectionError, matchOptionId, prefillFromSaved, type AddressNotice } from "@/lib/addresses-edit";
 import {
   BEIGE,
   DANGER_BG,
@@ -68,22 +70,38 @@ function useOptions(level: string, query: string | null) {
   };
 }
 
-export default function AddressFlow({ onClose }: { onClose: () => void }) {
+// Crear una dirección nueva o, con `editing`, modificar una guardada (mismos pasos, mismas validaciones y mismo mapa, con los
+// valores actuales precargados). Al editar NO se puede cambiar la cédula ni la compañía (ni siquiera aparecen: la cuenta sale
+// del JWT en el servidor). `onClose` recibe el resultado al terminar una edición para que el panel avise y devuelva el foco.
+export default function AddressFlow({
+  onClose,
+  editing,
+}: {
+  onClose: (result?: AddressNotice) => void;
+  editing?: SavedAddress;
+}) {
   const t = useTranslations("Profile.address");
   const { user } = useAuth();
   const { refreshAddresses } = useAddresses();
 
-  const [step, setStep] = useState<Step>("map");
-  const [center, setCenter] = useState<LatLng | null>(null);
-  const [pinned, setPinned] = useState<LatLng | null>(null);
+  const [prefill] = useState(() => (editing ? prefillFromSaved(editing) : null));
+
+  // Editando una dirección con ubicación se empieza en el formulario (con el pin ya puesto); sin ubicación, en el mapa.
+  const [step, setStep] = useState<Step>(prefill?.pin ? "form" : "map");
+  const [center, setCenter] = useState<LatLng | null>(prefill?.pin ?? null);
+  const [pinned, setPinned] = useState<LatLng | null>(prefill?.pin ?? null);
 
   const [fullName, setFullName] = useState(user?.name ?? "");
-  const [provinceId, setProvinceId] = useState("");
-  const [cantonId, setCantonId] = useState("");
-  const [districtId, setDistrictId] = useState("");
-  const [cityId, setCityId] = useState("");
-  const [street, setStreet] = useState("");
-  const [addressName, setAddressName] = useState("");
+  // Lo que eligió el cliente en cada nivel. Al editar, mientras no toque un nivel, se usa el de la dirección guardada
+  // (por nombre) en cuanto llega su lista de opciones; al tocar un nivel, ese nivel y los de abajo ya no se prellenan.
+  const [provinceSel, setProvinceSel] = useState("");
+  const [cantonSel, setCantonSel] = useState("");
+  const [districtSel, setDistrictSel] = useState("");
+  const [citySel, setCitySel] = useState("");
+  const [prefillOffFrom, setPrefillOffFrom] = useState(5);
+  const [street, setStreet] = useState(prefill?.street ?? "");
+  const [addressName, setAddressName] = useState(prefill?.addressName ?? "");
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -92,16 +110,28 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
   const countries = useOptions("countries", step === "form" ? "" : null);
   const countryId = countries.options[0]?.id ?? "";
 
+  const prefillOn = (level: number) => prefill !== null && level < prefillOffFrom;
+  const disablePrefill = (level: number) => setPrefillOffFrom((from) => Math.min(from, level));
+
   const provinces = useOptions("provinces", countryId ? `countryId=${countryId}` : null);
+  const provinceId = provinceSel || (prefillOn(1) ? matchOptionId(provinces.options, prefill?.provinceName) : "");
   const cantons = useOptions("cantons", provinceId ? `countryId=${countryId}&provinceId=${provinceId}` : null);
+  const cantonId = cantonSel || (prefillOn(2) ? matchOptionId(cantons.options, prefill?.cantonName) : "");
   const districts = useOptions(
     "districts",
     cantonId ? `countryId=${countryId}&provinceId=${provinceId}&cantonId=${cantonId}` : null
   );
+  const districtId = districtSel || (prefillOn(3) ? matchOptionId(districts.options, prefill?.districtName) : "");
   const cities = useOptions(
     "cities",
     districtId ? `countryId=${countryId}&provinceId=${provinceId}&cantonId=${cantonId}&districtId=${districtId}` : null
   );
+  const cityId = citySel || (prefillOn(4) ? matchOptionId(cities.options, prefill?.cityName) : "");
+
+  // Al editar, el foco va al título al abrir el formulario (y al volver del mapa).
+  useEffect(() => {
+    if (editing && step === "form") titleRef.current?.focus();
+  }, [editing, step]);
 
   // Un distrito sin ciudad devuelve [] (respuesta válida, no error): la
   // ciudad queda "no aplica" y no bloquea el resto del formulario.
@@ -129,8 +159,8 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/directions", {
-        method: "POST",
+      const res = await fetch(editing ? `/api/directions/${editing.addressId}` : "/api/directions", {
+        method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: fullName.trim(),
@@ -150,11 +180,31 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (editing) {
+          // Lo escrito se conserva (el estado sigue aquí): solo se muestra el aviso.
+          const kind = classifyDirectionError(res.status, data);
+          if (kind === "notFound") {
+            // La dirección ya no existe: se actualiza la lista y se vuelve a ella con un aviso.
+            await refreshAddresses();
+            onClose("notFound");
+            return;
+          }
+          setError(kind === "session" ? t("sessionExpired") : kind === "validation" ? t("editValidationError") : t("editSaveError"));
+          return;
+        }
         setError(
           res.status === 401 ? t("sessionExpired") : ((data as { error?: string }).error ?? t("saveError"))
         );
         return;
       }
+
+      if (editing) {
+        // Se espera a la lista nueva para volver a ella con la dirección ya actualizada (si falla, la lista muestra su error).
+        await refreshAddresses();
+        onClose("saved");
+        return;
+      }
+
       // Recarga la lista de "Mis direcciones"; si falla, ese listado muestra su
       // propio error con "Reintentar" y el guardado ya hecho no se ve afectado.
       void refreshAddresses();
@@ -190,7 +240,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
           {t("savedBody")}
         </p>
-        <button type="button" onClick={onClose} className={`${PRIMARY_BUTTON} mt-1`} style={primaryStyle}>
+        <button type="button" onClick={() => onClose()} className={`${PRIMARY_BUTTON} mt-1`} style={primaryStyle}>
           {t("done")}
         </button>
       </div>
@@ -200,7 +250,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
   if (step === "map") {
     return (
       <div className="flex flex-col gap-4">
-        {backButton(onClose)}
+        {backButton(() => (editing && prefill?.pin ? setStep("form") : onClose()))}
         <div>
           <p className="font-display text-[17px] font-semibold" style={{ color: INK }}>
             {t("mapTitle")}
@@ -266,15 +316,25 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {backButton(() => setStep("map"))}
+      {backButton(() => (editing ? onClose() : setStep("map")))}
       <div>
-        <p className="font-display text-[17px] font-semibold" style={{ color: INK }}>
-          {t("formTitle")}
-        </p>
+        <h3 ref={titleRef} tabIndex={-1} className="font-display text-[17px] font-semibold outline-none" style={{ color: INK }}>
+          {editing ? t("editTitle") : t("formTitle")}
+        </h3>
         <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" style={{ color: TEXT_MUTED }}>
           <MapPin className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
           {t("pinnedAt", { lat: pinned?.lat.toFixed(5) ?? "", lng: pinned?.lng.toFixed(5) ?? "" })}
         </p>
+        {editing && (
+          <button
+            type="button"
+            onClick={() => setStep("map")}
+            className={`mt-1 rounded text-[12.5px] font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+            style={{ color: "#075FD8" }}
+          >
+            {t("changePin")}
+          </button>
+        )}
       </div>
 
       <label className="flex flex-col gap-1.5">
@@ -311,10 +371,11 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         t("provinceLabel"),
         provinceId,
         (v) => {
-          setProvinceId(v);
-          setCantonId("");
-          setDistrictId("");
-          setCityId("");
+          setProvinceSel(v);
+          setCantonSel("");
+          setDistrictSel("");
+          setCitySel("");
+          disablePrefill(1);
         },
         provinces,
         !countryId
@@ -324,9 +385,10 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         t("cantonLabel"),
         cantonId,
         (v) => {
-          setCantonId(v);
-          setDistrictId("");
-          setCityId("");
+          setCantonSel(v);
+          setDistrictSel("");
+          setCitySel("");
+          disablePrefill(2);
         },
         cantons,
         !provinceId
@@ -336,8 +398,9 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         t("districtLabel"),
         districtId,
         (v) => {
-          setDistrictId(v);
-          setCityId("");
+          setDistrictSel(v);
+          setCitySel("");
+          disablePrefill(3);
         },
         districts,
         !cantonId
@@ -349,7 +412,17 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
           {t("cityNotApplicable")}
         </p>
       ) : (
-        selectField("city", t("cityLabel"), cityId, setCityId, cities, !districtId)
+        selectField(
+          "city",
+          t("cityLabel"),
+          cityId,
+          (v) => {
+            setCitySel(v);
+            disablePrefill(4);
+          },
+          cities,
+          !districtId
+        )
       )}
 
       <label className="flex flex-col gap-1.5">
@@ -401,7 +474,7 @@ export default function AddressFlow({ onClose }: { onClose: () => void }) {
         className={`${PRIMARY_BUTTON} mt-1`}
         style={primaryStyle}
       >
-        {submitting ? t("saving") : t("saveCta")}
+        {submitting ? t("saving") : editing ? t("saveChangesCta") : t("saveCta")}
       </button>
     </form>
   );
