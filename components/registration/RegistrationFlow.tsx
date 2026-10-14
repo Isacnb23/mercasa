@@ -541,6 +541,11 @@ export default function RegistrationFlow({
 
           {codeError && codeError !== "validation" && codeError !== "codeInvalid" && <FormAlert>{codeErrorText(codeError)}</FormAlert>}
 
+          {/* Mismo texto siempre: la pantalla no puede distinguir un registro nuevo de uno con datos que ya existían. */}
+          <p className="text-[13px] leading-snug" style={{ color: TEXT_MUTED }}>
+            {t("step2.noCode")}
+          </p>
+
           <button
             type="submit"
             disabled={submitting}

@@ -804,11 +804,12 @@
     },
     "step2": {
       "title": "Confirm your email",
-      "intro": "We sent a 6-digit code to {email}. Enter it here; it is valid for 10 minutes.",
+      "intro": "If the details are valid, we sent a 6-digit code to {email}. Enter it here; it is valid for 10 minutes.",
       "codeLabel": "Verification code",
       "submit": "Confirm code",
       "submitting": "Verifying...",
       "restart": "Start over",
+      "noCode": "Did not get it? Check your spam folder or start over.",
       "codeInvalid": "The code is not correct. Check it and try again.",
       "codeExpired": "The code expired or the number of attempts was exceeded. Start over."
     },

@@ -804,11 +804,12 @@
     },
     "step2": {
       "title": "Confirmá tu correo",
-      "intro": "Enviamos un código de 6 dígitos a {email}. Escribilo acá; vale por 10 minutos.",
+      "intro": "Si los datos son válidos, te enviamos un código de 6 dígitos a {email}. Escribilo acá; vale por 10 minutos.",
       "codeLabel": "Código de verificación",
       "submit": "Confirmar código",
       "submitting": "Verificando...",
       "restart": "Empezar de nuevo",
+      "noCode": "¿No te llegó? Revisá la carpeta de correo no deseado o empezá de nuevo.",
       "codeInvalid": "El código no es correcto. Revisalo e intentá de nuevo.",
       "codeExpired": "El código venció o se superó el número de intentos. Empezá de nuevo."
     },
