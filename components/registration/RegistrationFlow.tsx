@@ -36,6 +36,16 @@ import CaptchaWidget from "./CaptchaWidget";
 type Step = 1 | 2 | 3;
 const TOTAL_STEPS = 3;
 
+// Escala vertical única del registro (clases de Tailwind, sin valores sueltos), igual en los 3 pasos:
+//  BLOCK    20px entre bloques (campo, términos, captcha);
+//  FIELD    8px dentro de un bloque (etiqueta + ayuda → campo → error → requisitos);
+//  LABEL    4px entre la etiqueta y su texto de ayuda;
+//  STEP_TOP 24px bajo la barra de progreso.
+const BLOCK = "gap-5";
+const FIELD = "gap-2";
+const LABEL = "gap-1";
+const STEP_TOP = "mt-6";
+
 async function post(step: "start" | "verify" | "complete", body: unknown): Promise<{ status: number; body: unknown }> {
   try {
     const res = await fetch(`/api/register/${step}`, {
@@ -221,16 +231,16 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
       </div>
 
       {step === 1 && (
-        <form onSubmit={handleStart} noValidate className="mt-6 flex flex-col gap-5">
+        <form onSubmit={handleStart} noValidate className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
           <div>
-            <h1
+            <h3
               ref={headingRef}
               tabIndex={-1}
               className="font-display text-corp-ink outline-none"
               style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
             >
               {t("step1.title")}
-            </h1>
+            </h3>
             <p className="mt-3 text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
               {t("step1.intro")}
             </p>
@@ -294,10 +304,10 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
             describedBy="reg-password-rules"
             onChange={(v) => setField("password", v)}
             onBlur={() => touch("password")}
-          />
-          <div id="reg-password-rules" className="-mt-2 text-[13px]" style={{ color: TEXT_MUTED }}>
+          >
+            <div id="reg-password-rules" className={`flex flex-col ${LABEL} text-[13px]`} style={{ color: TEXT_MUTED }}>
             <p className="font-semibold">{t("passwordRules.title")}</p>
-            <ul className="mt-1.5 flex flex-col gap-1">
+            <ul className={`flex flex-col ${LABEL}`}>
               {(["length", "upper", "lower", "digit"] as const).map((rule) => (
                 <li key={rule} className="flex items-center gap-2" style={{ color: passwordRules[rule] ? "#1B6B3A" : TEXT_MUTED }}>
                   {passwordRules[rule] ? (
@@ -313,9 +323,10 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
                 </li>
               ))}
             </ul>
-          </div>
+            </div>
+          </TextField>
 
-          <div>
+          <div className={`flex flex-col ${FIELD}`}>
             <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-snug" style={{ color: INK }}>
               <input
                 id="reg-acceptedTerms"
@@ -353,19 +364,6 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
             {fieldInvalid("acceptedTerms") && <FieldError id="reg-acceptedTerms-error">{t("errors.acceptedTerms")}</FieldError>}
           </div>
 
-          <CaptchaWidget onToken={setCaptchaToken} resetKey={captchaReset} />
-
-          {formError && <FormAlert>{formErrorText(formError)}</FormAlert>}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className={PRIMARY_BUTTON}
-            style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
-          >
-            {submitting ? t("step1.submitting") : t("step1.submit")}
-          </button>
-
           <p className="text-center text-[13.5px]" style={{ color: TEXT_MUTED }}>
             {t("haveAccount")}{" "}
             <button
@@ -377,20 +375,38 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
               {t("haveAccountLink")}
             </button>
           </p>
+
+          <CaptchaWidget onToken={setCaptchaToken} resetKey={captchaReset} />
+
+          {/* Pie fijo: el error y el botón principal siempre quedan a la vista dentro de la zona con scroll. */}
+          <div
+            className={`sticky bottom-0 -mx-5 -mb-6 flex flex-col ${FIELD} bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3`}
+            style={{ boxShadow: "0 -10px 28px -14px rgba(8,43,92,0.22)" }}
+          >
+            {formError && <FormAlert>{formErrorText(formError)}</FormAlert>}
+            <button
+              type="submit"
+              disabled={submitting}
+              className={PRIMARY_BUTTON}
+              style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+            >
+              {submitting ? t("step1.submitting") : t("step1.submit")}
+            </button>
+          </div>
         </form>
       )}
 
       {step === 2 && (
-        <form onSubmit={handleVerify} noValidate className="mt-6 flex flex-col gap-5">
+        <form onSubmit={handleVerify} noValidate className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
           <div>
-            <h1
+            <h3
               ref={headingRef}
               tabIndex={-1}
               className="font-display text-corp-ink outline-none"
               style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
             >
               {t("step2.title")}
-            </h1>
+            </h3>
             <p className="mt-3 text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
               {t("step2.intro", { email })}
             </p>
@@ -429,8 +445,8 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
       )}
 
       {step === 3 && (
-        <div className="mt-6 flex flex-col gap-5">
-          <h1
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
             ref={headingRef}
             tabIndex={-1}
             className="font-display text-corp-ink outline-none"
@@ -443,7 +459,7 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
                 : outcome === "working"
                   ? t("step3.workingTitle")
                   : t("step3.errorTitle")}
-          </h1>
+          </h3>
 
           <div role="status" aria-live="polite" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
             {outcome === "working" && t("step3.workingBody")}
@@ -481,7 +497,7 @@ export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () 
 
 function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-[13px] font-medium leading-snug" style={{ color: DANGER_TEXT }}>
+    <p id={id} role="alert" className="flex items-start gap-1.5 text-[13px] font-medium leading-snug" style={{ color: DANGER_TEXT }}>
       <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
       {children}
     </p>
@@ -516,6 +532,7 @@ function TextField({
   inputMode,
   autoComplete,
   maxLength,
+  children,
 }: {
   field: RegistrationField | "code";
   label: string;
@@ -530,6 +547,7 @@ function TextField({
   inputMode?: "numeric" | "email" | "tel" | "text";
   autoComplete?: string;
   maxLength?: number;
+  children?: React.ReactNode;
 }) {
   const id = `reg-${field}`;
   const hintId = `${id}-hint`;
@@ -537,15 +555,17 @@ function TextField({
   const described = [hint ? hintId : null, invalid ? errorId : null, describedBy].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[13px] font-semibold" style={{ color: INK }}>
-        {label}
-      </label>
-      {hint && (
-        <p id={hintId} className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
-          {hint}
-        </p>
-      )}
+    <div className={`flex scroll-mt-6 flex-col ${FIELD}`}>
+      <div className={`flex flex-col ${LABEL}`}>
+        <label htmlFor={id} className="text-[13px] font-semibold" style={{ color: INK }}>
+          {label}
+        </label>
+        {hint && (
+          <p id={hintId} className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
+            {hint}
+          </p>
+        )}
+      </div>
       <input
         id={id}
         name={field}
@@ -563,6 +583,7 @@ function TextField({
         style={{ borderColor: invalid ? DANGER_TEXT : RULE, color: INK }}
       />
       {invalid && <FieldError id={errorId}>{error}</FieldError>}
+      {children}
     </div>
   );
 }

@@ -719,8 +719,8 @@
     "privacyLink": "Privacy Policy"
   },
   "Registration": {
-    "metaTitle": "Create account",
-    "metaDescription": "Create your Mercasa customer account to see prices and place orders online.",
+    "eyebrow": "Sign up",
+    "panelTitle": "Create account",
     "stepsAria": "Registration progress",
     "stepLabel": "Step {current} of {total}",
     "haveAccount": "Already a customer?",

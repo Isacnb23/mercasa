@@ -34,6 +34,7 @@ function getInitials(name: string, fallback: string): string {
 
 export default function ProfileDrawer() {
   const t = useTranslations("Profile");
+  const tRegistration = useTranslations("Registration");
   const { user, isLoading, isOpen, closeProfile, login, logout } = useAuth();
   const { addresses, status: addressesStatus } = useAddresses();
 
@@ -76,13 +77,15 @@ export default function ProfileDrawer() {
     setPassword("");
   };
 
+  // El registro solo se muestra sin sesión; con sesión el panel es el Perfil de siempre.
+  const showingRegistration = registering && !user && !isLoading;
   const showAddButton = !(addressesStatus === "ready" && addresses.length === 0);
 
   return (
-    <DrawerShell isOpen={isOpen} onClose={closeProfile} label={t("title")} name="profile">
+    <DrawerShell isOpen={isOpen} onClose={closeProfile} label={showingRegistration ? tRegistration("panelTitle") : t("title")} name="profile">
       <DrawerHeader
-        eyebrow={t("eyebrow")}
-        title={user ? user.name || user.accountNum : t("title")}
+        eyebrow={showingRegistration ? tRegistration("eyebrow") : t("eyebrow")}
+        title={showingRegistration ? tRegistration("panelTitle") : user ? user.name || user.accountNum : t("title")}
         subtitle={user ? `${t("accountNumLabel")}: ${user.accountNum}` : undefined}
         closeLabel={t("close")}
         onClose={closeProfile}

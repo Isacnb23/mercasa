@@ -719,8 +719,8 @@
     "privacyLink": "Política de Privacidad"
   },
   "Registration": {
-    "metaTitle": "Crear cuenta",
-    "metaDescription": "Creá tu cuenta de cliente Mercasa para ver precios y hacer pedidos en línea.",
+    "eyebrow": "Registro",
+    "panelTitle": "Crear cuenta",
     "stepsAria": "Progreso del registro",
     "stepLabel": "Paso {current} de {total}",
     "haveAccount": "¿Ya sos cliente?",

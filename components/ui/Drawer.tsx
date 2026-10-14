@@ -113,7 +113,7 @@ export function DrawerShell({ isOpen, onClose, label, name, children }: DrawerSh
             aria-label={label}
             {...panelMotion}
             transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
-            className="fixed inset-y-0 right-0 z-[310] flex w-full max-w-[440px] flex-col overflow-hidden bg-white outline-none shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-l-[28px]"
+            className="fixed right-0 top-0 z-[310] flex h-dvh max-h-dvh w-full max-w-[440px] flex-col overflow-hidden bg-white outline-none shadow-[0_0_60px_rgba(8,20,40,0.22)] md:rounded-tl-[28px]"
           >
             {children}
           </motion.div>
@@ -180,7 +180,7 @@ export function DrawerBody({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-lenis-prevent
-      className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-5"
+      className="flex-1 scroll-pb-28 scroll-pt-6 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5"
       style={{ background: BODY_BG }}
     >
       {children}
@@ -191,7 +191,7 @@ export function DrawerBody({ children }: { children: React.ReactNode }) {
 // Pie fijo: superficie blanca con sombra superior suave.
 export function DrawerFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="shrink-0 bg-white px-5 pb-4 pt-3.5" style={{ boxShadow: "0 -10px 28px -14px rgba(8,43,92,0.22)" }}>
+    <div className="shrink-0 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3.5" style={{ boxShadow: "0 -10px 28px -14px rgba(8,43,92,0.22)" }}>
       {children}
     </div>
   );
