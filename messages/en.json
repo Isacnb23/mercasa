@@ -724,7 +724,7 @@
     "stepsAria": "Registration progress",
     "stepLabel": "Step {current} of {total}",
     "haveAccount": "Already a customer?",
-    "haveAccountLink": "Go to the home page to sign in",
+    "haveAccountLink": "Sign in",
     "step1": {
       "title": "Create your account",
       "intro": "Fill in your customer details. We will email you a code to confirm the address is yours.",
@@ -791,7 +791,7 @@
       "retryBody": "The service is not available right now. You can retry in a few minutes.",
       "restartBody": "The registration expired. Start over.",
       "retry": "Retry",
-      "home": "Back to home"
+      "home": "Back to sign in"
     }
   },
   "Legal": {

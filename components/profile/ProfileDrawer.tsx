@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import { REGISTRATION_ENABLED } from "@/lib/feature-flags";
-import { Link } from "@/i18n/navigation";
+import RegistrationFlow from "@/components/registration/RegistrationFlow";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
 import {
   BEIGE,
@@ -42,6 +42,7 @@ export default function ProfileDrawer() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [addingAddress, setAddingAddress] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
   // Limpia el formulario cuando el drawer se cierra, para que la próxima
   // apertura (ya sea otro intento o tras cerrar sesión) no arrastre el
@@ -54,6 +55,7 @@ export default function ProfileDrawer() {
       setPassword("");
       setError(null);
       setAddingAddress(false);
+      setRegistering(false);
     }
   }
 
@@ -140,6 +142,8 @@ export default function ProfileDrawer() {
               </button>
             )}
           </div>
+        ) : registering ? (
+          <RegistrationFlow onBackToLogin={() => setRegistering(false)} />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
@@ -201,14 +205,14 @@ export default function ProfileDrawer() {
 
             {/* Registro: solo con NEXT_PUBLIC_ENABLE_REGISTRATION=true (apagado por defecto). */}
             {REGISTRATION_ENABLED && (
-              <Link
-                href="/registro"
-                onClick={closeProfile}
+              <button
+                type="button"
+                onClick={() => setRegistering(true)}
                 className={SECONDARY_BUTTON}
                 style={{ borderColor: RULE, color: INK }}
               >
                 {t("createAccountCta")}
-              </Link>
+              </button>
             )}
           </form>
         )}

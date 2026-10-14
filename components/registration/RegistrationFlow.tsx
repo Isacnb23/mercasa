@@ -51,8 +51,9 @@ async function post(step: "start" | "verify" | "complete", body: unknown): Promi
 }
 
 // Registro de clientes en 3 pasos, un objetivo por pantalla: (1) datos, (2) código del correo, (3) listo / en revisión.
+// Vive dentro del panel de perfil (no es una página aparte); `onBackToLogin` vuelve al formulario de ingreso.
 // La contraseña vive solo en el estado de este componente y se borra en cuanto el servidor acepta el paso 1.
-export default function RegistrationFlow() {
+export default function RegistrationFlow({ onBackToLogin }: { onBackToLogin: () => void }) {
   const t = useTranslations("Registration");
 
   const [step, setStep] = useState<Step>(1);
@@ -209,7 +210,7 @@ export default function RegistrationFlow() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[560px]">
+    <div className="w-full">
       <p className="text-[13px] font-semibold" style={{ color: TEXT_MUTED }} aria-label={t("stepsAria")}>
         {t("stepLabel", { current: step, total: TOTAL_STEPS })}
       </p>
@@ -220,13 +221,13 @@ export default function RegistrationFlow() {
       </div>
 
       {step === 1 && (
-        <form onSubmit={handleStart} noValidate className="mt-8 flex flex-col gap-5">
+        <form onSubmit={handleStart} noValidate className="mt-6 flex flex-col gap-5">
           <div>
             <h1
               ref={headingRef}
               tabIndex={-1}
               className="font-display text-corp-ink outline-none"
-              style={{ fontSize: "clamp(28px, 4vw, 38px)", lineHeight: 1.1, fontWeight: 650 }}
+              style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
             >
               {t("step1.title")}
             </h1>
@@ -367,21 +368,26 @@ export default function RegistrationFlow() {
 
           <p className="text-center text-[13.5px]" style={{ color: TEXT_MUTED }}>
             {t("haveAccount")}{" "}
-            <Link href="/" className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`} style={{ color: "#075FD8" }}>
+            <button
+              type="button"
+              onClick={onBackToLogin}
+              className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+              style={{ color: "#075FD8" }}
+            >
               {t("haveAccountLink")}
-            </Link>
+            </button>
           </p>
         </form>
       )}
 
       {step === 2 && (
-        <form onSubmit={handleVerify} noValidate className="mt-8 flex flex-col gap-5">
+        <form onSubmit={handleVerify} noValidate className="mt-6 flex flex-col gap-5">
           <div>
             <h1
               ref={headingRef}
               tabIndex={-1}
               className="font-display text-corp-ink outline-none"
-              style={{ fontSize: "clamp(28px, 4vw, 38px)", lineHeight: 1.1, fontWeight: 650 }}
+              style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
             >
               {t("step2.title")}
             </h1>
@@ -423,12 +429,12 @@ export default function RegistrationFlow() {
       )}
 
       {step === 3 && (
-        <div className="mt-8 flex flex-col gap-5">
+        <div className="mt-6 flex flex-col gap-5">
           <h1
             ref={headingRef}
             tabIndex={-1}
             className="font-display text-corp-ink outline-none"
-            style={{ fontSize: "clamp(28px, 4vw, 38px)", lineHeight: 1.1, fontWeight: 650 }}
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
           >
             {outcome === "pending"
               ? t("step3.pendingTitle")
@@ -463,9 +469,9 @@ export default function RegistrationFlow() {
             </button>
           )}
           {(outcome === "pending" || outcome === "disabled") && (
-            <Link href="/" className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
+            <button type="button" onClick={onBackToLogin} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
               {t("step3.home")}
-            </Link>
+            </button>
           )}
         </div>
       )}

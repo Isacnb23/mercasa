@@ -724,7 +724,7 @@
     "stepsAria": "Progreso del registro",
     "stepLabel": "Paso {current} de {total}",
     "haveAccount": "¿Ya sos cliente?",
-    "haveAccountLink": "Ir al inicio para iniciar sesión",
+    "haveAccountLink": "Iniciar sesión",
     "step1": {
       "title": "Creá tu cuenta",
       "intro": "Completá tus datos de cliente. Te enviaremos un código a tu correo para confirmar que es tuyo.",
@@ -791,7 +791,7 @@
       "retryBody": "El servicio no está disponible en este momento. Podés reintentar en unos minutos.",
       "restartBody": "El registro venció. Empezá de nuevo.",
       "retry": "Reintentar",
-      "home": "Volver al inicio"
+      "home": "Volver a iniciar sesión"
     }
   },
   "Legal": {
