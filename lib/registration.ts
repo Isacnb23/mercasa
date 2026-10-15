@@ -9,21 +9,43 @@
 //             DIMEX/pasaporte: NO se aceptan (decisión pendiente para extranjeros).
 //   Teléfono  8 dígitos que empiezan por 2, 4, 5, 6, 7 u 8 (máscara 8888-7777)
 //   Correo    sin espacios alrededor, en minúsculas, hasta 254 caracteres, una sola @, dominio con punto
-//   Nombre    3 a 100 caracteres; física: solo letras (más espacio ' - .), sin dígitos y al menos dos palabras;
-//             jurídica: letras, números, espacio y . , & -
+//   Nombres   Se normalizan igual en los dos lados: NFC, ’ -> ', espacios recortados y repetidos colapsados (sin
+//             cambiar mayúsculas: AX capitaliza). AX arma el código de cliente con las iniciales de estos campos.
+//             Física:   firstName (nombre(s)) obligatorio, 2 a 50; lastName1 (primer apellido) obligatorio, 2 a 40;
+//                       lastName2 (segundo apellido) opcional, vacío o 2 a 40. Letras (con tildes, ñ, ü), espacio,
+//                       ' y -; sin dígitos ni otros símbolos.
+//             Jurídica: legalName (razón social) obligatorio, 3 a 100; tradeName (nombre comercial) opcional,
+//                       vacío o 3 a 100. Letras, números, espacio y . , & - ' ( ); al menos una letra.
+//             Los campos del otro tipo no se piden, se vacían al cambiar el tipo y no se mandan.
 //   Contraseña 8 a 64 con mayúscula, minúscula y número
 
-export type RegistrationField = "name" | "idNumber" | "email" | "phone" | "password" | "acceptedTerms";
+export type RegistrationField =
+  | "idNumber"
+  | "firstName"
+  | "lastName1"
+  | "lastName2"
+  | "legalName"
+  | "tradeName"
+  | "email"
+  | "phone"
+  | "password"
+  | "acceptedTerms";
 
 export type IdType = "fisica" | "juridica";
 
 export const ID_TYPES: IdType[] = ["fisica", "juridica"];
 
 export interface RegistrationValues {
-  name: string;
   idType: IdType;
   // Solo dígitos (la máscara se aplica al mostrarlos).
   idNumber: string;
+  // Persona física: nombre(s), primer apellido y segundo apellido (opcional).
+  firstName: string;
+  lastName1: string;
+  lastName2: string;
+  // Persona jurídica: razón social y nombre comercial (opcional).
+  legalName: string;
+  tradeName: string;
   email: string;
   // Solo dígitos (la máscara se aplica al mostrarlos).
   phone: string;
@@ -32,16 +54,50 @@ export interface RegistrationValues {
 }
 
 export const EMPTY_VALUES: RegistrationValues = {
-  name: "",
   idType: "fisica",
   idNumber: "",
+  firstName: "",
+  lastName1: "",
+  lastName2: "",
+  legalName: "",
+  tradeName: "",
   email: "",
   phone: "",
   password: "",
   acceptedTerms: false,
 };
 
-export const FIELD_ORDER: RegistrationField[] = ["idNumber", "name", "email", "phone", "password", "acceptedTerms"];
+// Todos los campos, en el orden de la pantalla (sirve para reconocer nombres de campo que llegan del servidor).
+export const FIELD_ORDER: RegistrationField[] = [
+  "idNumber",
+  "firstName",
+  "lastName1",
+  "lastName2",
+  "legalName",
+  "tradeName",
+  "email",
+  "phone",
+  "password",
+  "acceptedTerms",
+];
+
+const PERSON_FIELDS: RegistrationField[] = ["firstName", "lastName1", "lastName2"];
+const COMPANY_FIELDS: RegistrationField[] = ["legalName", "tradeName"];
+
+// Campos que se piden (y validan) según el tipo de cédula, en el orden de la pantalla.
+export const fieldsFor = (type: IdType): RegistrationField[] =>
+  FIELD_ORDER.filter((field) => !(type === "fisica" ? COMPANY_FIELDS : PERSON_FIELDS).includes(field));
+
+// Campos que quedan vacíos al cambiar a `next` (los del otro tipo).
+export const fieldsClearedByType = (next: IdType): RegistrationField[] => (next === "juridica" ? PERSON_FIELDS : COMPANY_FIELDS);
+
+// Al cambiar el tipo: reajusta la cédula (changeIdType), conserva lo que sigue aplicando (correo, teléfono, contraseña,
+// términos) y vacía los campos del otro tipo.
+export function applyIdType(values: RegistrationValues, next: IdType): RegistrationValues {
+  if (values.idType === next) return values;
+  const cleared = Object.fromEntries(fieldsClearedByType(next).map((field) => [field, ""]));
+  return { ...values, ...cleared, idType: next, idNumber: changeIdType(values.idNumber, next) };
+}
 
 export const CODE_LENGTH = 6;
 
@@ -158,21 +214,38 @@ export function emailSuggestion(value: string): string | null {
 
 // ---- Nombre ----
 
-export const normalizeName = (value: string): string => value.trim().replace(/\s+/g, " ");
+export const NAME_LIMITS = {
+  firstName: { min: 2, max: 50 },
+  lastName1: { min: 2, max: 40 },
+  lastName2: { min: 2, max: 40 },
+  legalName: { min: 3, max: 100 },
+  tradeName: { min: 3, max: 100 },
+} as const;
 
-// null = válido. "digits": física con dígitos. "surname": física con una sola palabra (falta el apellido).
-// "invalid": largo, caracteres no permitidos o sin letras.
-export function nameError(value: string, type: IdType): "invalid" | "digits" | "surname" | null {
+// Normalización común a todos los campos de nombre (igual que RegistrationValidator.NormalizeName en homex-api):
+// NFC, apóstrofo tipográfico (’) -> ', espacios recortados y repetidos colapsados. No cambia mayúsculas ni minúsculas.
+export const normalizeName = (value: string): string => value.normalize("NFC").replace(/’/g, "'").trim().replace(/\s+/g, " ");
+
+const PERSON_PART = /^[\p{L} '-]+$/u;
+const COMPANY_PART = /^[\p{L}\p{N} .,&'()-]+$/u;
+
+// null = válido. "required": obligatorio y vacío. "invalid": largo, caracteres no permitidos o sin letras.
+export type NameErrorKind = "required" | "invalid";
+
+function namePartError(value: string, limits: { min: number; max: number }, pattern: RegExp, required: boolean): NameErrorKind | null {
   const name = normalizeName(value);
-  if (name.length < 3 || name.length > 100 || !/\p{L}/u.test(name)) return "invalid";
-
-  if (type === "juridica") return /^[\p{L}\p{N} .,&-]+$/u.test(name) ? null : "invalid";
-
-  if (/\p{N}/u.test(name)) return "digits";
-  if (!/^[\p{L} '.-]+$/u.test(name)) return "invalid";
-  const words = name.split(" ").filter((word) => /\p{L}/u.test(word)).length;
-  return words >= 2 ? null : "surname";
+  if (name.length === 0) return required ? "required" : null;
+  return name.length >= limits.min && name.length <= limits.max && /\p{L}/u.test(name) && pattern.test(name) ? null : "invalid";
 }
+
+// Persona física: nombre(s) (obligatorio), primer apellido (obligatorio), segundo apellido (opcional).
+export const firstNameError = (value: string) => namePartError(value, NAME_LIMITS.firstName, PERSON_PART, true);
+export const lastName1Error = (value: string) => namePartError(value, NAME_LIMITS.lastName1, PERSON_PART, true);
+export const lastName2Error = (value: string) => namePartError(value, NAME_LIMITS.lastName2, PERSON_PART, false);
+
+// Persona jurídica: razón social (obligatoria) y nombre comercial (opcional).
+export const legalNameError = (value: string) => namePartError(value, NAME_LIMITS.legalName, COMPANY_PART, true);
+export const tradeNameError = (value: string) => namePartError(value, NAME_LIMITS.tradeName, COMPANY_PART, false);
 
 // ---- Contraseña ----
 
@@ -197,12 +270,20 @@ export const isValidPassword = (value: string) => Object.values(passwordChecks(v
 // ---- Campos del formulario ----
 
 // Tipo de error de un campo (null = válido). Cada tipo tiene su propio mensaje en la pantalla.
-export type FieldErrorKind = "invalid" | "length" | "prefix" | "digits" | "surname";
+export type FieldErrorKind = "invalid" | "required" | "length" | "prefix";
 
 export function fieldError(field: RegistrationField, values: RegistrationValues): FieldErrorKind | null {
   switch (field) {
-    case "name":
-      return nameError(values.name, values.idType);
+    case "firstName":
+      return firstNameError(values.firstName);
+    case "lastName1":
+      return lastName1Error(values.lastName1);
+    case "lastName2":
+      return lastName2Error(values.lastName2);
+    case "legalName":
+      return legalNameError(values.legalName);
+    case "tradeName":
+      return tradeNameError(values.tradeName);
     case "idNumber":
       return idNumberError(values.idNumber, values.idType);
     case "email":
@@ -219,8 +300,27 @@ export function fieldError(field: RegistrationField, values: RegistrationValues)
 // true si el campo es válido.
 export const validateField = (field: RegistrationField, values: RegistrationValues): boolean => fieldError(field, values) === null;
 
+// Solo los campos que se piden para el tipo elegido, en el orden de la pantalla (el primero recibe el foco).
 export const invalidFields = (values: RegistrationValues): RegistrationField[] =>
-  FIELD_ORDER.filter((field) => !validateField(field, values));
+  fieldsFor(values.idType).filter((field) => !validateField(field, values));
+
+// Cuerpo de register/start: los campos del tipo elegido (nombres ya normalizados), sin los del otro tipo.
+export function buildStartBody(values: RegistrationValues, captchaToken: string): Record<string, unknown> {
+  const names =
+    values.idType === "juridica"
+      ? { legalName: normalizeName(values.legalName), tradeName: normalizeName(values.tradeName) }
+      : { firstName: normalizeName(values.firstName), lastName1: normalizeName(values.lastName1), lastName2: normalizeName(values.lastName2) };
+  return {
+    idType: values.idType,
+    idNumber: values.idNumber,
+    ...names,
+    email: normalizeEmail(values.email),
+    phone: values.phone,
+    password: values.password,
+    acceptedTerms: values.acceptedTerms,
+    captchaToken,
+  };
+}
 
 export const isCodeComplete = (value: string) => digitsOnly(value).length === CODE_LENGTH;
 
@@ -328,9 +428,13 @@ export function sanitizeRegisterBody(step: RegisterStep, raw: unknown): Record<s
   const body = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   if (step === "start") {
     return {
-      name: text(body.name, 120),
       idType: text(body.idType, 12),
       idNumber: text(body.idNumber, 20),
+      firstName: text(body.firstName, 120),
+      lastName1: text(body.lastName1, 120),
+      lastName2: text(body.lastName2, 120),
+      legalName: text(body.legalName, 120),
+      tradeName: text(body.tradeName, 120),
       email: text(body.email, 260),
       phone: text(body.phone, 20),
       password: text(body.password, 80),

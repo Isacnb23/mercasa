@@ -19,14 +19,17 @@ import {
 import {
   CODE_LENGTH,
   EMPTY_VALUES,
-  FIELD_ORDER,
   ID_TYPES,
-  changeIdType,
+  NAME_LIMITS,
+  applyIdType,
+  buildStartBody,
   classifyRegisterError,
   completeOutcome,
   digitsOnly,
   emailSuggestion,
   fieldError,
+  fieldsClearedByType,
+  fieldsFor,
   formatIdNumber,
   formatPhone,
   invalidFields,
@@ -81,16 +84,19 @@ async function post(step: "start" | "verify" | "complete", body: unknown): Promi
 export default function RegistrationFlow({
   onBackToLogin,
   footerTarget,
+  initialValues,
 }: {
   onBackToLogin: () => void;
   // Elemento del panel (fuera de la zona con scroll) donde se pinta el pie con el botón del paso 1. Sin esta prop
   // (undefined) el pie va al final del formulario; con null (el panel aún no lo montó) no se pinta nada todavía.
   footerTarget?: HTMLElement | null;
+  // Valores con los que arranca el formulario (por ejemplo el tipo de cédula); solo lo usan las pruebas de pantalla.
+  initialValues?: Partial<RegistrationValues>;
 }) {
   const t = useTranslations("Registration");
 
   const [step, setStep] = useState<Step>(1);
-  const [values, setValues] = useState<RegistrationValues>(EMPTY_VALUES);
+  const [values, setValues] = useState<RegistrationValues>({ ...EMPTY_VALUES, ...initialValues });
   const [touched, setTouched] = useState<Partial<Record<RegistrationField, boolean>>>({});
   // Códigos de error por campo que devolvió el servidor al enviar (campo -> código); vacío si no hubo.
   const [serverCodes, setServerCodes] = useState<ServerFieldCodes>({});
@@ -126,10 +132,16 @@ export default function RegistrationFlow({
   const fieldErrorText = (field: RegistrationField): string => {
     const kind = fieldError(field, values) ?? serverErrorKind(field, serverCodes[field], "invalid");
     switch (field) {
-      case "name":
-        if (kind === "digits") return t("errors.name.digits");
-        if (kind === "surname") return t("errors.name.surname");
-        return values.idType === "juridica" ? t("errors.name.invalidCompany") : t("errors.name.invalid");
+      case "firstName":
+        return kind === "required" ? t("errors.firstName.required") : t("errors.firstName.invalid");
+      case "lastName1":
+        return kind === "required" ? t("errors.lastName1.required") : t("errors.lastName1.invalid");
+      case "lastName2":
+        return t("errors.lastName2.invalid");
+      case "legalName":
+        return kind === "required" ? t("errors.legalName.required") : t("errors.legalName.invalid");
+      case "tradeName":
+        return t("errors.tradeName.invalid");
       case "idNumber":
         if (values.idType === "juridica") return t("errors.idNumber.juridica");
         return kind === "prefix" ? t("errors.idNumber.fisicaPrefix") : t("errors.idNumber.fisicaLength");
@@ -146,9 +158,16 @@ export default function RegistrationFlow({
 
   const suggestedEmail = emailSuggestion(values.email);
 
-  // Cambiar el tipo reajusta la máscara y conserva los dígitos que siguen siendo válidos; se vuelve a validar solo.
-  const changeType = (type: IdType) =>
-    setValues((v) => ({ ...v, idType: type, idNumber: changeIdType(v.idNumber, type) }));
+  // Cambiar el tipo reajusta la máscara y conserva los dígitos que siguen siendo válidos y lo escrito en lo que sigue
+  // aplicando (correo, teléfono...); vacía los campos del otro tipo (y sus errores). Se vuelve a validar solo.
+  const changeType = (type: IdType) => {
+    if (type === values.idType) return;
+    const cleared = fieldsClearedByType(type);
+    setValues((v) => applyIdType(v, type));
+    setTouched((s) => Object.fromEntries(Object.entries(s).filter(([field]) => !cleared.includes(field as RegistrationField))));
+    setServerCodes((c) => Object.fromEntries(Object.entries(c).filter(([field]) => !cleared.includes(field as RegistrationField))));
+    setFormError(null);
+  };
 
   const setField = <K extends RegistrationField>(field: K, value: RegistrationValues[K]) => {
     setValues((v) => ({ ...v, [field]: value }));
@@ -179,7 +198,7 @@ export default function RegistrationFlow({
     e.preventDefault();
     if (submitting) return;
 
-    setTouched(Object.fromEntries(FIELD_ORDER.map((f) => [f, true])));
+    setTouched(Object.fromEntries(fieldsFor(values.idType).map((f) => [f, true])));
     const bad = invalidFields(values);
     if (bad.length > 0) {
       setFormError("validation");
@@ -193,7 +212,7 @@ export default function RegistrationFlow({
 
     setSubmitting(true);
     setFormError(null);
-    const res = await post("start", { ...values, email: normalizeEmail(values.email), captchaToken });
+    const res = await post("start", buildStartBody(values, captchaToken));
     setSubmitting(false);
 
     if (res.status === 200 && typeof (res.body as { attemptId?: unknown } | null)?.attemptId === "string") {
@@ -210,7 +229,7 @@ export default function RegistrationFlow({
     setFormError(error.kind);
     setServerCodes(Object.fromEntries(error.fields.map((field) => [field, error.fieldCodes[field] ?? ""])));
     setCaptchaReset((n) => n + 1);
-    const firstWithError = FIELD_ORDER.find((field) => error.fields.includes(field));
+    const firstWithError = fieldsFor(values.idType).find((field) => error.fields.includes(field));
     if (firstWithError) document.getElementById(`reg-${firstWithError}`)?.focus();
   };
 
@@ -349,6 +368,7 @@ export default function RegistrationFlow({
 
           <TextField
             field="idNumber"
+            required
             label={t("fields.idNumber.label")}
             hint={values.idType === "fisica" ? t("fields.idNumber.hintFisica") : t("fields.idNumber.hintJuridica")}
             placeholder={values.idType === "fisica" ? "0-0000-0000" : "3-000-000000"}
@@ -360,20 +380,78 @@ export default function RegistrationFlow({
             onChange={(v) => setField("idNumber", normalizeIdInput(v, values.idType))}
             onBlur={() => touch("idNumber")}
           />
-          <TextField
-            field="name"
-            label={values.idType === "fisica" ? t("fields.name.labelFisica") : t("fields.name.labelJuridica")}
-            hint={values.idType === "fisica" ? t("fields.name.hintFisica") : undefined}
-            autoComplete={values.idType === "fisica" ? "name" : "organization"}
-            maxLength={100}
-            value={values.name}
-            invalid={fieldInvalid("name")}
-            error={fieldErrorText("name")}
-            onChange={(v) => setField("name", v)}
-            onBlur={() => touch("name")}
-          />
+          {values.idType === "fisica" ? (
+            <>
+              <TextField
+                field="firstName"
+                label={t("fields.firstName.label")}
+                hint={t("fields.firstName.hint")}
+                autoComplete="given-name"
+                maxLength={NAME_LIMITS.firstName.max}
+                required
+                value={values.firstName}
+                invalid={fieldInvalid("firstName")}
+                error={fieldErrorText("firstName")}
+                onChange={(v) => setField("firstName", v)}
+                onBlur={() => touch("firstName")}
+              />
+              <TextField
+                field="lastName1"
+                label={t("fields.lastName1.label")}
+                autoComplete="family-name"
+                maxLength={NAME_LIMITS.lastName1.max}
+                required
+                value={values.lastName1}
+                invalid={fieldInvalid("lastName1")}
+                error={fieldErrorText("lastName1")}
+                onChange={(v) => setField("lastName1", v)}
+                onBlur={() => touch("lastName1")}
+              />
+              <TextField
+                field="lastName2"
+                label={t("fields.lastName2.label")}
+                hint={t("fields.lastName2.hint")}
+                autoComplete="additional-name"
+                maxLength={NAME_LIMITS.lastName2.max}
+                value={values.lastName2}
+                invalid={fieldInvalid("lastName2")}
+                error={fieldErrorText("lastName2")}
+                onChange={(v) => setField("lastName2", v)}
+                onBlur={() => touch("lastName2")}
+              />
+            </>
+          ) : (
+            <>
+              <TextField
+                field="legalName"
+                label={t("fields.legalName.label")}
+                hint={t("fields.legalName.hint")}
+                autoComplete="organization"
+                maxLength={NAME_LIMITS.legalName.max}
+                required
+                value={values.legalName}
+                invalid={fieldInvalid("legalName")}
+                error={fieldErrorText("legalName")}
+                onChange={(v) => setField("legalName", v)}
+                onBlur={() => touch("legalName")}
+              />
+              <TextField
+                field="tradeName"
+                label={t("fields.tradeName.label")}
+                hint={t("fields.tradeName.hint")}
+                autoComplete="off"
+                maxLength={NAME_LIMITS.tradeName.max}
+                value={values.tradeName}
+                invalid={fieldInvalid("tradeName")}
+                error={fieldErrorText("tradeName")}
+                onChange={(v) => setField("tradeName", v)}
+                onBlur={() => touch("tradeName")}
+              />
+            </>
+          )}
           <TextField
             field="email"
+            required
             label={t("fields.email.label")}
             type="email"
             inputMode="email"
@@ -404,6 +482,7 @@ export default function RegistrationFlow({
           </TextField>
           <TextField
             field="phone"
+            required
             label={t("fields.phone.label")}
             hint={t("fields.phone.hint")}
             placeholder="8888-7777"
@@ -418,6 +497,7 @@ export default function RegistrationFlow({
           />
           <TextField
             field="password"
+            required
             label={t("fields.password.label")}
             type="password"
             autoComplete="new-password"
@@ -649,6 +729,7 @@ function TextField({
   autoComplete,
   maxLength,
   placeholder,
+  required = false,
   children,
 }: {
   field: RegistrationField | "code";
@@ -665,6 +746,9 @@ function TextField({
   autoComplete?: string;
   maxLength?: number;
   placeholder?: string;
+  // Obligatorio (aria-required). El código, el correo, el teléfono, etc. lo son por defecto en su llamada; los
+  // opcionales (segundo apellido, nombre comercial) no lo pasan.
+  required?: boolean;
   children?: React.ReactNode;
 }) {
   const id = `reg-${field}`;
@@ -695,7 +779,7 @@ function TextField({
         value={value}
         aria-invalid={invalid || undefined}
         aria-describedby={described}
-        aria-required={field !== "code" || undefined}
+        aria-required={required || undefined}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         className={FIELD_CLASS}

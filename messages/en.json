@@ -787,10 +787,24 @@
       "submitting": "Sending..."
     },
     "fields": {
-      "name": {
-        "labelFisica": "Full name",
-        "labelJuridica": "Company name",
-        "hintFisica": "First name and at least one last name"
+      "firstName": {
+        "label": "First name(s)",
+        "hint": "As it appears on your ID"
+      },
+      "lastName1": {
+        "label": "First last name"
+      },
+      "lastName2": {
+        "label": "Second last name (optional)",
+        "hint": "If you don't have a second last name, leave it empty"
+      },
+      "legalName": {
+        "label": "Legal name",
+        "hint": "As it appears on the company ID"
+      },
+      "tradeName": {
+        "label": "Trade name (optional)",
+        "hint": "If there isn't one, leave it empty"
       },
       "idNumber": {
         "label": "ID number",
@@ -829,11 +843,23 @@
       "privacyLink": "Privacy Policy"
     },
     "errors": {
-      "name": {
-        "invalid": "Enter your full name (between 3 and 100 characters).",
-        "invalidCompany": "Enter the company name (3 to 100 characters; letters, numbers and . , & -).",
-        "digits": "The name cannot contain numbers.",
-        "surname": "Enter your first name and at least one last name."
+      "firstName": {
+        "required": "Enter your name as it appears on your ID",
+        "invalid": "The name must be 2 to 50 letters. You can use accents, ñ, spaces, ' and -, but no numbers or other symbols."
+      },
+      "lastName1": {
+        "required": "The first last name is required",
+        "invalid": "The first last name must be 2 to 40 letters. You can use accents, ñ, spaces, ' and -, but no numbers or other symbols."
+      },
+      "lastName2": {
+        "invalid": "The second last name must be 2 to 40 letters (accents, ñ, spaces, ' and -; no numbers). If you don't have one, leave it empty."
+      },
+      "legalName": {
+        "required": "The legal name is required",
+        "invalid": "Enter the legal name (3 to 100 characters with at least one letter; letters, numbers, spaces and . , & - ' ( ))."
+      },
+      "tradeName": {
+        "invalid": "The trade name must be 3 to 100 characters (letters, numbers, spaces and . , & - ' ( )). If there isn't one, leave it empty."
       },
       "idNumber": {
         "fisicaLength": "An individual ID has 9 digits.",

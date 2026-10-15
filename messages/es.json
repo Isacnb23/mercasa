@@ -787,10 +787,24 @@
       "submitting": "Enviando..."
     },
     "fields": {
-      "name": {
-        "labelFisica": "Nombre completo",
-        "labelJuridica": "Razón social",
-        "hintFisica": "Nombre y al menos un apellido"
+      "firstName": {
+        "label": "Nombre(s)",
+        "hint": "Como aparece en tu cédula"
+      },
+      "lastName1": {
+        "label": "Primer apellido"
+      },
+      "lastName2": {
+        "label": "Segundo apellido (opcional)",
+        "hint": "Si no tenés segundo apellido, dejalo vacío"
+      },
+      "legalName": {
+        "label": "Razón social",
+        "hint": "Como aparece en la cédula jurídica"
+      },
+      "tradeName": {
+        "label": "Nombre comercial (opcional)",
+        "hint": "Si no tiene, dejalo vacío"
       },
       "idNumber": {
         "label": "Número de cédula",
@@ -829,11 +843,23 @@
       "privacyLink": "Política de Privacidad"
     },
     "errors": {
-      "name": {
-        "invalid": "Escribí tu nombre completo (entre 3 y 100 caracteres).",
-        "invalidCompany": "Escribí la razón social (3 a 100 caracteres; letras, números y . , & -).",
-        "digits": "El nombre no puede llevar números.",
-        "surname": "Escribí tu nombre y al menos un apellido."
+      "firstName": {
+        "required": "Escribí tu nombre como aparece en tu cédula",
+        "invalid": "El nombre debe tener de 2 a 50 letras. Podés usar tildes, ñ, espacios, ' y -, sin números ni otros símbolos."
+      },
+      "lastName1": {
+        "required": "El primer apellido es obligatorio",
+        "invalid": "El primer apellido debe tener de 2 a 40 letras. Podés usar tildes, ñ, espacios, ' y -, sin números ni otros símbolos."
+      },
+      "lastName2": {
+        "invalid": "El segundo apellido debe tener de 2 a 40 letras (tildes, ñ, espacios, ' y -; sin números). Si no tenés, dejalo vacío."
+      },
+      "legalName": {
+        "required": "La razón social es obligatoria",
+        "invalid": "Escribí la razón social (3 a 100 caracteres, con al menos una letra; letras, números, espacios y . , & - ' ( ))."
+      },
+      "tradeName": {
+        "invalid": "El nombre comercial debe tener de 3 a 100 caracteres (letras, números, espacios y . , & - ' ( )). Si no tiene, dejalo vacío."
       },
       "idNumber": {
         "fisicaLength": "La cédula física lleva 9 dígitos.",
