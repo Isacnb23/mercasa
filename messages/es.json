@@ -819,7 +819,12 @@
         "hint": "8 dígitos. Ej. 8888-7777"
       },
       "password": {
-        "label": "Contraseña"
+        "label": "Contraseña",
+        "show": "Mostrar contraseña",
+        "hide": "Ocultar contraseña"
+      },
+      "confirmPassword": {
+        "label": "Confirmá tu contraseña"
       },
       "idType": {
         "label": "Tipo de cédula",
@@ -829,10 +834,10 @@
     },
     "passwordRules": {
       "title": "Tu contraseña debe tener:",
-      "length": "Entre 8 y 64 caracteres",
-      "upper": "Una letra mayúscula",
-      "lower": "Una letra minúscula",
-      "digit": "Un número",
+      "length": "Entre 8 y 20 caracteres",
+      "letter": "Al menos una letra",
+      "digit": "Al menos un número",
+      "edges": "Sin espacios al inicio ni al final",
       "met": "cumplido",
       "pending": "pendiente"
     },
@@ -872,6 +877,10 @@
         "prefix": "El teléfono debe empezar por 2, 4, 5, 6, 7 u 8."
       },
       "password": "La contraseña no cumple los requisitos de la lista.",
+      "confirmPassword": {
+        "required": "Repetí tu contraseña",
+        "mismatch": "Las contraseñas no coinciden"
+      },
       "acceptedTerms": "Tenés que aceptar los términos y la política de privacidad.",
       "code": "Escribí los 6 dígitos del código.",
       "form": {
@@ -895,15 +904,23 @@
       "codeExpired": "El código venció o se superó el número de intentos. Empezá de nuevo."
     },
     "step3": {
-      "workingTitle": "Terminando tu registro",
-      "workingBody": "Un momento, estamos terminando tu registro...",
-      "pendingTitle": "¡Recibimos tu solicitud!",
-      "pendingBody": "Estamos revisando tus datos. Cuando tu cuenta esté lista, vas a poder iniciar sesión con tu cédula y tu contraseña.",
+      "title": "Elegí tu contraseña",
+      "intro": "Último paso: elegí la contraseña con la que vas a entrar y aceptá los términos para crear tu cuenta.",
+      "submit": "Crear mi cuenta",
+      "submitting": "Creando tu cuenta...",
+      "processingTitle": "Estamos terminando de crear tu cuenta",
+      "processingBody": "Esto puede tardar unos segundos. No cierres esta pantalla.",
+      "createdTitle": "¡Tu cuenta está lista!",
+      "createdBody": "Ya podés iniciar sesión con tu cédula y la contraseña que elegiste.",
+      "login": "Iniciar sesión",
+      "failedTitle": "No pudimos crear tu cuenta",
+      "failedBody": "Si ya tenés una cuenta, iniciá sesión. Si no, escribinos y te ayudamos.",
+      "retryTitle": "Todavía no terminamos",
+      "retryBody": "Tu cuenta puede estar creándose o el servicio no está disponible ahora. Intentá de nuevo en unos segundos.",
       "disabledTitle": "Estamos habilitando el registro en línea",
       "disabledBody": "Confirmamos tu correo, pero todavía no podemos crear tu cuenta desde la web. No se creó ninguna cuenta. Volvé a intentarlo pronto o contactanos.",
-      "errorTitle": "No pudimos terminar el registro",
-      "retryBody": "El servicio no está disponible en este momento. Podés reintentar en unos minutos.",
       "restartBody": "El registro venció. Empezá de nuevo.",
+      "restartTitle": "El registro venció",
       "retry": "Reintentar",
       "home": "Volver a iniciar sesión"
     },

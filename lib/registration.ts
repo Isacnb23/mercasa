@@ -17,7 +17,8 @@
 //             Jurídica: legalName (razón social) obligatorio, 3 a 100; tradeName (nombre comercial) opcional,
 //                       vacío o 3 a 100. Letras, números, espacio y . , & - ' ( ); al menos una letra.
 //             Los campos del otro tipo no se piden, se vacían al cambiar el tipo y no se mandan.
-//   Contraseña 8 a 64 con mayúscula, minúscula y número
+//   Contraseña 8 a 20 (HE_ResetPassword corta a 20), al menos una letra y un número, sin espacios al inicio ni al final.
+//             Se pide en el paso 3 (complete), no en el paso 1.
 
 export type RegistrationField =
   | "idNumber"
@@ -27,9 +28,13 @@ export type RegistrationField =
   | "legalName"
   | "tradeName"
   | "email"
-  | "phone"
-  | "password"
-  | "acceptedTerms";
+  | "phone";
+
+// Paso 3 (contraseña): la contraseña y los términos se piden y se envían en register/complete, no en start.
+export type CompleteField = "password" | "confirmPassword" | "acceptedTerms";
+
+// Campos que el servidor puede marcar con un código (paso 1 y los dos que valida en el paso 3).
+export type ServerField = RegistrationField | "password" | "acceptedTerms";
 
 export type IdType = "fisica" | "juridica";
 
@@ -49,9 +54,17 @@ export interface RegistrationValues {
   email: string;
   // Solo dígitos (la máscara se aplica al mostrarlos).
   phone: string;
+}
+
+// Paso 3: contraseña, confirmación y términos. Viven solo en el estado del componente (nunca en almacenamiento del
+// navegador, URL ni logs) y se borran al terminar o al volver a empezar.
+export interface CompletionValues {
   password: string;
+  confirmPassword: string;
   acceptedTerms: boolean;
 }
+
+export const EMPTY_COMPLETION: CompletionValues = { password: "", confirmPassword: "", acceptedTerms: false };
 
 export const EMPTY_VALUES: RegistrationValues = {
   idType: "fisica",
@@ -63,11 +76,9 @@ export const EMPTY_VALUES: RegistrationValues = {
   tradeName: "",
   email: "",
   phone: "",
-  password: "",
-  acceptedTerms: false,
 };
 
-// Todos los campos, en el orden de la pantalla (sirve para reconocer nombres de campo que llegan del servidor).
+// Campos del paso 1, en el orden de la pantalla.
 export const FIELD_ORDER: RegistrationField[] = [
   "idNumber",
   "firstName",
@@ -77,9 +88,13 @@ export const FIELD_ORDER: RegistrationField[] = [
   "tradeName",
   "email",
   "phone",
-  "password",
-  "acceptedTerms",
 ];
+
+// Campos del paso 3, en el orden de la pantalla (el primero inválido recibe el foco).
+export const COMPLETE_FIELD_ORDER: CompleteField[] = ["password", "confirmPassword", "acceptedTerms"];
+
+// Todos los nombres de campo que reconocemos cuando llegan del servidor.
+const SERVER_FIELDS: ServerField[] = [...FIELD_ORDER, "password", "acceptedTerms"];
 
 const PERSON_FIELDS: RegistrationField[] = ["firstName", "lastName1", "lastName2"];
 const COMPANY_FIELDS: RegistrationField[] = ["legalName", "tradeName"];
@@ -247,25 +262,56 @@ export const lastName2Error = (value: string) => namePartError(value, NAME_LIMIT
 export const legalNameError = (value: string) => namePartError(value, NAME_LIMITS.legalName, COMPANY_PART, true);
 export const tradeNameError = (value: string) => namePartError(value, NAME_LIMITS.tradeName, COMPANY_PART, false);
 
-// ---- Contraseña ----
+// ---- Contraseña (paso 3) ----
+// MISMA regla que RegistrationValidator.IsValidPassword en homex-api: 8 a 20 caracteres (20 es el máximo porque
+// HE_ResetPassword corta a 20), al menos una letra y un número, sin espacios al inicio ni al final. Se valida tal cual se
+// escribe (sin recortar): no se cambia lo que la persona eligió.
+
+export const PASSWORD_LIMITS = { min: 8, max: 20 } as const;
 
 export interface PasswordChecks {
   length: boolean;
-  upper: boolean;
-  lower: boolean;
+  letter: boolean;
   digit: boolean;
+  edges: boolean;
 }
 
 export function passwordChecks(value: string): PasswordChecks {
   return {
-    length: value.length >= 8 && value.length <= 64,
-    upper: /\p{Lu}/u.test(value),
-    lower: /\p{Ll}/u.test(value),
-    digit: /\d/.test(value),
+    length: value.length >= PASSWORD_LIMITS.min && value.length <= PASSWORD_LIMITS.max,
+    letter: /\p{L}/u.test(value),
+    digit: /\p{Nd}/u.test(value),
+    edges: value.length > 0 && !/^\s|\s$/u.test(value),
   };
 }
 
 export const isValidPassword = (value: string) => Object.values(passwordChecks(value)).every(Boolean);
+
+// Errores del paso 3 (null = válido). "required": confirmación vacía. "mismatch": la confirmación no coincide.
+export type CompleteErrorKind = "invalid" | "required" | "mismatch";
+
+export function completionError(field: CompleteField, values: CompletionValues): CompleteErrorKind | null {
+  switch (field) {
+    case "password":
+      return isValidPassword(values.password) ? null : "invalid";
+    case "confirmPassword":
+      if (values.confirmPassword === "") return "required";
+      return values.confirmPassword === values.password ? null : "mismatch";
+    case "acceptedTerms":
+      return values.acceptedTerms ? null : "invalid";
+  }
+}
+
+// Campos del paso 3 inválidos, en el orden de la pantalla (el primero recibe el foco).
+export const invalidCompletionFields = (values: CompletionValues): CompleteField[] =>
+  COMPLETE_FIELD_ORDER.filter((field) => completionError(field, values) !== null);
+
+// Cuerpo de register/complete: solo el id del registro, la contraseña y los términos (la confirmación no viaja).
+export const buildCompleteBody = (attemptId: string, values: CompletionValues): Record<string, unknown> => ({
+  attemptId,
+  password: values.password,
+  acceptedTerms: values.acceptedTerms,
+});
 
 // ---- Campos del formulario ----
 
@@ -290,10 +336,6 @@ export function fieldError(field: RegistrationField, values: RegistrationValues)
       return isValidEmail(normalizeEmail(values.email)) ? null : "invalid";
     case "phone":
       return phoneError(values.phone);
-    case "password":
-      return isValidPassword(values.password) ? null : "invalid";
-    case "acceptedTerms":
-      return values.acceptedTerms ? null : "invalid";
   }
 }
 
@@ -316,8 +358,6 @@ export function buildStartBody(values: RegistrationValues, captchaToken: string)
     ...names,
     email: normalizeEmail(values.email),
     phone: values.phone,
-    password: values.password,
-    acceptedTerms: values.acceptedTerms,
     captchaToken,
   };
 }
@@ -329,7 +369,7 @@ export const isCodeComplete = (value: string) => digitsOnly(value).length === CO
 // Tipos de resultado que la pantalla sabe mostrar.
 export type RegisterErrorKind =
   | "validation" // 400 validation_failed (con `fields` y `fieldErrors`)
-  | "duplicate" // 409 registration_unavailable (genérico: no dice si es cédula o correo)
+  | "duplicate" // 409 (en start ya no se devuelve: el duplicado es genérico y nunca verifica)
   | "codeInvalid" // 400 code_invalid
   | "codeExpired" // 410
   | "notVerified" // 409 not_verified
@@ -337,20 +377,23 @@ export type RegisterErrorKind =
   | "captcha" // captcha_failed
   | "captchaUnavailable"
   | "disabled" // 503 registration_disabled o registration_not_available
-  | "unavailable"; // cualquier otra falla
+  | "processing" // 202 registration_processing (AX todavía no terminó)
+  | "failed" // 502 registration_failed
+  | "busy" // 503 registration_busy
+  | "unavailable"; // cualquier otra falla (incluye 503 registration_unavailable)
 
 // Códigos de error por campo del servidor ("campo:codigo"), ya separados.
-export type ServerFieldCodes = Partial<Record<RegistrationField, string>>;
+export type ServerFieldCodes = Partial<Record<ServerField, string>>;
 
 export interface RegisterApiError {
   kind: RegisterErrorKind;
-  fields: RegistrationField[];
+  fields: ServerField[];
   fieldCodes: ServerFieldCodes;
 }
 
-function knownFields(value: unknown): RegistrationField[] {
+function knownFields(value: unknown): ServerField[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((f): f is RegistrationField => typeof f === "string" && (FIELD_ORDER as string[]).includes(f));
+  return value.filter((f): f is ServerField => typeof f === "string" && (SERVER_FIELDS as string[]).includes(f));
 }
 
 // ["idNumber:invalid_id_length", ...] -> { idNumber: "invalid_id_length" }. Ignora lo que no sea un campo conocido.
@@ -360,7 +403,7 @@ export function parseFieldCodes(value: unknown): ServerFieldCodes {
   for (const item of value) {
     if (typeof item !== "string") continue;
     const [field, code] = item.split(":");
-    if ((FIELD_ORDER as string[]).includes(field) && code && !(field in out)) out[field as RegistrationField] = code;
+    if ((SERVER_FIELDS as string[]).includes(field) && code && !(field in out)) out[field as ServerField] = code;
   }
   return out;
 }
@@ -385,21 +428,48 @@ export function classifyRegisterError(status: number, body: unknown): RegisterAp
   if (code === "code_invalid") return result("codeInvalid");
   if (status === 410 || code === "code_expired") return result("codeExpired");
   if (code === "not_verified") return result("notVerified");
-  if (code === "registration_unavailable" || status === 409) return result("duplicate");
+  if (status === 202 || code === "registration_processing") return result("processing");
+  if (code === "registration_busy") return result("busy");
+  if (status === 502 || code === "registration_failed") return result("failed");
+  if (status === 409) return result("duplicate");
   if (code === "registration_disabled" || code === "registration_not_available") return result("disabled");
   return result("unavailable");
 }
 
-// Qué muestra el paso 3 según la respuesta de complete.
-export type CompleteOutcome = "pending" | "disabled" | "retry" | "restart";
+// Qué muestra el paso 3 según la respuesta de complete:
+//  created    200: la cuenta quedó creada
+//  processing 202: AX todavía no terminó; la pantalla reintenta sola unas veces
+//  validation 400: la contraseña o los términos no pasaron la validación del servidor (se muestran en su campo)
+//  disabled   el registro en línea está apagado
+//  failed     502: no se pudo crear (por ejemplo ya existía); no se reintenta a ciegas
+//  restart    410 / not_verified: el registro venció
+//  retry      cualquier otra falla pasajera (límite de intentos, servicio ocupado o caído)
+export type CompleteOutcome = "created" | "processing" | "validation" | "disabled" | "failed" | "restart" | "retry";
 
 export function completeOutcome(status: number, body: unknown): CompleteOutcome {
-  if (status === 200) return "pending";
+  if (status === 200) return "created";
   const { kind } = classifyRegisterError(status, body);
-  if (kind === "disabled") return "disabled";
-  if (kind === "codeExpired" || kind === "notVerified") return "restart";
-  return "retry";
+  switch (kind) {
+    case "processing":
+      return "processing";
+    case "validation":
+      return "validation";
+    case "disabled":
+      return "disabled";
+    case "failed":
+    case "duplicate":
+      return "failed";
+    case "codeExpired":
+    case "notVerified":
+      return "restart";
+    default:
+      return "retry";
+  }
 }
+
+// Reintentos automáticos cuando AX todavía está procesando (registration_processing): hasta 3 veces, cada 5 segundos.
+export const PROCESSING_RETRIES = 3;
+export const PROCESSING_RETRY_MS = 5000;
 
 // Claves del cuerpo que la web deja pasar de mercasa-api al navegador.
 const ALLOWED_RESPONSE_KEYS = ["code", "message", "fields", "fieldErrors", "attemptId", "expiresInSeconds", "verified", "status"] as const;
@@ -417,7 +487,7 @@ export function pickAllowedResponse(body: unknown): Record<string, unknown> {
 }
 
 // Estados que se reenvían tal cual al navegador; todo lo demás sale como 503 service_unavailable.
-export const FORWARDED_STATUSES = [200, 400, 409, 410, 429, 503];
+export const FORWARDED_STATUSES = [200, 202, 400, 409, 410, 429, 502, 503];
 
 // Cuerpos de entrada por paso: solo los campos conocidos y con tope de tamaño (lo demás se descarta).
 const text = (value: unknown, max: number) => (typeof value === "string" ? value.slice(0, max) : "");
@@ -437,12 +507,11 @@ export function sanitizeRegisterBody(step: RegisterStep, raw: unknown): Record<s
       tradeName: text(body.tradeName, 120),
       email: text(body.email, 260),
       phone: text(body.phone, 20),
-      password: text(body.password, 80),
-      acceptedTerms: body.acceptedTerms === true,
     };
   }
   if (step === "verify") return { attemptId: text(body.attemptId, 64), code: text(body.code, 12) };
-  return { attemptId: text(body.attemptId, 64) };
+  // complete: la contraseña y los términos viajan aquí (paso 3), con tope de tamaño; nada se registra.
+  return { attemptId: text(body.attemptId, 64), password: text(body.password, 80), acceptedTerms: body.acceptedTerms === true };
 }
 
 // Cédula enmascarada para registros (últimos 3 dígitos).

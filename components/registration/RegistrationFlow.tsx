@@ -18,13 +18,18 @@ import {
 } from "@/components/ui/drawer-tokens";
 import {
   CODE_LENGTH,
+  EMPTY_COMPLETION,
   EMPTY_VALUES,
   ID_TYPES,
   NAME_LIMITS,
+  PROCESSING_RETRIES,
+  PROCESSING_RETRY_MS,
   applyIdType,
+  buildCompleteBody,
   buildStartBody,
   classifyRegisterError,
   completeOutcome,
+  completionError,
   digitsOnly,
   emailSuggestion,
   fieldError,
@@ -32,6 +37,7 @@ import {
   fieldsFor,
   formatIdNumber,
   formatPhone,
+  invalidCompletionFields,
   invalidFields,
   isCodeComplete,
   normalizeEmail,
@@ -39,7 +45,9 @@ import {
   normalizePhoneInput,
   passwordChecks,
   serverErrorKind,
+  type CompleteField,
   type CompleteOutcome,
+  type CompletionValues,
   type IdType,
   type RegisterErrorKind,
   type RegistrationField,
@@ -61,8 +69,14 @@ const FIELD = "gap-2";
 const LABEL = "gap-1";
 const STEP_TOP = "mt-6";
 
-// El botón del paso 1 vive en el pie del panel (fuera del formulario en el DOM) y se asocia con form=.
+// Los botones del paso 1 y del paso 3 (formulario de contraseña) viven en el pie del panel (fuera del formulario en el
+// DOM) y se asocian con form=.
 const START_FORM_ID = "registration-start-form";
+const COMPLETE_FORM_ID = "registration-complete-form";
+
+// Estado del paso 3: "form" (contraseña, confirmación y términos), "working" (enviando), "processing" (AX todavía crea la
+// cuenta: se reintenta solo), y los resultados finales.
+type Phase = "form" | "working" | "processing" | "created" | "disabled" | "failed" | "restart" | "retry";
 
 async function post(step: "start" | "verify" | "complete", body: unknown): Promise<{ status: number; body: unknown }> {
   try {
@@ -80,11 +94,13 @@ async function post(step: "start" | "verify" | "complete", body: unknown): Promi
 
 // Registro de clientes en 3 pasos, un objetivo por pantalla: (1) datos, (2) código del correo, (3) listo / en revisión.
 // Vive dentro del panel de perfil (no es una página aparte); `onBackToLogin` vuelve al formulario de ingreso.
-// La contraseña vive solo en el estado de este componente y se borra en cuanto el servidor acepta el paso 1.
+// La contraseña se pide en el último paso, vive solo en el estado de este componente (nunca en almacenamiento del navegador)
+// y se borra al terminar o al volver a empezar.
 export default function RegistrationFlow({
   onBackToLogin,
   footerTarget,
   initialValues,
+  initialStep,
 }: {
   onBackToLogin: () => void;
   // Elemento del panel (fuera de la zona con scroll) donde se pinta el pie con el botón del paso 1. Sin esta prop
@@ -92,10 +108,12 @@ export default function RegistrationFlow({
   footerTarget?: HTMLElement | null;
   // Valores con los que arranca el formulario (por ejemplo el tipo de cédula); solo lo usan las pruebas de pantalla.
   initialValues?: Partial<RegistrationValues>;
+  // Paso con el que arranca (1 por defecto); solo lo usan las pruebas de pantalla para ver el paso 3.
+  initialStep?: 1 | 2 | 3;
 }) {
   const t = useTranslations("Registration");
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(initialStep ?? 1);
   const [values, setValues] = useState<RegistrationValues>({ ...EMPTY_VALUES, ...initialValues });
   const [touched, setTouched] = useState<Partial<Record<RegistrationField, boolean>>>({});
   // Códigos de error por campo que devolvió el servidor al enviar (campo -> código); vacío si no hubo.
@@ -111,9 +129,22 @@ export default function RegistrationFlow({
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<RegisterErrorKind | null>(null);
 
-  const [outcome, setOutcome] = useState<CompleteOutcome | "working">("working");
+  // Paso 3: contraseña, confirmación y términos (solo en el estado del componente), y en qué va la creación de la cuenta.
+  const [completion, setCompletion] = useState<CompletionValues>(EMPTY_COMPLETION);
+  const [completionTouched, setCompletionTouched] = useState<Partial<Record<CompleteField, boolean>>>({});
+  const [completionServerCodes, setCompletionServerCodes] = useState<ServerFieldCodes>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [phase, setPhase] = useState<Phase>("form");
+  const [processingRetries, setProcessingRetries] = useState(0);
+  const [completeError, setCompleteError] = useState<RegisterErrorKind | null>(null);
+  // La última contraseña escrita, para que un reintento automático (con la pantalla ya en "processing") no use una copia vieja.
+  const completionRef = useRef(completion);
+  useEffect(() => {
+    completionRef.current = completion;
+  }, [completion]);
 
-  // Cada paso nuevo recibe el foco en su título (lectores de pantalla y teclado).
+  // Cada paso (y cada resultado del paso 3) recibe el foco en su título (lectores de pantalla y teclado).
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   useEffect(() => {
@@ -122,7 +153,7 @@ export default function RegistrationFlow({
       return;
     }
     headingRef.current?.focus();
-  }, [step]);
+  }, [step, phase]);
 
   // Un error se muestra al salir del campo (blur) o al enviar, no en cada tecla; una vez mostrado se actualiza en vivo.
   const fieldInvalid = (field: RegistrationField) =>
@@ -149,12 +180,38 @@ export default function RegistrationFlow({
         return t("errors.email");
       case "phone":
         return kind === "prefix" ? t("errors.phone.prefix") : t("errors.phone.length");
+    }
+  };
+
+  // Paso 3: el error se muestra al salir del campo o al enviar, y se actualiza en vivo una vez mostrado; también si el
+  // servidor rechazó la contraseña o los términos.
+  const completeFieldInvalid = (field: CompleteField) =>
+    (completionTouched[field] || (field in completionServerCodes)) &&
+    (completionError(field, completion) !== null || field in completionServerCodes);
+
+  const completeErrorText = (field: CompleteField): string => {
+    const kind = completionError(field, completion);
+    switch (field) {
       case "password":
         return t("errors.password");
+      case "confirmPassword":
+        return kind === "mismatch" ? t("errors.confirmPassword.mismatch") : t("errors.confirmPassword.required");
       case "acceptedTerms":
         return t("errors.acceptedTerms");
     }
   };
+
+  const setCompletionField = <K extends keyof CompletionValues>(field: K, value: CompletionValues[K]) => {
+    setCompletion((c) => ({ ...c, [field]: value }));
+    setCompletionServerCodes((c) => {
+      const next = { ...c };
+      delete next[field as "password" | "acceptedTerms"];
+      return next;
+    });
+    setCompleteError(null);
+  };
+
+  const touchCompletion = (field: CompleteField) => setCompletionTouched((s) => ({ ...s, [field]: true }));
 
   const suggestedEmail = emailSuggestion(values.email);
 
@@ -183,15 +240,26 @@ export default function RegistrationFlow({
 
   const restart = () => {
     setStep(1);
-    setValues((v) => ({ ...v, password: "" }));
     setTouched({});
     setServerCodes({});
     setFormError(null);
     setAttemptId("");
     setCode("");
     setCodeError(null);
-    setOutcome("working");
+    clearCompletion();
     setCaptchaReset((n) => n + 1);
+  };
+
+  // Borra la contraseña (y todo el estado del paso 3) del componente.
+  const clearCompletion = () => {
+    setCompletion(EMPTY_COMPLETION);
+    setCompletionTouched({});
+    setCompletionServerCodes({});
+    setShowPassword(false);
+    setShowConfirm(false);
+    setPhase("form");
+    setProcessingRetries(0);
+    setCompleteError(null);
   };
 
   const handleStart = async (e: React.FormEvent) => {
@@ -218,7 +286,6 @@ export default function RegistrationFlow({
     if (res.status === 200 && typeof (res.body as { attemptId?: unknown } | null)?.attemptId === "string") {
       setAttemptId((res.body as { attemptId: string }).attemptId);
       setEmail(normalizeEmail(values.email));
-      setValues((v) => ({ ...v, password: "" }));
       setCode("");
       setCodeError(null);
       setStep(2);
@@ -233,10 +300,75 @@ export default function RegistrationFlow({
     if (firstWithError) document.getElementById(`reg-${firstWithError}`)?.focus();
   };
 
-  const runComplete = async (id: string) => {
-    setOutcome("working");
-    const res = await post("complete", { attemptId: id });
-    setOutcome(completeOutcome(res.status, res.body));
+  // Envía register/complete con la contraseña del estado. Resultados: created / processing (se reintenta solo hasta
+  // PROCESSING_RETRIES veces, cada PROCESSING_RETRY_MS) / validation (el servidor rechazó un campo) / el resto.
+  const runComplete = async () => {
+    setPhase("working");
+    setCompleteError(null);
+    const res = await post("complete", buildCompleteBody(attemptId, completionRef.current));
+    const outcome: CompleteOutcome = completeOutcome(res.status, res.body);
+
+    if (outcome === "created") {
+      setCompletion(EMPTY_COMPLETION); // la contraseña ya no hace falta: se borra
+      setShowPassword(false);
+      setShowConfirm(false);
+      setPhase("created");
+      return;
+    }
+    if (outcome === "processing") {
+      setPhase("processing");
+      return;
+    }
+    if (outcome === "validation") {
+      const error = classifyRegisterError(res.status, res.body);
+      setCompletionServerCodes(
+        Object.fromEntries(error.fields.filter((f) => f === "password" || f === "acceptedTerms").map((f) => [f, error.fieldCodes[f] ?? ""])),
+      );
+      setCompleteError("validation");
+      setPhase("form");
+      const first = (["password", "acceptedTerms"] as const).find((f) => error.fields.includes(f));
+      if (first) document.getElementById(`reg-${first}`)?.focus();
+      return;
+    }
+    if (outcome === "failed" || outcome === "restart" || outcome === "disabled") {
+      setCompletion(EMPTY_COMPLETION); // sin posibilidad de reintentar a ciegas: se borra la contraseña
+    }
+    setPhase(outcome);
+  };
+
+  // AX todavía está creando la cuenta (registration_processing): reintenta solo, hasta PROCESSING_RETRIES veces cada
+  // PROCESSING_RETRY_MS conservando la contraseña SOLO en el estado del componente; luego ofrece "Reintentar".
+  useEffect(() => {
+    if (phase !== "processing") return;
+    const exhausted = processingRetries >= PROCESSING_RETRIES;
+    const timer = setTimeout(
+      () => {
+        if (exhausted) {
+          setPhase("retry"); // se agotaron los reintentos automáticos: se ofrece "Reintentar"
+          return;
+        }
+        setProcessingRetries((n) => n + 1);
+        void runComplete();
+      },
+      exhausted ? 0 : PROCESSING_RETRY_MS,
+    );
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, processingRetries]);
+
+  const handleComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (phase === "working") return;
+
+    setCompletionTouched(Object.fromEntries(["password", "confirmPassword", "acceptedTerms"].map((f) => [f, true])));
+    const bad = invalidCompletionFields(completion);
+    if (bad.length > 0) {
+      setCompleteError("validation");
+      document.getElementById(`reg-${bad[0]}`)?.focus();
+      return;
+    }
+    setProcessingRetries(0);
+    await runComplete();
   };
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -254,8 +386,8 @@ export default function RegistrationFlow({
     setSubmitting(false);
 
     if (res.status === 200) {
+      clearCompletion();
       setStep(3);
-      void runComplete(attemptId);
       return;
     }
 
@@ -263,7 +395,7 @@ export default function RegistrationFlow({
     document.getElementById("reg-code")?.focus();
   };
 
-  const passwordRules = passwordChecks(values.password);
+  const passwordRules = passwordChecks(completion.password);
 
   const formErrorText = (kind: RegisterErrorKind) => {
     switch (kind) {
@@ -309,6 +441,22 @@ export default function RegistrationFlow({
         style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
       >
         {submitting ? t("step1.submitting") : t("step1.submit")}
+      </button>
+    </>
+  );
+
+  // Pie del paso 3 (formulario de contraseña): error general + botón principal "Crear mi cuenta". Fuera del scroll (ver footerTarget).
+  const completeFooter = (
+    <>
+      {completeError === "validation" && <FormAlert>{t("errors.form.validation")}</FormAlert>}
+      <button
+        type="submit"
+        form={COMPLETE_FORM_ID}
+        disabled={phase === "working"}
+        className={PRIMARY_BUTTON}
+        style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+      >
+        {phase === "working" ? t("step3.submitting") : t("step3.submit")}
       </button>
     </>
   );
@@ -495,78 +643,6 @@ export default function RegistrationFlow({
             onChange={(v) => setField("phone", normalizePhoneInput(v))}
             onBlur={() => touch("phone")}
           />
-          <TextField
-            field="password"
-            required
-            label={t("fields.password.label")}
-            type="password"
-            autoComplete="new-password"
-            value={values.password}
-            invalid={fieldInvalid("password")}
-            error={fieldErrorText("password")}
-            describedBy="reg-password-rules"
-            onChange={(v) => setField("password", v)}
-            onBlur={() => touch("password")}
-          >
-            <div id="reg-password-rules" className={`flex flex-col ${LABEL} text-[13px]`} style={{ color: TEXT_MUTED }}>
-            <p className="font-semibold">{t("passwordRules.title")}</p>
-            <ul className={`flex flex-col ${LABEL}`}>
-              {(["length", "upper", "lower", "digit"] as const).map((rule) => (
-                <li key={rule} className="flex items-center gap-2" style={{ color: passwordRules[rule] ? "#1B6B3A" : TEXT_MUTED }}>
-                  {passwordRules[rule] ? (
-                    <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-                  )}
-                  <span>{t(`passwordRules.${rule}`)}</span>
-                  <span className="sr-only">
-                    {" — "}
-                    {passwordRules[rule] ? t("passwordRules.met") : t("passwordRules.pending")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            </div>
-          </TextField>
-
-          <div className={`flex flex-col ${FIELD}`}>
-            <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-snug" style={{ color: INK }}>
-              <input
-                id="reg-acceptedTerms"
-                type="checkbox"
-                checked={values.acceptedTerms}
-                aria-invalid={fieldInvalid("acceptedTerms") || undefined}
-                aria-describedby={fieldInvalid("acceptedTerms") ? "reg-acceptedTerms-error" : undefined}
-                onChange={(e) => {
-                  setField("acceptedTerms", e.target.checked);
-                  touch("acceptedTerms");
-                }}
-                className={`mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer accent-[#082B5C] ${FOCUS_RING}`}
-              />
-              <span>
-                {t("terms.accept")}{" "}
-                <Link
-                  href="/legal/terminos-y-condiciones"
-                  target="_blank"
-                  className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
-                  style={{ color: "#075FD8" }}
-                >
-                  {t("terms.termsLink")}
-                </Link>{" "}
-                {t("terms.and")}{" "}
-                <Link
-                  href="/legal/politica-de-privacidad"
-                  target="_blank"
-                  className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
-                  style={{ color: "#075FD8" }}
-                >
-                  {t("terms.privacyLink")}
-                </Link>
-              </span>
-            </label>
-            {fieldInvalid("acceptedTerms") && <FieldError id="reg-acceptedTerms-error">{fieldErrorText("acceptedTerms")}</FieldError>}
-          </div>
-
           <p className="text-center text-[13.5px]" style={{ color: TEXT_MUTED }}>
             {t("haveAccount")}{" "}
             <button
@@ -640,7 +716,136 @@ export default function RegistrationFlow({
         </form>
       )}
 
-      {step === 3 && (
+      {step === 3 && (phase === "form" || phase === "working") && (
+        <form id={COMPLETE_FORM_ID} onSubmit={handleComplete} noValidate aria-busy={phase === "working"} className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <div>
+            <h3
+              ref={headingRef}
+              tabIndex={-1}
+              className="font-display text-corp-ink outline-none"
+              style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+            >
+              {t("step3.title")}
+            </h3>
+            <p className="mt-3 text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+              {t("step3.intro")}
+            </p>
+          </div>
+
+          <TextField
+            field="password"
+            required
+            label={t("fields.password.label")}
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            value={completion.password}
+            invalid={completeFieldInvalid("password")}
+            error={completeErrorText("password")}
+            describedBy="reg-password-rules"
+            onChange={(v) => setCompletionField("password", v)}
+            onBlur={() => touchCompletion("password")}
+          >
+            <button
+              type="button"
+              aria-pressed={showPassword}
+              aria-controls="reg-password"
+              onClick={() => setShowPassword((s) => !s)}
+              className={`self-start rounded text-[13px] font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+              style={{ color: "#075FD8" }}
+            >
+              {showPassword ? t("fields.password.hide") : t("fields.password.show")}
+            </button>
+            <div id="reg-password-rules" className={`flex flex-col ${LABEL} text-[13px]`} style={{ color: TEXT_MUTED }}>
+              <p className="font-semibold">{t("passwordRules.title")}</p>
+              <ul className={`flex flex-col ${LABEL}`}>
+                {(["length", "letter", "digit", "edges"] as const).map((rule) => (
+                  <li key={rule} className="flex items-center gap-2" style={{ color: passwordRules[rule] ? "#1B6B3A" : TEXT_MUTED }}>
+                    {passwordRules[rule] ? (
+                      <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                    )}
+                    <span>{t(`passwordRules.${rule}`)}</span>
+                    <span className="sr-only">
+                      {" — "}
+                      {passwordRules[rule] ? t("passwordRules.met") : t("passwordRules.pending")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </TextField>
+
+          <TextField
+            field="confirmPassword"
+            required
+            label={t("fields.confirmPassword.label")}
+            type={showConfirm ? "text" : "password"}
+            autoComplete="new-password"
+            value={completion.confirmPassword}
+            invalid={completeFieldInvalid("confirmPassword")}
+            error={completeErrorText("confirmPassword")}
+            onChange={(v) => setCompletionField("confirmPassword", v)}
+            onBlur={() => touchCompletion("confirmPassword")}
+          >
+            <button
+              type="button"
+              aria-pressed={showConfirm}
+              aria-controls="reg-confirmPassword"
+              onClick={() => setShowConfirm((s) => !s)}
+              className={`self-start rounded text-[13px] font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+              style={{ color: "#075FD8" }}
+            >
+              {showConfirm ? t("fields.password.hide") : t("fields.password.show")}
+            </button>
+          </TextField>
+
+          <div className={`flex flex-col ${FIELD}`}>
+            <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-snug" style={{ color: INK }}>
+              <input
+                id="reg-acceptedTerms"
+                type="checkbox"
+                checked={completion.acceptedTerms}
+                aria-required="true"
+                aria-invalid={completeFieldInvalid("acceptedTerms") || undefined}
+                aria-describedby={completeFieldInvalid("acceptedTerms") ? "reg-acceptedTerms-error" : undefined}
+                onChange={(e) => {
+                  setCompletionField("acceptedTerms", e.target.checked);
+                  touchCompletion("acceptedTerms");
+                }}
+                className={`mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer accent-[#082B5C] ${FOCUS_RING}`}
+              />
+              <span>
+                {t("terms.accept")}{" "}
+                <Link
+                  href="/legal/terminos-y-condiciones"
+                  target="_blank"
+                  className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+                  style={{ color: "#075FD8" }}
+                >
+                  {t("terms.termsLink")}
+                </Link>{" "}
+                {t("terms.and")}{" "}
+                <Link
+                  href="/legal/politica-de-privacidad"
+                  target="_blank"
+                  className={`rounded font-semibold underline underline-offset-4 ${FOCUS_RING}`}
+                  style={{ color: "#075FD8" }}
+                >
+                  {t("terms.privacyLink")}
+                </Link>
+              </span>
+            </label>
+            {completeFieldInvalid("acceptedTerms") && <FieldError id="reg-acceptedTerms-error">{completeErrorText("acceptedTerms")}</FieldError>}
+          </div>
+
+          {footerTarget === undefined ? <div className={`flex flex-col ${FIELD}`}>{completeFooter}</div> : null}
+        </form>
+      )}
+
+      {step === 3 && (phase === "form" || phase === "working") && footerTarget ? createPortal(completeFooter, footerTarget) : null}
+
+      {step === 3 && phase === "processing" && (
         <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
           <h3
             ref={headingRef}
@@ -648,43 +853,123 @@ export default function RegistrationFlow({
             className="font-display text-corp-ink outline-none"
             style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
           >
-            {outcome === "pending"
-              ? t("step3.pendingTitle")
-              : outcome === "disabled"
-                ? t("step3.disabledTitle")
-                : outcome === "working"
-                  ? t("step3.workingTitle")
-                  : t("step3.errorTitle")}
+            {t("step3.processingTitle")}
           </h3>
-
           <div role="status" aria-live="polite" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
-            {outcome === "working" && t("step3.workingBody")}
-            {outcome === "pending" && t("step3.pendingBody")}
-            {outcome === "disabled" && t("step3.disabledBody")}
-            {outcome === "retry" && t("step3.retryBody")}
-            {outcome === "restart" && t("step3.restartBody")}
+            {t("step3.processingBody")}
           </div>
+        </div>
+      )}
 
-          {outcome === "retry" && (
-            <button
-              type="button"
-              onClick={() => void runComplete(attemptId)}
-              className={PRIMARY_BUTTON}
-              style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
-            >
-              {t("step3.retry")}
-            </button>
-          )}
-          {outcome === "restart" && (
-            <button type="button" onClick={restart} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
-              {t("step2.restart")}
-            </button>
-          )}
-          {(outcome === "pending" || outcome === "disabled") && (
-            <button type="button" onClick={onBackToLogin} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
-              {t("step3.home")}
-            </button>
-          )}
+      {step === 3 && phase === "created" && (
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-display text-corp-ink outline-none"
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+          >
+            {t("step3.createdTitle")}
+          </h3>
+          <div role="status" aria-live="polite" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+            {t("step3.createdBody")}
+          </div>
+          {/* Sin iniciar sesión automáticamente: la persona entra con su cédula y la contraseña que eligió. */}
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className={PRIMARY_BUTTON}
+            style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+          >
+            {t("step3.login")}
+          </button>
+        </div>
+      )}
+
+      {step === 3 && phase === "retry" && (
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-display text-corp-ink outline-none"
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+          >
+            {t("step3.retryTitle")}
+          </h3>
+          <div role="alert" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+            {t("step3.retryBody")}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setProcessingRetries(0);
+              void runComplete();
+            }}
+            className={PRIMARY_BUTTON}
+            style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+          >
+            {t("step3.retry")}
+          </button>
+        </div>
+      )}
+
+      {step === 3 && phase === "failed" && (
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-display text-corp-ink outline-none"
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+          >
+            {t("step3.failedTitle")}
+          </h3>
+          <div role="alert" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+            {t("step3.failedBody")}
+          </div>
+          <button type="button" onClick={onBackToLogin} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
+            {t("step3.login")}
+          </button>
+          <button type="button" onClick={restart} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
+            {t("step2.restart")}
+          </button>
+        </div>
+      )}
+
+      {step === 3 && phase === "restart" && (
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-display text-corp-ink outline-none"
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+          >
+            {t("step3.restartTitle")}
+          </h3>
+          <div role="alert" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+            {t("step3.restartBody")}
+          </div>
+          <button type="button" onClick={restart} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
+            {t("step2.restart")}
+          </button>
+        </div>
+      )}
+
+      {step === 3 && phase === "disabled" && (
+        <div className={`${STEP_TOP} flex flex-col ${BLOCK}`}>
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="font-display text-corp-ink outline-none"
+            style={{ fontSize: 26, lineHeight: 1.15, fontWeight: 650 }}
+          >
+            {t("step3.disabledTitle")}
+          </h3>
+          <div role="status" aria-live="polite" className="text-[15px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+            {t("step3.disabledBody")}
+          </div>
+          <button type="button" onClick={onBackToLogin} className={SECONDARY_BUTTON} style={{ borderColor: RULE, color: INK }}>
+            {t("step3.home")}
+          </button>
         </div>
       )}
     </div>
@@ -732,7 +1017,7 @@ function TextField({
   required = false,
   children,
 }: {
-  field: RegistrationField | "code";
+  field: RegistrationField | CompleteField | "code";
   label: string;
   hint?: string;
   error: string;

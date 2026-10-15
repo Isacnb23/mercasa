@@ -819,7 +819,12 @@
         "hint": "8 digits. E.g. 8888-7777"
       },
       "password": {
-        "label": "Password"
+        "label": "Password",
+        "show": "Show password",
+        "hide": "Hide password"
+      },
+      "confirmPassword": {
+        "label": "Confirm your password"
       },
       "idType": {
         "label": "ID type",
@@ -829,10 +834,10 @@
     },
     "passwordRules": {
       "title": "Your password must have:",
-      "length": "Between 8 and 64 characters",
-      "upper": "One uppercase letter",
-      "lower": "One lowercase letter",
-      "digit": "One number",
+      "length": "Between 8 and 20 characters",
+      "letter": "At least one letter",
+      "digit": "At least one number",
+      "edges": "No spaces at the start or end",
       "met": "met",
       "pending": "pending"
     },
@@ -872,6 +877,10 @@
         "prefix": "The phone must start with 2, 4, 5, 6, 7 or 8."
       },
       "password": "The password does not meet the requirements in the list.",
+      "confirmPassword": {
+        "required": "Repeat your password",
+        "mismatch": "The passwords do not match"
+      },
       "acceptedTerms": "You must accept the terms and the privacy policy.",
       "code": "Enter the 6 digits of the code.",
       "form": {
@@ -895,15 +904,23 @@
       "codeExpired": "The code expired or the number of attempts was exceeded. Start over."
     },
     "step3": {
-      "workingTitle": "Finishing your registration",
-      "workingBody": "One moment, we are finishing your registration...",
-      "pendingTitle": "We received your request!",
-      "pendingBody": "We are reviewing your details. Once your account is ready, you will be able to sign in with your ID number and password.",
+      "title": "Choose your password",
+      "intro": "Last step: choose the password you will sign in with and accept the terms to create your account.",
+      "submit": "Create my account",
+      "submitting": "Creating your account...",
+      "processingTitle": "We are finishing creating your account",
+      "processingBody": "This can take a few seconds. Please do not close this screen.",
+      "createdTitle": "Your account is ready!",
+      "createdBody": "You can now sign in with your ID number and the password you chose.",
+      "login": "Sign in",
+      "failedTitle": "We could not create your account",
+      "failedBody": "If you already have an account, sign in. If not, write to us and we will help you.",
+      "retryTitle": "We are not done yet",
+      "retryBody": "Your account may still be being created, or the service is unavailable right now. Please try again in a few seconds.",
       "disabledTitle": "We are enabling online registration",
       "disabledBody": "We confirmed your email, but we cannot create your account from the website yet. No account was created. Please try again soon or contact us.",
-      "errorTitle": "We could not finish the registration",
-      "retryBody": "The service is not available right now. You can retry in a few minutes.",
       "restartBody": "The registration expired. Start over.",
+      "restartTitle": "The registration expired",
       "retry": "Retry",
       "home": "Back to sign in"
     },
