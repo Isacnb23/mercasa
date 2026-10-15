@@ -1,6 +1,7 @@
-// Credenciales que acepta homex-api: el "usuario" es la cédula (VATNUM),
-// no un email. homex-api la normaliza internamente (con o sin guiones), no
-// hace falta validar/formatear el formato del lado del cliente.
+// Credenciales que acepta homex-api: el "usuario" es la cédula (VATNUM), no un email. Esta web manda lo que
+// la persona teclea, sin formatearlo. homex-api prueba hasta 4 formas de la cédula (lo recibido, solo dígitos,
+// con guiones X-XXXX-XXXX / X-XXX-XXXXXX y el VATNUM real) contra el procedimiento de login, que compara la
+// cédula IDÉNTICA a como se dio de alta: por eso se puede teclear con o sin guiones.
 export interface LoginCredentials {
   userId: string;
   password: string;
