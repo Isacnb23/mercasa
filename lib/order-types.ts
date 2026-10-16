@@ -117,8 +117,5 @@ export interface OrderPreview {
 export type CheckoutStep = "cart" | "delivery" | "payment" | "summary";
 export const CHECKOUT_STEPS: CheckoutStep[] = ["cart", "delivery", "payment", "summary"];
 
-// Resultado de POST /api/checkout/order.
-export type OrderSubmitResult =
-  | { ok: true; orderNumber: string | null }
-  // code: ordering_disabled | ordering_not_available | service_unavailable | session | invalid | unknown
-  | { ok: false; code: string };
+// Resultado de POST /api/checkout/order: ver lib/order-create.ts.
+export type { OrderSubmitResult } from "./order-create";

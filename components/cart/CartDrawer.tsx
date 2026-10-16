@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
@@ -13,6 +13,13 @@ import { ORDERING_ENABLED } from "@/lib/feature-flags";
 import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
 import { useOrderPreview } from "@/lib/order-preview";
 import { submitOrder } from "@/lib/order-submit";
+import {
+  buildCreateOrderBody,
+  buildCreateOrderContent,
+  createOrderContentKey,
+  resolveRequestId,
+  type RequestIdState,
+} from "@/lib/order-create";
 import type { CheckoutStep, PaymentMethod } from "@/lib/order-types";
 import CartCheckoutInfo from "@/components/cart/CartCheckoutInfo";
 import CartLines from "@/components/cart/CartLines";
@@ -76,6 +83,13 @@ export default function CartDrawer() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  // Instrucciones de entrega opcionales del pedido.
+  const [notes, setNotes] = useState("");
+  // requestId de la confirmación: NUEVO por cada pantalla de pago (se descarta al abrirla) y el MISMO en los reintentos de esa
+  // confirmación (timeout o red), para que un doble clic o un reintento no duplique el pedido. Se descarta tras un 201/202.
+  const requestIdRef = useRef<RequestIdState | null>(null);
+  // Evita dos envíos simultáneos aunque el estado de React todavía no se haya actualizado (doble clic muy rápido).
+  const submittingRef = useRef(false);
 
   // Fecha de entrega elegida, atada a la dirección activa: si cambia la dirección, la elección anterior deja
   // de aplicar sin necesidad de un efecto que la borre.
@@ -113,6 +127,10 @@ export default function CartDrawer() {
   const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale, tOrder("groupPickupTitle")));
 
   const goTo = (target: CheckoutStep) => {
+    if (submittingRef.current) return;
+    // Abrir la pantalla de pago desde otro paso empieza una confirmación nueva (otro requestId). Volver del resumen al pago
+    // conserva el mismo: es la misma confirmación.
+    if (target === "payment" && step !== "summary") requestIdRef.current = null;
     setSubmit({ status: "idle" });
     setStep(target);
   };
@@ -124,10 +142,40 @@ export default function CartDrawer() {
   };
 
   const confirm = async () => {
-    if (submit.status === "sending") return;
+    if (submittingRef.current || submit.status === "sending") return;
+
+    // Zonas que se coordinan con servicio al cliente no tienen fecha: no se puede pedir en línea todavía.
+    if (present.delivery && preview?.delivery.requiresCoordination) {
+      setSubmit({ status: "error", code: "delivery_coordination_not_supported" });
+      return;
+    }
+
+    // Solo ids, cantidades y selecciones: nunca precios, totales ni la cuenta (sale del JWT en el servidor).
+    const content = buildCreateOrderContent(items, { addressId, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite }, notes);
+    if (!content) {
+      setSubmit({ status: "error", code: "invalid_request" });
+      return;
+    }
+
+    requestIdRef.current = resolveRequestId(requestIdRef.current, createOrderContentKey(content));
+    submittingRef.current = true;
     setSubmit({ status: "sending" });
-    const result = await submitOrder();
-    setSubmit(result.ok ? { status: "done", orderNumber: result.orderNumber } : { status: "error", code: result.code });
+    try {
+      const result = await submitOrder(buildCreateOrderBody(content, requestIdRef.current.id));
+      if (result.ok) {
+        requestIdRef.current = null; // el pedido ya salió: el próximo es otro
+        setSubmit({ status: "done", kind: result.kind, orderNumber: result.orderNumber });
+      } else {
+        setSubmit({ status: "error", code: result.code, errors: result.errors });
+      }
+    } finally {
+      submittingRef.current = false;
+    }
+  };
+
+  const openOrders = () => {
+    closeCart();
+    openProfile();
   };
 
   const finish = () => {
@@ -136,6 +184,8 @@ export default function CartDrawer() {
     setStep("cart");
     setTermsAccepted(false);
     setPaymentMethod(null);
+    setNotes("");
+    requestIdRef.current = null;
     closeCart();
   };
 
@@ -349,6 +399,10 @@ export default function CartDrawer() {
                 termsAccepted={termsAccepted}
                 onTermsChange={setTermsAccepted}
                 submit={submit}
+                notes={notes}
+                onNotesChange={setNotes}
+                onOpenOrders={openOrders}
+                contactHref={site.whatsappHref}
               />
             ) : (
               <div className="rounded-2xl border bg-white px-4 py-3.5" style={{ borderColor: RULE }} role="alert">

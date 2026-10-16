@@ -163,6 +163,65 @@ que enlazan directo al catálogo, ya sea a nivel de Familia (Alimentos,
 Bebidas) o Sub-familia específica (Cuidado del Bebé, Higiene Personal,
 Limpieza del hogar, Institucional).
 
+## Checkout: crear el pedido
+
+Flujo de 4 pasos (carrito → entrega → pago → resumen) detrás de `NEXT_PUBLIC_ENABLE_ORDERING` (apagada por defecto: el botón final es la cotización
+por WhatsApp). Los precios, totales e impuestos que muestra la pantalla vienen de `Order/Validate` (servidor); **la web nunca los envía** al crear el pedido
+ni envía la cuenta (sale del JWT en el servidor).
+
+```
+CartDrawer ─► lib/order-submit.ts ─► POST /api/checkout/order ─► lib/checkout-proxy.ts (proxyOrderCreate, 60 s) ─► mercasa-api POST /api/customer/order
+                (requestId, cuerpo)        (cuerpo estricto, sesión)          lib/order-create-upstream.ts (mapeo)         ─► homex-api Order/Create
+```
+
+- **Cuerpo** (`lib/order-create.ts`): `{ requestId, addressId, deliveryDate, paymentMethod, items: [{ itemId, unitId?, quantity }], notes? }`. La ruta lo valida
+  de forma **estricta**: cualquier campo desconocido (precios, totales, impuestos, cuenta...) da 400; `requestId` debe ser GUID, la fecha `yyyy-MM-dd`, el método
+  `sinpe`/`transfer`, las notas hasta 250 caracteres (se limpian los caracteres de control). Con retiro en tienda en el carrito viaja el grupo `pickup` y el servidor
+  responde que todavía no está disponible.
+- **`requestId`**: nuevo al abrir la pantalla de pago (de "entrega" a "pago"), el mismo en los reintentos de esa confirmación (timeout o red) mientras el contenido
+  no cambie, y descartado tras un 201/202. Así un doble clic o un reintento no duplica el pedido (mientras `homex-api` no se reinicie). El botón se deshabilita
+  mientras la petición está en curso y un `ref` evita dos envíos simultáneos.
+- **Tiempo de espera**: el proxy espera 60 s **solo para el pedido** (`ORDER_PROXY_TIMEOUT_MS`); `mercasa-api` espera hasta 45 s y `homex-api` hasta ~24 s. Los demás
+  endpoints conservan los suyos (15 s los GET; 25 s los POST de validar y de precios). El navegador espera 70 s.
+
+### Estados y textos (`messages/*.json`, `Cart.order.*`)
+
+| Respuesta | Qué ve el cliente |
+|---|---|
+| 201 `created` / 202 `received` | "¡Pedido recibido!", el número si viene, **"Pedido recibido; pendiente de verificación de pago"**, que el personal de Mercasa verifica el pago antes de confirmarlo (puede tardar), "Normalmente entra en nuestro sistema en segundos o en unos pocos minutos; a veces puede tardar horas" y que lo verá en Mis pedidos cuando ya esté registrado. Nunca "confirmado" |
+| 202 `processing` | "Estamos procesando tu pedido…" (no hace falta enviarlo de nuevo) |
+| 400 `min_total_not_met` | monto mínimo para pedir en línea no alcanzado |
+| 400 `payment_method_not_allowed` | método de pago no disponible |
+| 400 `pickup_not_supported` | el retiro en tienda todavía no está disponible para pedidos en línea |
+| 400 `delivery_coordination_not_supported` (también se detecta antes de enviar) | la zona se coordina con servicio al cliente (WhatsApp) |
+| 400 `delivery_route_missing` | la dirección no tiene ruta de entrega |
+| 400 `order_invalid` + `errors` | "Revisá tu pedido" + un texto por cada error de línea (sin existencia, no disponible, presentación...) |
+| 400 `invalid_request` / otros | "No pudimos enviar tu pedido. Revisá los datos…" |
+| 401 / 404 / 429 | sesión vencida / dirección no encontrada / "varios intentos seguidos, esperá un minuto" |
+| 503 `order_busy` | "Estamos procesando otro pedido, intentá de nuevo en un momento" |
+| 503 `ordering_disabled` / `ordering_not_available` | "Los pedidos en línea todavía no están habilitados" + cotización por WhatsApp (el carrito no se pierde) |
+| 503 `service_unavailable` y demás | "El servicio no está disponible. Intentá de nuevo en unos minutos" |
+| 504 `order_timeout` (o el navegador vence) | **"Estamos verificando tu pedido. Revisalo en Mis pedidos o contactanos antes de volver a enviarlo"** con "Ver Mis pedidos" y WhatsApp; **no** invita a reintentar a ciegas (si el cliente reintenta, viaja el mismo `requestId`) |
+
+Nunca se muestran códigos crudos ni mensajes internos. **El carrito solo se vacía al pulsar "Listo" tras un 201/202; ante cualquier error se conserva.**
+
+El pago por Sinpe o transferencia no cambia: en la confirmación se muestran los datos de `Cart.order.sinpeInstructions` / `transferInstructions` si tienen texto;
+si están vacíos (hoy lo están), un texto neutro ("Te enviaremos los datos de pago y cómo mandar tu comprobante"). **No hay números de cuenta ni de Sinpe inventados.**
+
+### "Mis pedidos"
+
+No cambió. Muestra el pedido **solo cuando la orden ya existe en AX** (`SalesTable`, normalmente entre unos segundos y unos 3-4 minutos; a veces horas): mientras
+el pedido solo está en las tablas intermedias no aparece, y por eso la confirmación y el aviso de tiempo de espera lo explican.
+
+### Pendiente
+
+- **Herson**: textos y datos de Sinpe y transferencia (números de cuenta, a quién y cómo enviar el comprobante: `sinpeInstructions` / `transferInstructions` en es/en), monto
+  mínimo de la web (`Orders:MinTotal`), métodos de pago permitidos y su texto, quién convierte los pedidos a Contrato.
+- **Luis**: encender `Orders:Provisioning:Mode` en `homex-api` (hoy `Disabled`: la web recibe `503 ordering_disabled`), escritura real en `PSMAINXML`, estilo de fecha, precio con/sin IVA.
+- **Encender la web**: `NEXT_PUBLIC_ENABLE_ORDERING=true` (se incorpora al compilar; reiniciar o recompilar) solo cuando `homex-api` tenga el pedido encendido.
+- "Mis pedidos" con el estado de las tablas intermedias (`received`) antes de que exista la orden; retiro en tienda; promociones y flete (no están en el pedido todavía).
+- Zonas "a coordinar" (sin fecha) y pedidos mixtos (domicilio + retiro) todavía no se pueden pedir en línea.
+
 ## Repos remotos
 
 El proyecto está conectado a **dos** remotos de git:

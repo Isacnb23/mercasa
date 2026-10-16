@@ -1,17 +1,38 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/auth-cookies";
-import { proxyCustomerPost } from "@/lib/checkout-proxy";
+import { proxyOrderCreate } from "@/lib/checkout-proxy";
+import { sanitizeCreateOrderBody } from "@/lib/order-create";
+import { MAX_ORDER_BODY_BYTES } from "@/lib/order-logic";
 
-// Confirma el pedido. Hoy homex-api NO crea pedidos: responde 503 { code: "ordering_disabled" } mientras
-// Ordering:Enabled=false (y 501 -> "ordering_not_available" si se habilita sin implementación). La web
-// integra el flujo completo contra ese contrato estable. No se reenvía ningún dato del navegador: el
-// pedido se arma en el servidor. Sin sesión: 401 SIN llamar a mercasa-api.
-export async function POST() {
+// Crea el pedido. El navegador manda SOLO ids y cantidades (más dirección, fecha de entrega, método de pago, notas y el
+// requestId de esa pantalla de pago): aquí el cuerpo se valida de forma ESTRICTA y cualquier otro campo (precios, totales,
+// impuestos, cuenta...) lo rechaza con 400 en vez de reenviarlo. Los precios los calcula el servidor y la cuenta sale del JWT
+// (cookie httpOnly) en homex-api. Sin sesión: 401 SIN llamar a mercasa-api. Mientras homex-api tenga el pedido apagado la
+// respuesta es 503 { code: "ordering_disabled" } (o "ordering_not_available"), que la pantalla muestra como "no disponible".
+// Espera hasta 60 s (solo este endpoint). Nunca se registran cuerpos ni datos del cliente.
+export async function POST(request: Request) {
   const store = await cookies();
   if (!store.get(SESSION_COOKIE)?.value) {
     return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
   }
 
-  return proxyCustomerPost("/api/customer/order", {}, "order-create");
+  const text = await request.text();
+  if (text.length > MAX_ORDER_BODY_BYTES) {
+    return NextResponse.json({ error: "Solicitud demasiado grande.", code: "invalid_request" }, { status: 400 });
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return NextResponse.json({ error: "Body inválido", code: "invalid_request" }, { status: 400 });
+  }
+
+  const body = sanitizeCreateOrderBody(raw);
+  if (!body) {
+    return NextResponse.json({ error: "Pedido inválido.", code: "invalid_request" }, { status: 400 });
+  }
+
+  return proxyOrderCreate(body, "order-create");
 }

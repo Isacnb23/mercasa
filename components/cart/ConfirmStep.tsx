@@ -7,6 +7,14 @@ import { Link } from "@/i18n/navigation";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { unitLabel } from "@/lib/presentations";
 import type { OrderPreview, PaymentMethod } from "@/lib/order-types";
+import {
+  MAX_NOTES_LENGTH,
+  errorMessageKey,
+  isAmbiguousFailure,
+  lineErrorMessageKey,
+  type CreateKind,
+  type OrderErrorCode,
+} from "@/lib/order-create";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import OrderSummary, { GrandTotal } from "./OrderSummary";
 import type { OrderPreviewLine } from "@/lib/order-types";
@@ -14,9 +22,11 @@ import type { OrderPreviewLine } from "@/lib/order-types";
 export type SubmitState =
   | { status: "idle" }
   | { status: "sending" }
-  | { status: "done"; orderNumber: string | null }
-  // code: ordering_disabled | ordering_not_available | service_unavailable | session | invalid | unknown
-  | { status: "error"; code: string };
+  // kind: created (ya existe en AX) | received (llegó a AX) | processing (aún sin resultado). En los tres el pedido quedó
+  // recibido y pendiente de verificación de pago: nunca se dice "confirmado".
+  | { status: "done"; kind: CreateKind; orderNumber: string | null }
+  // code: ver lib/order-create.ts (KNOWN_ORDER_CODES); errors: códigos de línea de order_invalid, que se explican con texto propio.
+  | { status: "error"; code: OrderErrorCode; errors?: string[] };
 
 interface Props {
   preview: OrderPreview;
@@ -26,12 +36,30 @@ interface Props {
   termsAccepted: boolean;
   onTermsChange: (accepted: boolean) => void;
   submit: SubmitState;
+  // Instrucciones de entrega opcionales (se limpian y se limitan en el servidor).
+  notes: string;
+  onNotesChange: (notes: string) => void;
+  // Tras un tiempo de espera el pedido pudo haber salido: se ofrece ver "Mis pedidos" o escribir por WhatsApp.
+  onOpenOrders: () => void;
+  contactHref: string;
 }
 
 // Paso 4: todo lo anterior en solo lectura, términos y estados del envío. El botón "Confirmar pedido" lo pone
 // el pie del drawer. `ordering_disabled` / `ordering_not_available` muestran un mensaje amable (los pedidos en
 // línea todavía no están habilitados) y el drawer ofrece enviar la cotización por WhatsApp.
-export default function ConfirmStep({ preview, stale, deliveryDate, paymentMethod, termsAccepted, onTermsChange, submit }: Props) {
+export default function ConfirmStep({
+  preview,
+  stale,
+  deliveryDate,
+  paymentMethod,
+  termsAccepted,
+  onTermsChange,
+  submit,
+  notes,
+  onNotesChange,
+  onOpenOrders,
+  contactHref,
+}: Props) {
   const t = useTranslations("Cart.order");
   const tCatalog = useTranslations("Products.catalog");
   const locale = useLocale();
@@ -44,6 +72,9 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
   }, [submit.status]);
 
   if (submit.status === "done") {
+    // Datos para enviar el comprobante: los que haya en los mensajes (sinpeInstructions / transferInstructions); si están
+    // vacíos, un texto neutro. PENDIENTE DE DEFINIR POR HERSON: números/cuentas y cómo enviar el comprobante (no se inventan).
+    const instructions = (paymentMethod === "sinpe" ? (t.raw("sinpeInstructions") as string) : paymentMethod === "transfer" ? (t.raw("transferInstructions") as string) : "").trim();
     return (
       <div ref={topRef} className="flex flex-col items-center gap-3 rounded-2xl border bg-white px-6 py-8 text-center" style={{ borderColor: RULE }} role="status">
         <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: BEIGE }} aria-hidden>
@@ -57,8 +88,17 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
             {t("orderNumber", { number: submit.orderNumber })}
           </p>
         )}
+        <p className="text-[14px] font-semibold leading-snug" style={{ color: INK }}>
+          {t("successPending")}
+        </p>
         <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
-          {t("successBody")}
+          {submit.kind === "processing" ? t("successProcessingBody") : t("successBody")}
+        </p>
+        <p className="whitespace-pre-line rounded-xl px-3.5 py-3 text-[13px] leading-relaxed" style={{ background: BEIGE, color: INK }}>
+          {instructions || t("successProofPending")}
+        </p>
+        <p className="text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+          {t("successTiming")} {t("successMyOrders")}
         </p>
       </div>
     );
@@ -82,15 +122,46 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </div>
       )}
 
-      {submit.status === "error" && !orderingOff && (
-        <p
+      {submit.status === "error" && !orderingOff && isAmbiguousFailure(submit.code) && (
+        // El pedido pudo haber salido: no se invita a reintentar a ciegas (si el cliente reintenta, viaja el MISMO requestId).
+        <div role="alert" className="rounded-2xl px-4 py-3.5" style={{ background: BEIGE }}>
+          <p className="text-[13.5px] font-medium leading-snug" style={{ color: INK }}>
+            {t("createTimeout")}
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+            <button
+              type="button"
+              onClick={onOpenOrders}
+              className={`rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+              style={{ color: "#075FD8" }}
+            >
+              {t("createOpenOrders")}
+            </button>
+            <a
+              href={contactHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+              style={{ color: "#075FD8" }}
+            >
+              {t("createContact")}
+            </a>
+          </div>
+        </div>
+      )}
+
+      {submit.status === "error" && !orderingOff && !isAmbiguousFailure(submit.code) && (
+        <div
           role="alert"
           className="flex items-start gap-2 rounded-xl px-3.5 py-3 text-[13px] font-medium leading-snug"
           style={{ background: DANGER_BG, color: DANGER_TEXT }}
         >
           <AlertCircle className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-          {submit.code === "session" ? t("sessionExpired") : t("confirmError")}
-        </p>
+          <div>
+            <p className="m-0">{t(errorMessageKey(submit.code))}</p>
+            {submit.code === "order_invalid" && <LineErrors codes={submit.errors} />}
+          </div>
+        </div>
       )}
 
       {preview.deliveryGroup && (
@@ -168,6 +239,27 @@ export default function ConfirmStep({ preview, stale, deliveryDate, paymentMetho
         </>
       )}
 
+      {preview.deliveryGroup && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="order-notes" className="text-[11px] font-bold uppercase" style={{ color: TEXT_MUTED, letterSpacing: "0.12em" }}>
+            {t("notesLabel")}
+          </label>
+          <textarea
+            id="order-notes"
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value.slice(0, MAX_NOTES_LENGTH))}
+            maxLength={MAX_NOTES_LENGTH}
+            rows={2}
+            placeholder={t("notesPlaceholder")}
+            className={`w-full resize-none rounded-2xl border bg-white px-4 py-3 text-[13.5px] leading-snug ${FOCUS_RING}`}
+            style={{ borderColor: RULE, color: INK }}
+          />
+          <span className="self-end text-[11.5px]" style={{ color: TEXT_MUTED }}>
+            {t("notesCount", { count: notes.length, max: MAX_NOTES_LENGTH })}
+          </span>
+        </div>
+      )}
+
       <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-snug" style={{ color: INK }}>
         <input
           type="checkbox"
@@ -229,5 +321,19 @@ function GroupBlock({
       </ul>
       {children}
     </section>
+  );
+}
+
+// Códigos de línea de order_invalid explicados con texto propio (nunca el código crudo ni mensajes internos del servidor).
+function LineErrors({ codes }: { codes: string[] | undefined }) {
+  const t = useTranslations("Cart.order");
+  const keys = Array.from(new Set((codes ?? []).map(lineErrorMessageKey).filter((k): k is string => k !== null))).slice(0, 5);
+  if (keys.length === 0) return null;
+  return (
+    <ul className="m-0 mt-1 list-disc pl-4 font-normal">
+      {keys.map((key) => (
+        <li key={key}>{t(key)}</li>
+      ))}
+    </ul>
   );
 }

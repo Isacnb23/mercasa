@@ -2,6 +2,8 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import type { CreateOrderBody } from "@/lib/order-create";
+import { forwardOrderCreate } from "@/lib/order-create-upstream";
 
 const GENERIC_ERROR = "No se pudo cargar la información en este momento.";
 
@@ -11,7 +13,7 @@ function rateLimited(upstream: Response): NextResponse {
   const retryAfter = upstream.headers.get("Retry-After")?.trim();
   return NextResponse.json(
     { error: "Demasiadas solicitudes. Intentá de nuevo en unos segundos.", code: "rate_limited" },
-    { status: 429, headers: { "Retry-After": retryAfter && /^d+$/.test(retryAfter) ? retryAfter : "5", "Cache-Control": "no-store" } },
+    { status: 429, headers: { "Retry-After": retryAfter && /^\d+$/.test(retryAfter) ? retryAfter : "5", "Cache-Control": "no-store" } },
   );
 }
 
@@ -140,4 +142,27 @@ export async function proxyCustomerPost(path: string, body: unknown, logTag: str
     console.error(`[${logTag}] No se pudo contactar a mercasa-api:`, error);
     return unavailable();
   }
+}
+
+// Crea el pedido: reenvía el cuerpo YA validado (sanitizeCreateOrderBody) a mercasa-api con el JWT de la cookie httpOnly.
+// Sin sesión: 401 SIN llamar a mercasa-api. Espera hasta ORDER_PROXY_TIMEOUT_MS (60 s) y SOLO para el pedido: los demás
+// endpoints de este archivo conservan los suyos (15 s los GET; 25 s los POST de validar y de precios). El mapeo de respuestas
+// vive en lib/order-create-upstream.ts (probado con un fetch simulado).
+export async function proxyOrderCreate(body: CreateOrderBody, logTag: string): Promise<NextResponse> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+
+  if (!token) {
+    return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
+  }
+
+  const reply = await forwardOrderCreate(body, {
+    token,
+    apiBase: process.env.MERCASA_API_BASE,
+    apiKey: process.env.MERCASA_API_KEY,
+    // Solo el tipo de falla: nunca el cuerpo, la cuenta, la dirección ni la respuesta.
+    log: (message) => console.error(`[${logTag}] ${message}`),
+  });
+
+  return NextResponse.json(reply.body, { status: reply.status, headers: reply.headers });
 }
