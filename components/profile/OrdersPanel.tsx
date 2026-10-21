@@ -51,6 +51,9 @@ async function getJson<T>(url: string, parse: (raw: unknown) => T | null): Promi
 // Colores por grupo; el estado SIEMPRE lleva su texto (no depende solo del color).
 const STATUS_STYLE: Record<OrderStatus, { background: string; color: string }> = {
   received: { background: "#EAF0F8", color: "#082B5C" },
+  pending_payment_verification: { background: "#FFF4D6", color: "#7A5A00" },
+  confirmed: { background: "#E6F4EA", color: "#1B6B3A" },
+  review: { background: "#FFF4D6", color: "#7A5A00" },
   processing: { background: "#EAF0F8", color: "#082B5C" },
   on_route: { background: "#EAF0F8", color: "#082B5C" },
   approved: { background: "#E6F4EA", color: "#1B6B3A" },
@@ -73,6 +76,8 @@ export default function OrdersPanel({ onBack }: { onBack: () => void }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const [selected, setSelected] = useState<OrderSummary | null>(null);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -135,9 +140,21 @@ export default function OrdersPanel({ onBack }: { onBack: () => void }) {
       hasMore={hasMore}
       loadingMore={loadingMore}
       moreFailed={moreFailed}
+      refreshing={refreshing}
+      refreshFailed={refreshFailed}
       headingRef={headingRef}
       listRef={listRef}
       onBack={onBack}
+      // Recarga MANUAL de la lista (sin refresco automático): si falla, se conserva lo que ya se veía.
+      onRefresh={() => {
+        setRefreshing(true);
+        setRefreshFailed(false);
+        void requestPage(1).then((result) => {
+          if (result.data === null) setRefreshFailed(true);
+          else applyPage(result, false);
+          setRefreshing(false);
+        });
+      }}
       onRetry={() => {
         setPhase("loading");
         void requestPage(1).then((result) => applyPage(result, false));
@@ -162,10 +179,13 @@ export function OrdersListView({
   hasMore,
   loadingMore = false,
   moreFailed = false,
+  refreshing = false,
+  refreshFailed = false,
   headingRef,
   listRef,
   onBack,
   onRetry,
+  onRefresh,
   onMore,
   onOpen,
 }: {
@@ -174,10 +194,13 @@ export function OrdersListView({
   hasMore: boolean;
   loadingMore?: boolean;
   moreFailed?: boolean;
+  refreshing?: boolean;
+  refreshFailed?: boolean;
   headingRef?: Ref<HTMLHeadingElement>;
   listRef?: Ref<HTMLUListElement>;
   onBack: () => void;
   onRetry: () => void;
+  onRefresh?: () => void;
   onMore: () => void;
   onOpen: (order: OrderSummary) => void;
 }) {
@@ -240,6 +263,21 @@ export function OrdersListView({
         </div>
       )}
 
+      {phase === "ready" && onRefresh && (
+        <div className="flex flex-col items-start gap-2">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className={SECONDARY_BUTTON}
+            style={{ borderColor: RULE, color: INK }}
+          >
+            {refreshing ? t("refreshing") : t("refresh")}
+          </button>
+          {refreshFailed && <ErrorNote>{t("refreshError")}</ErrorNote>}
+        </div>
+      )}
+
       {phase === "ready" && items.length > 0 && (
         <>
           <ul ref={listRef} aria-label={t("listAria")} className="flex flex-col gap-3">
@@ -272,6 +310,7 @@ export function OrdersListView({
 function OrderCard({ order, onOpen }: { order: OrderSummary; onOpen: () => void }) {
   const t = useTranslations("Orders");
   const locale = useLocale();
+  const note = useStatusNote()(order.status);
   const created = formatOrderDateTime(order.createdAt, locale);
 
   return (
@@ -288,6 +327,11 @@ function OrderCard({ order, onOpen }: { order: OrderSummary; onOpen: () => void 
         </span>
         <StatusBadge status={order.status} />
       </span>
+      {note && (
+        <span className="text-[13px] leading-snug" style={{ color: INK }}>
+          {note}
+        </span>
+      )}
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]" style={{ color: TEXT_MUTED }}>
         {created && <span>{created}</span>}
         <ChannelLabel channel={order.channel} />
@@ -316,12 +360,39 @@ function ChannelLabel({ channel }: { channel: OrderSummary["channel"] }) {
 }
 
 // Un solo lugar con los 11 textos (para cambiarlos fácil con Herson).
+// Explicación en lenguaje claro de cada estado del pedido recién hecho (sin jerga); los demás estados solo llevan su etiqueta.
+function useStatusNote() {
+  const t = useTranslations("Orders");
+  return (status: OrderStatus): string | null => {
+    switch (status) {
+      case "received":
+        return t("statusNote.received");
+      case "pending_payment_verification":
+        return t("statusNote.pending_payment_verification");
+      case "confirmed":
+        return t("statusNote.confirmed");
+      case "review":
+        return t("statusNote.review");
+      case "processing":
+        return t("statusNote.processing");
+      default:
+        return null;
+    }
+  };
+}
+
 function useStatusLabel() {
   const t = useTranslations("Orders");
   return (status: OrderStatus): string => {
     switch (status) {
       case "received":
         return t("status.received");
+      case "pending_payment_verification":
+        return t("status.pending_payment_verification");
+      case "confirmed":
+        return t("status.confirmed");
+      case "review":
+        return t("status.review");
       case "processing":
         return t("status.processing");
       case "postponed":
@@ -373,6 +444,8 @@ function OrderDetailView({ summary, onBack }: { summary: OrderSummary; onBack: (
   const [phase, setPhase] = useState<Phase>("loading");
   const [errorKind, setErrorKind] = useState<OrdersErrorKind>("unavailable");
   const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const requestDetail = useCallback(
@@ -412,10 +485,22 @@ function OrderDetailView({ summary, onBack }: { summary: OrderSummary; onBack: (
       errorKind={errorKind}
       detail={detail}
       headingRef={headingRef}
+      refreshing={refreshing}
+      refreshFailed={refreshFailed}
       onBack={onBack}
       onRetry={() => {
         setPhase("loading");
         void requestDetail().then(applyDetail);
+      }}
+      // Recarga MANUAL del estado: si falla, se conserva el detalle que ya se veía y se avisa.
+      onRefresh={() => {
+        setRefreshing(true);
+        setRefreshFailed(false);
+        void requestDetail().then((result) => {
+          if (result.data === null) setRefreshFailed(true);
+          else applyDetail(result);
+          setRefreshing(false);
+        });
       }}
     />
   );
@@ -427,21 +512,28 @@ export function OrderDetailBody({
   phase,
   errorKind = "unavailable",
   detail,
+  refreshing = false,
+  refreshFailed = false,
   headingRef,
   onBack,
   onRetry,
+  onRefresh,
 }: {
   summary: OrderSummary;
   phase: Phase;
   errorKind?: OrdersErrorKind;
   detail: OrderDetail | null;
+  refreshing?: boolean;
+  refreshFailed?: boolean;
   headingRef?: Ref<HTMLHeadingElement>;
   onBack: () => void;
   onRetry: () => void;
+  onRefresh?: () => void;
 }) {
   const t = useTranslations("Orders");
   const locale = useLocale();
   const statusLabel = useStatusLabel();
+  const statusNote = useStatusNote();
 
   // Mientras carga se muestra lo que ya se sabe de la lista.
   const order = detail?.order ?? summary;
@@ -471,6 +563,25 @@ export function OrderDetailBody({
           </h3>
           <StatusBadge status={order.status} />
         </div>
+        {statusNote(order.status) && (
+          <p className="rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed" style={{ ...STATUS_STYLE[order.status] }}>
+            {statusNote(order.status)}
+          </p>
+        )}
+        {onRefresh && phase === "ready" && (
+          <div className="flex flex-col items-start gap-2">
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className={SECONDARY_BUTTON}
+              style={{ borderColor: RULE, color: INK }}
+            >
+              {refreshing ? t("refreshing") : t("refresh")}
+            </button>
+            {refreshFailed && <ErrorNote>{t("refreshError")}</ErrorNote>}
+          </div>
+        )}
       </div>
 
       <dl className="flex flex-col gap-2.5 rounded-2xl border bg-white p-4 text-[13.5px]" style={{ borderColor: RULE }}>

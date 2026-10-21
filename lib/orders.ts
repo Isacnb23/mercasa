@@ -1,9 +1,18 @@
 // Lógica pura de "Mis pedidos" (historial del cliente, solo lectura). Sin React ni Next, para probarla con el test runner
 // de Node. La cuenta del cliente NUNCA viaja desde aquí: sale del JWT de la sesión en el servidor.
 
-// Códigos de estado estables (los mapea homex-api desde AX); el texto para el cliente está en los mensajes (Orders.status.*).
+// Códigos de estado estables (los mapea homex-api desde AX y mercasa-api los normaliza); el texto para el cliente está en los
+// mensajes (Orders.status.* y, con explicación, Orders.statusNote.*). Los cuatro del pedido recién hecho:
+//   received                      "Recibimos tu pedido. Lo estamos procesando."
+//   pending_payment_verification  "Estamos verificando tu pago."          (Propuesta: Mercasa verifica el pago)
+//   confirmed                     "Pedido confirmado."                    (Contrato)
+//   review                        "Estamos revisando tu pedido; te contactamos si hace falta."
+// Los demás son estados posteriores del pedido ya en AX. Uno desconocido se muestra como "processing" (nunca se esconde ni asusta).
 export const ORDER_STATUSES = [
   "received",
+  "pending_payment_verification",
+  "confirmed",
+  "review",
   "processing",
   "postponed",
   "cancelled",
@@ -21,7 +30,6 @@ export type OrderChannel = "delivery" | "pickup";
 
 export interface OrderSummary {
   orderId: string;
-  axOrderId: string;
   createdAt: string;
   status: OrderStatus;
   total: number;
@@ -91,7 +99,6 @@ function parseSummary(raw: unknown): OrderSummary | null {
 
   return {
     orderId,
-    axOrderId: str(r.axOrderId).trim(),
     createdAt: str(r.createdAt),
     // Un estado que la web no conoce se muestra como "En proceso" (no se esconde ni se inventa).
     status: isOrderStatus(r.status) ? r.status : "processing",

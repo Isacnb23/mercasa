@@ -783,8 +783,21 @@
     "unitPrice": "{price} each",
     "noLines": "We are processing your order. The products appear once it is confirmed.",
     "timelineTitle": "Tracking",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "refreshError": "We could not refresh. Please try again.",
+    "statusNote": {
+      "received": "We received your order. We are processing it.",
+      "pending_payment_verification": "We are verifying your payment.",
+      "confirmed": "Order confirmed.",
+      "review": "We are reviewing your order; we will contact you if needed.",
+      "processing": "We are processing your order."
+    },
     "status": {
       "received": "Received",
+      "pending_payment_verification": "Verifying payment",
+      "confirmed": "Confirmed",
+      "review": "Under review",
       "processing": "In process",
       "postponed": "Postponed",
       "cancelled": "Cancelled",
