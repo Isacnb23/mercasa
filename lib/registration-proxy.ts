@@ -1,6 +1,7 @@
 import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCaptcha } from "@/lib/captcha";
+import { clientIp } from "@/lib/client-ip";
 import {
   FORWARDED_STATUSES,
   pickAllowedResponse,
@@ -13,13 +14,6 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 const unavailable = (code = "service_unavailable") =>
   NextResponse.json({ code, message: "El servicio no está disponible en este momento." }, { status: 503, headers: NO_STORE });
-
-// IP del visitante para los límites de homex-api. Detrás del proxy de la web llega en x-forwarded-for.
-// Pendiente: confirmar con infraestructura que el proxy sobrescribe ese encabezado (si no, el visitante lo podría falsear).
-function clientIp(request: NextRequest): string | undefined {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip")?.trim() || undefined;
-}
 
 // Reenvía un paso del registro a mercasa-api (que guarda la API key). Reglas:
 //  - sin NEXT_PUBLIC_ENABLE_REGISTRATION=true la ruta no existe (404);
@@ -43,7 +37,7 @@ export async function proxyRegister(step: RegisterStep, request: NextRequest): P
     return NextResponse.json({ code: "validation_failed", message: "Solicitud inválida." }, { status: 400, headers: NO_STORE });
   }
 
-  const ip = clientIp(request);
+  const ip = clientIp(request.headers);
 
   if (step === "start") {
     const captcha = await verifyCaptcha((raw as { captchaToken?: unknown } | null)?.captchaToken, ip);

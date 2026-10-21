@@ -1,7 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { sessionGate, withSessionRetry } from "@/lib/session";
 import type { CreateOrderBody } from "@/lib/order-create";
 import { forwardOrderCreate } from "@/lib/order-create-upstream";
 
@@ -22,12 +21,9 @@ function rateLimited(upstream: Response): NextResponse {
 // sesión responde 401 SIN llamar a mercasa-api. Datos del cliente: nunca se
 // cachean del lado del servidor (cache: "no-store").
 export async function proxyCustomerGet(path: string, logTag: string): Promise<NextResponse> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
-  }
+  // JWT vigente (se renueva solo con el refresh si venció) o la respuesta 401/429/503 ya armada.
+  const gate = await sessionGate();
+  if ("response" in gate) return gate.response;
 
   const apiBase = process.env.MERCASA_API_BASE;
   const apiKey = process.env.MERCASA_API_KEY;
@@ -38,15 +34,18 @@ export async function proxyCustomerGet(path: string, logTag: string): Promise<Ne
   }
 
   try {
-    const upstream = await fetch(`${apiBase}${path}`, {
-      method: "GET",
-      headers: {
-        "X-Api-Key": apiKey,
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
+    // Un 401 (JWT vencido) renueva una vez y repite la misma petición.
+    const upstream = await withSessionRetry(gate.token, (token) =>
+      fetch(`${apiBase}${path}`, {
+        method: "GET",
+        headers: {
+          "X-Api-Key": apiKey,
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      }),
+    );
 
     if (upstream.status === 401) {
       return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
@@ -77,12 +76,8 @@ export async function proxyCustomerGet(path: string, logTag: string): Promise<Ne
 //   (ordering_disabled, ordering_not_available, service_unavailable); otros 5xx, timeouts y errores de
 //   conexión -> 503 service_unavailable. Nunca se reenvían detalles internos.
 export async function proxyCustomerPost(path: string, body: unknown, logTag: string): Promise<NextResponse> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
-  }
+  const gate = await sessionGate();
+  if ("response" in gate) return gate.response;
 
   const unavailable = (code = "service_unavailable") =>
     NextResponse.json({ error: "El servicio no está disponible en este momento.", code }, { status: 503 });
@@ -96,18 +91,20 @@ export async function proxyCustomerPost(path: string, body: unknown, logTag: str
   }
 
   try {
-    const upstream = await fetch(`${apiBase}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": apiKey,
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body ?? {}),
-      cache: "no-store",
-      // Mayor que el timeout del pedido en mercasa-api (20 s).
-      signal: AbortSignal.timeout(25_000),
-    });
+    const upstream = await withSessionRetry(gate.token, (token) =>
+      fetch(`${apiBase}${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": apiKey,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body ?? {}),
+        cache: "no-store",
+        // Mayor que el timeout del pedido en mercasa-api (20 s).
+        signal: AbortSignal.timeout(25_000),
+      }),
+    );
 
     if (upstream.status === 401) {
       return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
@@ -149,20 +146,19 @@ export async function proxyCustomerPost(path: string, body: unknown, logTag: str
 // endpoints de este archivo conservan los suyos (15 s los GET; 25 s los POST de validar y de precios). El mapeo de respuestas
 // vive en lib/order-create-upstream.ts (probado con un fetch simulado).
 export async function proxyOrderCreate(body: CreateOrderBody, logTag: string): Promise<NextResponse> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  const gate = await sessionGate();
+  if ("response" in gate) return gate.response;
 
-  if (!token) {
-    return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
-  }
-
-  const reply = await forwardOrderCreate(body, {
-    token,
-    apiBase: process.env.MERCASA_API_BASE,
-    apiKey: process.env.MERCASA_API_KEY,
-    // Solo el tipo de falla: nunca el cuerpo, la cuenta, la dirección ni la respuesta.
-    log: (message) => console.error(`[${logTag}] ${message}`),
-  });
+  // Un 401 significa que mercasa-api no procesó nada: renovar el JWT y repetir el pedido es seguro (mismo requestId).
+  const reply = await withSessionRetry(gate.token, (token) =>
+    forwardOrderCreate(body, {
+      token,
+      apiBase: process.env.MERCASA_API_BASE,
+      apiKey: process.env.MERCASA_API_KEY,
+      // Solo el tipo de falla: nunca el cuerpo, la cuenta, la dirección ni la respuesta.
+      log: (message) => console.error(`[${logTag}] ${message}`),
+    }),
+  );
 
   return NextResponse.json(reply.body, { status: reply.status, headers: reply.headers });
 }

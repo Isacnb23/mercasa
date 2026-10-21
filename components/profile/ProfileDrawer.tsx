@@ -39,7 +39,7 @@ function getInitials(name: string, fallback: string): string {
 export default function ProfileDrawer() {
   const t = useTranslations("Profile");
   const tRegistration = useTranslations("Registration");
-  const { user, isLoading, isOpen, closeProfile, login, logout } = useAuth();
+  const { user, isLoading, isOpen, sessionExpired, closeProfile, login, logout } = useAuth();
   const { addresses, status: addressesStatus } = useAddresses();
 
   const [userId, setUserId] = useState("");
@@ -247,6 +247,16 @@ export default function ProfileDrawer() {
           <RegistrationFlow onBackToLogin={() => setRegistering(false)} footerTarget={registrationFooter} />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {sessionExpired && (
+              <p
+                className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-[13px] leading-snug"
+                style={{ background: DANGER_BG, color: DANGER_TEXT }}
+                role="status"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                {t("sessionExpiredNotice")}
+              </p>
+            )}
             <p className="text-[13.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
               {t("loginIntro")}
             </p>

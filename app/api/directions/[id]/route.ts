@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { sessionGate, withSessionRetry } from "@/lib/session";
 import { isValidAddressId } from "@/lib/addresses-edit";
 import type { DirectionInput } from "@/lib/auth-types";
 
@@ -18,11 +17,8 @@ const unavailable = (code: "service_unavailable" | "aif_unavailable" = "service_
 // si no existe). El id y el cuerpo que manda el navegador NO son verdad: aquí solo se valida el formato. Ni la cédula ni la
 // compañía ni la cuenta se pueden mandar. Nada del cuerpo se registra.
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) {
-    return NextResponse.json({ error: "Iniciá sesión para guardar los cambios." }, { status: 401, headers: NO_STORE });
-  }
+  const gate = await sessionGate("Iniciá sesión para guardar los cambios.");
+  if ("response" in gate) return gate.response;
 
   const { id } = await params;
   if (!isValidAddressId(id)) {
@@ -63,7 +59,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    const upstream = await fetch(`${apiBase}/api/directions/${id}`, {
+    const upstream = await withSessionRetry(gate.token, (token) =>
+      fetch(`${apiBase}/api/directions/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -82,7 +79,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       cache: "no-store",
       // Mayor que el timeout de mercasa-api (10 s) para que llegue su 503 antes de rendirnos.
       signal: AbortSignal.timeout(20_000),
-    });
+    }));
 
     if (upstream.ok) return NextResponse.json({ ok: true }, { headers: NO_STORE });
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { hasSessionCookies } from "@/lib/auth-cookies";
 import { proxyCustomerPost } from "@/lib/checkout-proxy";
 import { MAX_ORDER_BODY_BYTES, sanitizeOrderRequest } from "@/lib/order-logic";
 
@@ -10,7 +10,7 @@ import { MAX_ORDER_BODY_BYTES, sanitizeOrderRequest } from "@/lib/order-logic";
 // Sin sesión: 401 SIN llamar a mercasa-api. Sin caché de datos del cliente.
 export async function POST(request: Request) {
   const store = await cookies();
-  if (!store.get(SESSION_COOKIE)?.value) {
+  if (!hasSessionCookies(store)) {
     return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
   }
 

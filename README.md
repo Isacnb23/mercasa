@@ -252,3 +252,6 @@ con `node scripts/diagnostics/[script].mjs`. Salidas en
 Vercel. Confirmar que las variables de entorno de producción usan el
 usuario de SQL de solo lectura (no `sa`) antes de cada deploy que toque
 la conexión a `Arte`.
+## Sesión del cliente
+
+El JWT de `homex-api` dura 5 minutos y se renueva solo en el servidor con un refresh token (cookies httpOnly separadas, sin tokens en el navegador). Flujo, cookies, qué pasa al expirar y pendientes: [`docs/sesion.md`](docs/sesion.md).

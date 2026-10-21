@@ -512,6 +512,7 @@
     "submitCta": "Sign in",
     "submitCtaLoading": "Signing in...",
     "serviceUnavailable": "The service is unavailable, please try again in a few minutes.",
+    "sessionExpiredNotice": "Your session expired, please sign in again. Your cart is still saved.",
     "loggedInGreeting": "Hi, {name}",
     "accountNumLabel": "Customer code",
     "emailLabel": "Email",

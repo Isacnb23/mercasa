@@ -1,7 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { sessionGate, withSessionRetry } from "@/lib/session";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -18,11 +17,8 @@ const unavailable = () =>
 //   429 -> 429 con Retry-After; cualquier otra falla, timeout o error de conexión -> 503 service_unavailable.
 // `parse` deja pasar SOLO los campos permitidos (lista cerrada); si la respuesta no tiene la forma esperada, 503.
 export async function proxyOrdersGet<T>(path: string, parse: (raw: unknown) => T | null, logTag: string): Promise<NextResponse> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) {
-    return NextResponse.json({ error: "Sesión requerida." }, { status: 401, headers: NO_STORE });
-  }
+  const gate = await sessionGate();
+  if ("response" in gate) return gate.response;
 
   const apiBase = process.env.MERCASA_API_BASE;
   const apiKey = process.env.MERCASA_API_KEY;
@@ -32,13 +28,15 @@ export async function proxyOrdersGet<T>(path: string, parse: (raw: unknown) => T
   }
 
   try {
-    const upstream = await fetch(`${apiBase}${path}`, {
-      method: "GET",
-      headers: { "X-Api-Key": apiKey, Authorization: `Bearer ${token}` },
-      cache: "no-store",
-      // Mayor que el timeout de mercasa-api para el historial (25 s).
-      signal: AbortSignal.timeout(30_000),
-    });
+    const upstream = await withSessionRetry(gate.token, (token) =>
+      fetch(`${apiBase}${path}`, {
+        method: "GET",
+        headers: { "X-Api-Key": apiKey, Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        // Mayor que el timeout de mercasa-api para el historial (25 s).
+        signal: AbortSignal.timeout(30_000),
+      }),
+    );
 
     if (upstream.status === 401) return NextResponse.json({ error: "Sesión requerida." }, { status: 401, headers: NO_STORE });
     if (upstream.status === 404) return NextResponse.json({ code: "not_found", message: "No encontramos ese pedido." }, { status: 404, headers: NO_STORE });

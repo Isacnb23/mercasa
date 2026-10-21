@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { hasSessionCookies } from "@/lib/auth-cookies";
 import { proxyOrderCreate } from "@/lib/checkout-proxy";
 import { sanitizeCreateOrderBody } from "@/lib/order-create";
 import { MAX_ORDER_BODY_BYTES } from "@/lib/order-logic";
@@ -13,7 +13,7 @@ import { MAX_ORDER_BODY_BYTES } from "@/lib/order-logic";
 // Espera hasta 60 s (solo este endpoint). Nunca se registran cuerpos ni datos del cliente.
 export async function POST(request: Request) {
   const store = await cookies();
-  if (!store.get(SESSION_COOKIE)?.value) {
+  if (!hasSessionCookies(store)) {
     return NextResponse.json({ error: "Sesión requerida." }, { status: 401 });
   }
 

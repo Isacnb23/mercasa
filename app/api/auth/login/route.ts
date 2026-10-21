@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getTokenExpirationSeconds, getUserFromToken } from "@/lib/jwt";
-import {
-  SESSION_COOKIE,
-  SESSION_MAX_AGE_FALLBACK,
-  sessionCookieOptions,
-} from "@/lib/auth-cookies";
+import { cookies, headers } from "next/headers";
+import { getUserFromToken } from "@/lib/jwt";
+import { clientIp } from "@/lib/client-ip";
+import { setSessionCookies } from "@/lib/session";
 import type { LoginCredentials } from "@/lib/auth-types";
 import { SERVICE_UNAVAILABLE_CODE, isServiceUnavailableStatus } from "@/lib/login-errors";
 
@@ -53,14 +50,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // IP real del visitante (igual que el registro): mercasa-api la reenvía a homex-api para su límite por IP y por cédula.
+  // Sin ella, todos los inicios de sesión compartirían el cupo de la IP de este servidor.
+  const ip = clientIp(await headers());
+  const upstreamHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Api-Key": apiKey,
+  };
+  if (ip) upstreamHeaders["X-Client-Ip"] = ip;
+
   let upstream: Response;
   try {
     upstream = await fetch(`${apiBase}/api/auth/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": apiKey,
-      },
+      headers: upstreamHeaders,
       body: JSON.stringify({
         userId: credentials.userId,
         password: credentials.password,
@@ -89,10 +92,18 @@ export async function POST(request: NextRequest) {
     if (isServiceUnavailableStatus(upstream.status)) {
       return NextResponse.json({ ...body, code: SERVICE_UNAVAILABLE_CODE }, { status: 503 });
     }
+    // Demasiados intentos (por IP o por cédula): se conserva el 429 con su Retry-After.
+    if (upstream.status === 429) {
+      const retryAfter = upstream.headers.get("Retry-After")?.trim();
+      return NextResponse.json(body, {
+        status: 429,
+        headers: { "Retry-After": retryAfter && /^\d+$/.test(retryAfter) ? retryAfter : "60" },
+      });
+    }
     return NextResponse.json(body, { status: upstream.status });
   }
 
-  const payload = (await upstream.json()) as { token?: string };
+  const payload = (await upstream.json()) as { token?: string; refreshToken?: string };
   const token = payload.token;
 
   if (!token) {
@@ -112,9 +123,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const maxAge = getTokenExpirationSeconds(token) ?? SESSION_MAX_AGE_FALLBACK;
+  // Dos cookies httpOnly separadas: el JWT (5 min) y el refresh (hasta 7 días, solo para /api). Un mercasa-api sin refresh
+  // deja el comportamiento de antes (solo el JWT).
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, { ...sessionCookieOptions, maxAge });
+  setSessionCookies(store, { token, refreshToken: payload.refreshToken, customerId: credentials.userId });
 
   return NextResponse.json({ user });
 }

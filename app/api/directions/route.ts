@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { sessionGate, withSessionRetry } from "@/lib/session";
 import type { DirectionInput } from "@/lib/auth-types";
 
 // Alta de dirección de entrega del cliente logueado. Lee el JWT
@@ -8,12 +7,8 @@ import type { DirectionInput } from "@/lib/auth-types";
 // mercasa-api POST /api/directions, que llama a homex-api CreateDirection.
 // La cédula ya no se manda: homex-api la deriva del AccountNum del JWT.
 export async function POST(request: NextRequest) {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: "Iniciá sesión para guardar la dirección." }, { status: 401 });
-  }
+  const gate = await sessionGate("Iniciá sesión para guardar la dirección.");
+  if ("response" in gate) return gate.response;
 
   let data: DirectionInput;
   try {
@@ -47,7 +42,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const upstream = await fetch(`${apiBase}/api/directions`, {
+    const upstream = await withSessionRetry(gate.token, (token) =>
+      fetch(`${apiBase}/api/directions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -69,7 +65,7 @@ export async function POST(request: NextRequest) {
       }),
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
-    });
+    }));
 
     if (!upstream.ok) {
       const body = await upstream.json().catch(() => ({ error: "No se pudo guardar la dirección." }));

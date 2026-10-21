@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/auth-cookies";
+import { hasSessionCookies } from "@/lib/auth-cookies";
 import { proxyCustomerPost } from "@/lib/checkout-proxy";
 import { sanitizeCatalogPricesBody } from "@/lib/catalog-prices";
 
@@ -9,7 +9,7 @@ import { sanitizeCatalogPricesBody } from "@/lib/catalog-prices";
 // mercasa-api. Respuesta privada y sin caché; no se guarda nada.
 export async function POST(request: Request) {
   const store = await cookies();
-  if (!store.get(SESSION_COOKIE)?.value) {
+  if (!hasSessionCookies(store)) {
     return NextResponse.json({ error: "Sesión requerida." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
   }
 
