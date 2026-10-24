@@ -9,3 +9,10 @@ export const ORDERING_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ORDERING === "tru
 // NEXT_PUBLIC_* se incorpora al compilar: cambiarla exige reiniciar o volver a compilar la web. Aparte, el servidor
 // (homex-api, Registration:Enabled) tiene su propio interruptor para el paso que crea el cliente.
 export const REGISTRATION_ENABLED = process.env.NEXT_PUBLIC_ENABLE_REGISTRATION === "true";
+
+// Precios con sesión del catálogo (POST /api/catalog/prices). NEXT_PUBLIC_ENABLE_CATALOG_PRICES (por defecto ENCENDIDA; solo
+// el valor "false" la apaga): apagada, el navegador no pide precios ni presentaciones, no sale ningún aviso de precios y los
+// productos se ven como para un cliente sin sesión; la ruta del servidor responde 404 sin llamar a mercasa-api. Se apaga
+// mientras homex-api no tenga Catalog/Prices. NEXT_PUBLIC_* se incorpora al compilar: exige reiniciar o volver a compilar.
+export const catalogPricesEnabled = (value: string | undefined): boolean => value !== "false";
+export const CATALOG_PRICES_ENABLED = catalogPricesEnabled(process.env.NEXT_PUBLIC_ENABLE_CATALOG_PRICES);

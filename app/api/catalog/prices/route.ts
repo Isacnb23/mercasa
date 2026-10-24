@@ -3,11 +3,17 @@ import { cookies } from "next/headers";
 import { hasSessionCookies } from "@/lib/auth-cookies";
 import { proxyCustomerPost } from "@/lib/checkout-proxy";
 import { sanitizeCatalogPricesBody } from "@/lib/catalog-prices";
+import { CATALOG_PRICES_ENABLED } from "@/lib/feature-flags";
 
 // Precios del catálogo con sesión. Del navegador se acepta SOLO `itemIds` (1 a 100, sin repetidos) y `withUnits` (presentaciones; máximo 20 ítems): la
 // lista de precios sale del JWT en homex-api, nunca de un valor del cliente. Sin sesión: 401 SIN llamar a
 // mercasa-api. Respuesta privada y sin caché; no se guarda nada.
 export async function POST(request: Request) {
+  // Interruptor apagado (NEXT_PUBLIC_ENABLE_CATALOG_PRICES=false): 404 limpio, sin leer sesión ni llamar a mercasa-api.
+  if (!CATALOG_PRICES_ENABLED) {
+    return NextResponse.json({ error: "No encontrado." }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+  }
+
   const store = await cookies();
   if (!hasSessionCookies(store)) {
     return NextResponse.json({ error: "Sesión requerida." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });

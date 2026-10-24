@@ -19,6 +19,7 @@ import {
   type PriceView,
 } from "@/lib/catalog-prices";
 import { fetchWithOneRetry } from "@/lib/retry";
+import { CATALOG_PRICES_ENABLED } from "@/lib/feature-flags";
 
 export type CatalogPricesStatus = "no-session" | "ready" | "price-list-missing" | "unavailable";
 
@@ -88,7 +89,7 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   }, [accountNum]);
 
   useEffect(() => {
-    if (!accountNum || isLoading || !idsKey) return;
+    if (!CATALOG_PRICES_ENABLED || !accountNum || isLoading || !idsKey) return;
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
@@ -152,7 +153,8 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   // Una instantánea de otra cuenta (o de antes de cerrar sesión) nunca se muestra.
   const own = snapshot.accountNum === accountNum ? snapshot : EMPTY;
 
-  const status: CatalogPricesStatus = isLoading
+  // Interruptor apagado: sin aviso de ningún tipo ("ready") y sin precios, igual que un cliente sin sesión.
+  const status: CatalogPricesStatus = !CATALOG_PRICES_ENABLED || isLoading
     ? "ready" // todavía no se sabe si hay sesión: sin aviso
     : !accountNum
       ? "no-session"
@@ -163,7 +165,7 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
           : "ready";
 
   const priceFor = (itemId: string): PriceView => {
-    if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
+    if (!CATALOG_PRICES_ENABLED || !accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
     const price = own.prices.get(key(itemId));
     if (price) return price.hasDelivery ? deliveryPriceView(price) : { kind: "hidden" };
     if (own.missing.has(key(itemId))) return { kind: "consult" };
@@ -171,7 +173,7 @@ export function useCatalogPrices(itemIds: ReadonlyArray<string>): CatalogPricesR
   };
 
   const pickupPriceFor = (itemId: string): PickupPriceView => {
-    if (!accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
+    if (!CATALOG_PRICES_ENABLED || !accountNum || isLoading || own.priceListMissing || own.failed) return { kind: "hidden" };
     const price = own.prices.get(key(itemId));
     if (price?.pickup) return pickupPriceView(price.pickup);
     if (price || own.missing.has(key(itemId))) return { kind: "consult" };

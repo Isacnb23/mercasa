@@ -2,8 +2,10 @@
 // sin ella y la lista de precios sale de la cuenta del JWT). Devuelve null si no se pudieron obtener (sin sesión,
 // servicio caído, respuesta inesperada): quien llama decide sin inventar nada.
 import { parseCatalogPrices, type CatalogUnit } from "./catalog-prices";
+import { CATALOG_PRICES_ENABLED } from "./feature-flags";
 
 export async function fetchItemUnits(itemId: string, signal?: AbortSignal): Promise<CatalogUnit[] | null> {
+  if (!CATALOG_PRICES_ENABLED) return null;
   try {
     const res = await fetch("/api/catalog/prices", {
       method: "POST",

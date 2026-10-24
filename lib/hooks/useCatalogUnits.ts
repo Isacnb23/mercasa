@@ -6,6 +6,7 @@
 // ni cookies) y se vacía al cerrar sesión o cambiar de cuenta. Sin sesión no llama a nada.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { CATALOG_PRICES_ENABLED } from "@/lib/feature-flags";
 import {
   CATALOG_PRICES_DEBOUNCE_MS,
   CATALOG_UNITS_BATCH_SIZE,
@@ -57,7 +58,7 @@ export function useCatalogUnits(itemIds: ReadonlyArray<string>): CatalogUnitsRes
   }, [accountNum]);
 
   useEffect(() => {
-    if (!accountNum || isLoading || !idsKey) return;
+    if (!CATALOG_PRICES_ENABLED || !accountNum || isLoading || !idsKey) return;
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
@@ -105,7 +106,7 @@ export function useCatalogUnits(itemIds: ReadonlyArray<string>): CatalogUnitsRes
   const own = snapshot.accountNum === accountNum ? snapshot : EMPTY;
   const allLoaded = idsKey.split(SEP).filter(Boolean).every((id) => own.units.has(key(id)));
 
-  const status: CatalogUnitsStatus = isLoading || !accountNum
+  const status: CatalogUnitsStatus = !CATALOG_PRICES_ENABLED || isLoading || !accountNum
     ? "no-session"
     : own.priceListMissing || own.failed
       ? "unavailable"
@@ -114,7 +115,7 @@ export function useCatalogUnits(itemIds: ReadonlyArray<string>): CatalogUnitsRes
         : "loading";
 
   const unitsFor = (itemId: string): CatalogUnit[] | null => {
-    if (!accountNum || isLoading || own.priceListMissing || own.failed) return null;
+    if (!CATALOG_PRICES_ENABLED || !accountNum || isLoading || own.priceListMissing || own.failed) return null;
     return own.units.get(key(itemId)) ?? null;
   };
 
