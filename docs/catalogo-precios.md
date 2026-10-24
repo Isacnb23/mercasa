@@ -1,0 +1,3 @@
+# Precios con sesión del catálogo
+
+`NEXT_PUBLIC_ENABLE_CATALOG_PRICES` (por defecto **encendida**; solo `false` la apaga) controla si la web pide precios y presentaciones con sesión (`POST /api/catalog/prices`). Apagada: el navegador no hace llamadas de precios, no sale ningún aviso y los productos se ven como para un cliente sin sesión; la ruta responde 404 sin llamar a `mercasa-api`. En Azure se pone en `false` hasta que `homex-api` tenga `Catalog/Prices`. Es una variable de compilación: hay que reiniciar o volver a compilar. `.env.example` no se versiona (está en `.gitignore`), por eso la documentación vive aquí.

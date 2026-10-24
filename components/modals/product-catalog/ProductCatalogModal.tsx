@@ -1,30 +1,64 @@
 "use client";
 
-import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, forwardRef, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image, { type StaticImageData } from "next/image";
 import HTMLFlipBook from "react-pageflip";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Boxes,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   HeartHandshake,
   Info,
-  ListFilter,
+  Lock,
   Package,
   Plus,
   ShieldCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { HierarchyNode, ProductSummary } from "@/lib/product-types";
+import type { HierarchyNode, ProductAvailability, ProductSummary } from "@/lib/product-types";
 import { FAMILY_ICONS } from "@/lib/product-family-icons";
 import { formatProductCount } from "@/lib/utils";
 import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
+import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
+import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
+import { needsUnitsForPlus, plusAction } from "@/lib/add-rules";
+import { fetchItemUnits } from "@/lib/fetch-units";
+import { site } from "@/lib/data";
+import PriceTag, { PickupPriceTag } from "./PriceTag";
+import { ChannelBadges, ChannelFilterBar } from "./ChannelBadges";
+import { collectVisiblePriceIds } from "@/lib/channel-price";
+import {
+  canAddToCart,
+  hasDelivery,
+  hasPickup,
+  countByChannel,
+  filterNodeByChannel,
+  filterTreeByChannel,
+  type CatalogChannel,
+} from "@/lib/catalog-channel";
+import { productTitle } from "@/lib/product-display";
+import { shouldLoadPageImages } from "@/lib/image-window";
+import CategoryMenu from "./CategoryMenu";
+import { activeCategoryId as computeActiveCategoryId, planJump, visiblePageIndexes, type MenuSection } from "@/lib/category-nav";
+import { createBookNavigator, type BookLike } from "@/lib/book-navigator";
+import {
+  anchorOf,
+  chooseBookLayout,
+  COLUMNS,
+  DEFAULT_LAYOUT,
+  findAnchor,
+  pageSize,
+  rowsFor,
+  sameLayout,
+  type BookLayout,
+  type PageAnchor,
+} from "@/lib/book-density";
 import ProductImage from "./ProductImage";
 import ProductDetailModal from "./ProductDetailModal";
 import mercasaLogo from "@/public/models/mercasa-logo-transparent.png";
@@ -117,9 +151,12 @@ const BOOK_WIDTH = 600;
 const BOOK_HEIGHT = 820;
 const BOOK_MIN_WIDTH = 220;
 
-// 9 por página (3x3) — cada página del libro es solo la mitad de un spread,
-// bastante más angosta que una página de pantalla completa suelta.
-const PRODUCTS_PER_GRID_PAGE = 9;
+// Ancho máximo de una hoja (el `maxWidth` que se le pasa a react-pageflip) y ancho máximo del panel (el
+// `max-width` de .catalog-panel en product-catalog-overlay.css): con ellos se calcula el espacio real del libro.
+const BOOK_MAX_PAGE_WIDTH = 860;
+const PANEL_MAX_WIDTH = 1400;
+// Tarjetas por hoja: 9 (3x3) o, como último recurso en hojas muy chicas, 6 (3x2). Lo decide el tamaño REAL de la
+// hoja (ver lib/book-density.ts y el efecto de la hoja de prueba en ProductCatalogModal).
 
 // Renglones por página impresa: son compactos, entran muchos más por hoja A4.
 const PRINT_PAGE_SIZE = 15;
@@ -224,10 +261,13 @@ const PILLAR_KEYS = ["catalogo", "disponibilidad", "compromiso"] as const;
 
 type BookPage =
   | { kind: "cover" }
+  // Contraportada: cierra el libro cuando el total sería par (sin ella la última página quedaría sola y la
+  // hoja derecha en blanco).
+  | { kind: "back" }
   | { kind: "portfolio-info" }
   | { kind: "portfolio-visual" }
   | { kind: "subfamily-divider"; subFamily: HierarchyNode; photo: StaticImageData }
-  | { kind: "category"; category: HierarchyNode; products: ProductSummary[]; part: number; totalParts: number };
+  | { kind: "category"; category: HierarchyNode; products: ProductSummary[]; part: number; totalParts: number; perPage: number };
 
 // react-pageflip muestra las páginas de a pares (spread) después de la
 // portada — portfolio-info/portfolio-visual son DOS entradas para que
@@ -237,7 +277,7 @@ type BookPage =
 // aunque una categoría caiga en índice par (page-flip la muestra como la
 // página derecha del spread) — no hace falta rellenar con páginas en
 // blanco para forzar paridad, eso solo infla el conteo de páginas.
-function buildBookPages(family: HierarchyNode, photoOffset: number): BookPage[] {
+function buildBookPages(family: HierarchyNode, photoOffset: number, perPage: number): BookPage[] {
   const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
 
   const subFamilies = family.children
@@ -261,14 +301,15 @@ function buildBookPages(family: HierarchyNode, photoOffset: number): BookPage[] 
     }
     for (const category of categories) {
       const products = category.products ?? [];
-      const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
+      const totalParts = Math.max(1, Math.ceil(products.length / perPage));
       for (let part = 0; part < totalParts; part++) {
         pages.push({
           kind: "category",
           category,
-          products: products.slice(part * PRODUCTS_PER_GRID_PAGE, (part + 1) * PRODUCTS_PER_GRID_PAGE),
+          products: products.slice(part * perPage, (part + 1) * perPage),
           part: part + 1,
           totalParts,
+          perPage,
         });
       }
     }
@@ -325,7 +366,8 @@ function findSubFamilyForCategory(allFamilies: HierarchyNode[], categoryId: stri
 function buildFilteredBookPages(
   filterCategories: { category: HierarchyNode }[],
   allFamilies: HierarchyNode[],
-  photoOffset: number
+  photoOffset: number,
+  perPage: number
 ): BookPage[] {
   const pages: BookPage[] = [{ kind: "cover" }, { kind: "portfolio-info" }, { kind: "portfolio-visual" }];
   let lastSubFamilyId: string | null = null;
@@ -342,14 +384,15 @@ function buildFilteredBookPages(
       });
       lastSubFamilyId = subFamily.id;
     }
-    const totalParts = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_GRID_PAGE));
+    const totalParts = Math.max(1, Math.ceil(products.length / perPage));
     for (let part = 0; part < totalParts; part++) {
       pages.push({
         kind: "category",
         category,
-        products: products.slice(part * PRODUCTS_PER_GRID_PAGE, (part + 1) * PRODUCTS_PER_GRID_PAGE),
+        products: products.slice(part * perPage, (part + 1) * perPage),
         part: part + 1,
         totalParts,
+        perPage,
       });
     }
   }
@@ -409,6 +452,8 @@ interface PageFlipController {
   flipPrev: () => void;
   flip: (page: number) => void;
   getCurrentPageIndex: () => number;
+  /** Vuelve a medir el área del libro y a dimensionar las hojas. */
+  update: () => void;
 }
 
 // Catálogo interactivo de UNA familia (independiente — no hay pantalla
@@ -420,10 +465,10 @@ interface PageFlipController {
 // o un click en el backdrop fuera del panel, siempre con fade-out simétrico
 // antes de desmontar (ver `handleClose`).
 export default function ProductCatalogModal({
-  family,
-  allFamilies,
+  family: familyProp,
+  allFamilies: allFamiliesProp,
   initialCategoryId,
-  filterCategories,
+  filterCategories: filterCategoriesProp,
   filterTitle,
   filterIcon,
   segmentId,
@@ -479,7 +524,33 @@ export default function ProductCatalogModal({
     title: string;
     entries: { abbr: string; meaning: string }[];
   }[];
-  const isFiltered = !!filterCategories && filterCategories.length > 0;
+  // Canal elegido en los chips "Todos / A domicilio / Retiro en tienda". El libro, el menú "Ir a categoría" y el
+  // PDF se arman SIEMPRE desde el árbol ya filtrado (family / allFamilies / filterCategories de aquí abajo),
+  // así sus páginas y conteos coinciden con lo que se ve.
+  const [channel, setChannel] = useState<CatalogChannel>("all");
+  const [channelChanged, setChannelChanged] = useState(false);
+  // El modo filtrado de Customer Class se decide con lo que VINO por props: un canal sin productos no lo
+  // convierte en el modo de una sola familia.
+  const isFiltered = !!filterCategoriesProp && filterCategoriesProp.length > 0;
+  const family = useMemo(
+    () => filterNodeByChannel(familyProp, channel) ?? { ...familyProp, itemCount: 0, children: [] },
+    [familyProp, channel]
+  );
+  const allFamilies = useMemo(() => filterTreeByChannel(allFamiliesProp, channel), [allFamiliesProp, channel]);
+  const filterCategories = useMemo(
+    () =>
+      channel === "all" || !filterCategoriesProp
+        ? filterCategoriesProp
+        : filterCategoriesProp.flatMap(({ category }) => {
+            const filtered = filterNodeByChannel(category, channel);
+            return filtered ? [{ category: filtered }] : [];
+          }),
+    [filterCategoriesProp, channel]
+  );
+  const channelCounts = useMemo(
+    () => countByChannel(isFiltered ? filterCategoriesProp!.map(({ category }) => category) : [familyProp]),
+    [isFiltered, filterCategoriesProp, familyProp]
+  );
   // Portada por segmento (ver catalogo-portada-por-segmento.md) — solo
   // cuando `segmentId` matchea una key real del mapeo; cualquier otro caso
   // (sin segmentId, o uno que no matchea) cae a la portada genérica de
@@ -525,15 +596,24 @@ export default function ProductCatalogModal({
   // `onInit` es el evento real de la librería que marca cuándo terminó.
   const [isBookReady, setIsBookReady] = useState(false);
 
+  // Densidad de las hojas (tarjetas por hoja y nivel de compactación): se elige según el tamaño real de la hoja.
+  // Al cambiar las tarjetas por hoja el libro tiene otras páginas: `anchor` recuerda dónde estaba el lector.
+  const [layout, setLayout] = useState<BookLayout>(DEFAULT_LAYOUT);
+  const [anchor, setAnchor] = useState<PageAnchor | null>(null);
+  const perPage = layout.perPage;
+
   const photoOffset = useMemo(() => photoOffsetFor(displayFamily.id), [displayFamily.id]);
-  const bookPages = useMemo(
-    () =>
-      isFiltered
-        ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset)
-        : buildBookPages(family, photoOffset),
-    [isFiltered, filterCategories, family, photoOffset, allFamilies]
-  );
+  const bookPages = useMemo(() => {
+    const content = isFiltered
+      ? buildFilteredBookPages(filterCategories!, allFamilies, photoOffset, perPage)
+      : buildBookPages(family, photoOffset, perPage);
+    // Con showCover la portada va sola y el resto en pares: si el total es par, la última página quedaría sola
+    // con la hoja derecha vacía. Se cierra con una contraportada intencional para que todo spread esté completo.
+    return content.length % 2 === 0 ? [...content, { kind: "back" } as BookPage] : content;
+  }, [isFiltered, filterCategories, family, photoOffset, allFamilies, perPage]);
   const totalPages = bookPages.length;
+  // Páginas de contenido (sin la contraportada): lo que cuenta el indicador "Página n de total".
+  const contentPageCount = bookPages.filter((page) => page.kind !== "back").length;
 
   // Agrupado por sub-familia para el <select> "Ir a categoría" (ver
   // fix-dropdown-agrupado-y-apertura-pagina.md) — mismo criterio que
@@ -570,8 +650,23 @@ export default function ProductCatalogModal({
     return map;
   }, [bookPages]);
 
-  const initialPageIndex = !isFiltered && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
+  const initialPageIndex = !isFiltered && !channelChanged && initialCategoryId ? (categoryPageIndex.get(initialCategoryId) ?? 0) : 0;
+  // Tras cambiar las tarjetas por hoja el libro se vuelve a montar en la página que contiene el mismo producto.
+  const startPage = anchor ? findAnchor(bookPages, anchor, perPage) : initialPageIndex;
   const [currentPage, setCurrentPage] = useState(initialPageIndex);
+  // Al cambiar las tarjetas por hoja la página actual se recalcula en el mismo render (estado derivado), no en un efecto.
+  const [seenPerPage, setSeenPerPage] = useState(perPage);
+  if (seenPerPage !== perPage) {
+    setSeenPerPage(perPage);
+    setCurrentPage(startPage);
+  }
+
+  // Precios (solo con sesión): de las páginas del spread actual y las vecinas (precarga de la siguiente).
+  const { openProfile } = useAuth();
+  // Piden precio los de A domicilio Y los de Retiro en tienda (cada canal con su precio); el "+" y el carrito
+  // siguen siendo solo para domicilio.
+  const visiblePriceIds = useMemo(() => collectVisiblePriceIds(bookPages, currentPage), [bookPages, currentPage]);
+  const { status: pricesStatus, priceFor, pickupPriceFor } = useCatalogPrices(visiblePriceIds);
 
   // Canto de páginas apiladas a los costados del panel (ver
   // canto-paginas-flipbook.md): el ancho de cada franja representa la
@@ -605,7 +700,26 @@ export default function ProductCatalogModal({
     // decidir si muestra una página sola o el spread de dos — si no lo
     // igualamos acá, calculamos la caja con la proporción de dos páginas
     // aunque el libro adentro termine renderizando una sola.
-    function fit(availableWidth: number, availableHeight: number) {
+    // El alto disponible es el del área (entre encabezado y pie). El ANCHO posible NO es el ancho actual del área:
+    // el panel se acota al ancho del libro que ya se calculó (ver panelMaxWidth), y si el alto crece después (el
+    // aviso de precios desaparece, la ventana se agranda) un libro limitado por ese ancho viejo no podría crecer
+    // nunca. Se usa el ancho que el área tendría con el panel libre: lo que cabe en la ventana (con el tope del
+    // panel) menos las flechas.
+    const panel = el.closest<HTMLElement>(".catalog-panel");
+    const backdrop = panel?.parentElement ?? null;
+
+    function freeWidth() {
+      const current = el!.clientWidth;
+      if (!panel || !backdrop) return current;
+      const style = getComputedStyle(backdrop);
+      const room = backdrop.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const chrome = (el!.parentElement?.clientWidth ?? current) - current; // flechas prev/next y sus márgenes
+      return Math.max(current, Math.min(room, PANEL_MAX_WIDTH) - chrome);
+    }
+
+    function fit() {
+      const availableWidth = freeWidth();
+      const availableHeight = el!.clientHeight;
       const isPortrait = availableWidth < BOOK_MIN_WIDTH * 2;
       setIsPortraitBook(isPortrait);
       const ratio = isPortrait ? BOOK_WIDTH / BOOK_HEIGHT : (BOOK_WIDTH * 2) / BOOK_HEIGHT;
@@ -615,15 +729,14 @@ export default function ProductCatalogModal({
         height = availableHeight;
         width = height * ratio;
       }
-      setBookBox({ width, height });
+      // Sin cambios reales no se vuelve a renderizar (evita ciclos con el ancho del panel).
+      setBookBox((prev) => (Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5 ? prev : { width, height }));
     }
 
-    fit(el.clientWidth, el.clientHeight);
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      fit(width, height);
-    });
+    fit();
+    const observer = new ResizeObserver(fit);
     observer.observe(el);
+    if (backdrop) observer.observe(backdrop);
     return () => observer.disconnect();
   }, []);
 
@@ -732,7 +845,7 @@ export default function ProductCatalogModal({
   // portada). Sirve para saber cuándo mostrar el panel decorativo del
   // hueco de spread simple (ver catalogo-portada-espacio-y-mobile.md, más
   // arriba en el JSX del libro).
-  const isSingleSpread = currentPage === 0 || (totalPages % 2 === 0 && currentPage === totalPages - 1);
+  const isSingleSpread = currentPage === 0; // el total es siempre impar (contraportada): solo la portada va sola
   const showSpreadGutter = isSingleSpread && !isPortraitBook;
   // La portada (índice 0, "página 1" 1-indexed, impar) siempre se dibuja a
   // la DERECHA (misma convención de libro físico: impar = derecha, par =
@@ -805,24 +918,100 @@ export default function ProductCatalogModal({
   const panelMaxWidth =
     measuredPanelWidth != null ? Math.max(640, headerMinWidth ?? 0, measuredPanelWidth) : undefined;
 
-  const activeCategoryId = useMemo(() => {
-    let found: string | null = null;
-    for (const [categoryId, pageIndex] of categoryPageIndex) {
-      if (pageIndex <= currentPage) found = categoryId;
-    }
-    return found;
-  }, [categoryPageIndex, currentPage]);
+  // Densidad de las hojas según su tamaño REAL (no según umbrales de la ventana). Se monta, oculta, una hoja de
+  // categoría "peor caso" (título de dos líneas; nombres y empaques largos; precios, etiquetas de los dos canales y
+  // "Desde ₡X IVA incluido") del tamaño que tendrán las hojas reales, y se queda con el nivel más holgado en el que
+  // su rejilla no desborda (ver lib/book-density.ts). Es el mismo componente que pinta las hojas reales, así que
+  // lo que mide es lo que se verá.
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isFading, setIsFading] = useState(false);
+  const probeRef = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const layoutRef = useRef({ layout, bookPages, currentPage });
+  useLayoutEffect(() => {
+    layoutRef.current = { layout, bookPages, currentPage };
+  });
 
-  // Nombre a mostrar en el botón del menú "Ir a categoría" — cae a la
-  // primera categoría de la primera sección si todavía no hay una activa
-  // (arranque en la portada, antes de cualquier flip).
-  const activeCategoryName = useMemo(() => {
-    for (const { categories } of categorySections) {
-      const found = categories.find((category) => category.id === activeCategoryId);
-      if (found) return found.name;
+  useLayoutEffect(() => {
+    const root = probeRef.current;
+    if (!root) return;
+
+    function measureLayout() {
+      const size = pageSize(bookBox, isPortraitBook, { width: BOOK_WIDTH, height: BOOK_HEIGHT }, BOOK_MAX_PAGE_WIDTH);
+      // Un poco menos que la hoja real: margen para el redondeo de la librería del libro.
+      const width = Math.max(1, Math.floor(size.width) - 1);
+      const height = Math.max(1, Math.floor(size.height) - 2);
+      const fits = (candidate: BookLayout) => {
+        const sheet = root!.querySelector<HTMLElement>(`[data-probe="${candidate.perPage}"]`);
+        const grid = sheet?.querySelector<HTMLElement>("[data-probe-grid]");
+        if (!sheet || !grid) return true;
+        sheet.style.width = `${width}px`;
+        sheet.style.height = `${height}px`;
+        sheet.setAttribute("data-density", String(candidate.level));
+        if (grid.scrollHeight > grid.clientHeight) return false;
+        return Array.from(grid.children).every((card) => card.scrollHeight <= card.clientHeight && card.scrollWidth <= card.clientWidth);
+      };
+      const next = chooseBookLayout(fits);
+      const current = layoutRef.current;
+      if (sameLayout(current.layout, next)) return;
+      if (next.perPage !== current.layout.perPage) {
+        // Otras páginas: el libro se vuelve a montar (key) en la página que contiene el mismo producto.
+        setAnchor(anchorOf(current.bookPages[current.currentPage], current.layout.perPage));
+        setIsBookReady(false);
+        setJumpTarget(null);
+        setIsNavigating(false);
+        setIsFading(false);
+      }
+      setLayout(next);
     }
-    return categorySections[0]?.categories[0]?.name ?? "";
-  }, [categorySections, activeCategoryId]);
+
+    measureLayout();
+    // Las fuentes del sitio cargan después: cambian el ancho de los textos y con él el alto de las tarjetas.
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) measureLayout();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookBox, isPortraitBook, locale]);
+
+  // react-pageflip mide el área del libro en su propio evento `resize` de la ventana, ANTES de que React aplique el
+  // tamaño nuevo: las hojas quedaban un paso atrás del libro (con otro tamaño que el de la hoja de prueba de
+  // arriba). Tras aplicar cada tamaño nuevo se le pide que vuelva a medir.
+  useLayoutEffect(() => {
+    if (isBookReady) bookRef.current?.pageFlip()?.update();
+  }, [bookBox.width, bookBox.height, isPortraitBook, isBookReady]);
+
+  // Menú "Ir a categoría": categoría elegida (manda mientras su primera página siga a la vista), categoría
+  // actual según las páginas VISIBLES del spread (la página derecha también cuenta: una categoría que empieza en
+  // una página par queda a la derecha y antes se marcaba la anterior) y secciones para el menú.
+  const pageCategory = useMemo(
+    () => bookPages.map((page) => (page.kind === "category" ? page.category.id : null)),
+    [bookPages]
+  );
+  const activeCategoryId = useMemo(
+    () =>
+      computeActiveCategoryId({
+        currentPage,
+        totalPages,
+        portrait: isPortraitBook,
+        pageCategory,
+        categoryStart: categoryPageIndex,
+        jumpTarget,
+      }),
+    [currentPage, totalPages, isPortraitBook, pageCategory, categoryPageIndex, jumpTarget]
+  );
+  const menuSections = useMemo<MenuSection[]>(
+    () =>
+      categorySections.map(({ subFamily, categories }) => ({
+        id: subFamily.id,
+        name: subFamily.name,
+        categories: categories.map((category) => ({ id: category.id, name: category.name, itemCount: category.itemCount })),
+      })),
+    [categorySections]
+  );
 
   const printPages = useMemo(
     () => (isFiltered ? buildFilteredPrintPages(filterCategories!) : buildPrintPages(family)),
@@ -894,6 +1083,78 @@ export default function ProductCatalogModal({
   // la misma página/categoría de antes. `selectedProduct` null = cerrado.
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
 
+  // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
+  const liveBook = useMemo(
+    () => ({ priceFor, pickupPriceFor, onProductClick: setSelectedProduct, currentPage }),
+    [priceFor, pickupPriceFor, setSelectedProduct, currentPage]
+  );
+
+  // Hijos del libro con identidad ESTABLE (ver el comentario junto al <HTMLFlipBook>).
+  const bookChildren = useMemo(
+    () =>
+      bookPages.map((page, index) => (
+        <Page key={index}>
+          <BookPageContent page={page} pageIndex={index} family={displayFamily} allFamilies={allFamiliesProp} icon={Icon} coverPhoto={coverPhoto} />
+        </Page>
+      )),
+    [bookPages, displayFamily, allFamiliesProp, Icon, coverPhoto]
+  );
+
+  // Navegación del menú "Ir a categoría" (ver lib/book-navigator): UNA sola navegación a la vez. Si el libro está
+  // animando se espera a que vuelva a reposo; un spread de distancia se anima, más lejos se va directo con
+  // turnToPage tras un fundido breve (sin fundido con prefers-reduced-motion). Mientras navega se ignoran las
+  // flechas, la rueda y los clics en la esquina.
+  const viewRef = useRef({ currentPage, totalPages, portrait: isPortraitBook });
+  useEffect(() => {
+    viewRef.current = { currentPage, totalPages, portrait: isPortraitBook };
+  });
+  const fadeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const timers = fadeTimersRef.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  // Se crea al primer uso (en un evento o efecto, nunca durante el render) porque lee refs del libro.
+  const navigatorRef = useRef<ReturnType<typeof createBookNavigator> | null>(null);
+  const getNavigator = useCallback(() => {
+    if (!navigatorRef.current) {
+      navigatorRef.current = createBookNavigator({
+        plan: planJump,
+        getBook: () => (bookRef.current?.pageFlip() as unknown as BookLike | undefined) ?? null,
+        getView: () => viewRef.current,
+        reducedMotion: () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        turn: (_page, apply) => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            apply();
+            return;
+          }
+          setIsFading(true);
+          fadeTimersRef.current.push(
+            setTimeout(() => {
+              apply();
+              fadeTimersRef.current.push(setTimeout(() => setIsFading(false), 40));
+            }, 130)
+          );
+        },
+        onBusyChange: setIsNavigating,
+      });
+    }
+    return navigatorRef.current;
+  }, []);
+
+  // Cambiar de canal rearma el libro (otras páginas): se vuelve a la portada y se vuelve a inicializar el
+  // libro (key en el <HTMLFlipBook>), sin dejar un salto o una navegación a medias del menú de categorías.
+  const handleChannelChange = (next: CatalogChannel) => {
+    if (next === channel) return;
+    setChannel(next);
+    setChannelChanged(true);
+    setAnchor(null);
+    setCurrentPage(0);
+    setIsBookReady(false);
+    setJumpTarget(null);
+    setIsNavigating(false);
+    setIsFading(false);
+  };
+
   // Rueda del mouse pasa de página (ver catalogo-scroll-no-funciona.md,
   // parte 2): react-pageflip solo entiende click/arrastre/swipe táctil —
   // nunca `wheel` — así que sobre el libro, scrollear con el mouse no hacía
@@ -911,7 +1172,7 @@ export default function ProductCatalogModal({
   const lastWheelFlipRef = useRef(0);
   const handleBookWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
-      if (!isBookReady || selectedProduct || isCategoryMenuOpen || isGlossaryOpen) return;
+      if (!isBookReady || selectedProduct || isCategoryMenuOpen || isGlossaryOpen || getNavigator().isBusy()) return;
       const scrollable = (e.target as HTMLElement).closest?.(".overflow-y-auto") as HTMLElement | null;
       if (scrollable) {
         const scrollingDown = e.deltaY > 0;
@@ -926,7 +1187,7 @@ export default function ProductCatalogModal({
       if (e.deltaY > 0) bookRef.current?.pageFlip()?.flipNext();
       else bookRef.current?.pageFlip()?.flipPrev();
     },
-    [isBookReady, selectedProduct, isCategoryMenuOpen, isGlossaryOpen]
+    [isBookReady, selectedProduct, isCategoryMenuOpen, isGlossaryOpen, getNavigator]
   );
 
   // ESC cierra el detalle de producto si está abierto (máxima prioridad —
@@ -952,25 +1213,36 @@ export default function ProductCatalogModal({
         }
         handleClose();
       } else if (e.key === "ArrowRight") {
-        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipNext();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen && !getNavigator().isBusy()) bookRef.current?.pageFlip()?.flipNext();
       } else if (e.key === "ArrowLeft") {
-        if (isBookReady && !selectedProduct) bookRef.current?.pageFlip()?.flipPrev();
+        if (isBookReady && !selectedProduct && !isCategoryMenuOpen && !isGlossaryOpen && !getNavigator().isBusy()) bookRef.current?.pageFlip()?.flipPrev();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct]);
+  }, [handleClose, isBookReady, isGlossaryOpen, isCategoryMenuOpen, selectedProduct, getNavigator]);
+
+  // Elegir una categoría: queda a la vista su PRIMERA página; la categoría actual se sincroniza con la página
+  // real que muestra el libro (onFlip actualiza currentPage al llegar).
+  const handleSelectCategory = (categoryId: string) => {
+    const target = categoryPageIndex.get(categoryId);
+    if (target === undefined) return;
+    setJumpTarget(categoryId);
+    getNavigator().go(target);
+  };
 
   return createPortal(
     <>
       <div
         className={`catalog-backdrop${isClosing ? " is-closing" : ""}`}
+        data-lenis-prevent
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
       >
         <div
           className={`catalog-panel${isClosing ? " is-closing" : ""}`}
+          data-density={layout.level}
           style={{ background: PAGE_BG, ...(panelMaxWidth != null ? { maxWidth: panelMaxWidth } : {}) }}
         >
           {/* Barra superior: identidad de familia + ir a categoría + PDF +
@@ -989,7 +1261,7 @@ export default function ProductCatalogModal({
               siempre, sin importar el z-index interno de las páginas. */}
           <div
             ref={headerRef}
-            className="catalog-header relative z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8"
+            className="catalog-header relative z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8"
             style={{ borderBottom: `1px solid ${RULE}` }}
           >
             <div className="flex items-center gap-3">
@@ -997,112 +1269,37 @@ export default function ProductCatalogModal({
                 <Icon className="h-5 w-5" strokeWidth={1.7} style={{ color: ACCENT }} aria-hidden />
               </span>
               <div>
-                <p className="text-[10px] font-bold uppercase" style={{ color: ACCENT, letterSpacing: "0.18em" }}>
-                  {t("catalog.eyebrow")}
-                </p>
                 <p className="font-display" style={{ color: INK, fontSize: "19px", fontWeight: 600, lineHeight: 1.1 }}>
                   {displayFamily.name}
                 </p>
+                {/* Los chips viven en el encabezado (no en una barra propia): una barra aparte le quitaba ~40 px
+                    de alto a la hoja del libro y con ellos la rejilla 3×3 ya no cabía. */}
+                <div className="mt-1.5">
+                  <ChannelFilterBar inline value={channel} counts={channelCounts} onChange={handleChannelChange} />
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Menú "ir a categoría" (ver mejora-dropdown-categoria.md) —
-                  popover propio en vez de un <select> nativo: la lista
-                  desplegada de un <select> la dibuja el sistema operativo, así
-                  que ni `appearance-none` ni ninguna clase de Tailwind le
-                  cambian una sola línea al panel abierto (solo al control
-                  cerrado) — quedaba con fuente/colores default del SO por más
-                  bonito que se viera cerrado. Mismo patrón de popover que el
-                  Glosario de abajo (backdrop invisible a pantalla completa +
-                  panel posicionado), pero anclado a la IZQUIERDA de este chip
-                  (no al borde derecho del header) porque es el primer control
-                  de la fila. */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCategoryMenuOpen((current) => !current);
-                    setIsGlossaryOpen(false);
-                  }}
-                  disabled={!isBookReady}
-                  aria-haspopup="listbox"
-                  aria-expanded={isCategoryMenuOpen}
-                  aria-label={t("catalog.jumpToCategoryLabel")}
-                  className="flex items-center gap-1.5 rounded-full border py-1.5 pl-3 pr-2.5 transition hover:shadow-[0_1px_6px_rgba(16,37,63,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ borderColor: RULE, background: "#F7FAFD" }}
-                >
-                  <ListFilter className="h-3.5 w-3.5 shrink-0" strokeWidth={2} style={{ color: MUTED }} aria-hidden />
-                  <span className="hidden text-[12px] font-medium sm:inline" style={{ color: MUTED }}>
-                    {t("catalog.jumpToCategoryLabel")}
-                  </span>
-                  <span
-                    className="max-w-[100px] truncate text-[13.5px] font-semibold sm:max-w-[170px]"
-                    style={{ color: ACCENT }}
-                  >
-                    {activeCategoryName}
-                  </span>
-                  <ChevronDown
-                    className={`h-3 w-3 shrink-0 transition-transform duration-200 ${isCategoryMenuOpen ? "rotate-180" : ""}`}
-                    strokeWidth={2.5}
-                    style={{ color: MUTED }}
-                    aria-hidden
-                  />
-                </button>
-
-                {isCategoryMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30"
-                      onClick={() => setIsCategoryMenuOpen(false)}
-                      aria-hidden
-                    />
-                    <div
-                      role="listbox"
-                      aria-label={t("catalog.jumpToCategoryLabel")}
-                      className="absolute left-0 top-[calc(100%+8px)] z-40 max-h-[min(60vh,420px)] w-[min(300px,88vw)] overflow-y-auto rounded-2xl border bg-white p-2 shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
-                      style={{ borderColor: RULE }}
-                    >
-                      {categorySections.map(({ subFamily, categories }) => (
-                        <div key={subFamily.id} className="mb-1 last:mb-0">
-                          {categorySections.length > 1 && (
-                            <p
-                              className="px-2.5 pb-1 pt-2.5 text-[10px] font-bold uppercase"
-                              style={{ color: MUTED, letterSpacing: "0.08em" }}
-                            >
-                              {subFamily.name}
-                            </p>
-                          )}
-                          {categories.map((category) => {
-                            const isActive = category.id === activeCategoryId;
-                            return (
-                              <button
-                                key={category.id}
-                                type="button"
-                                role="option"
-                                aria-selected={isActive}
-                                onClick={() => {
-                                  const index = categoryPageIndex.get(category.id);
-                                  if (index != null) bookRef.current?.pageFlip()?.flip(index);
-                                  setIsCategoryMenuOpen(false);
-                                }}
-                                className="flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-medium transition hover:bg-[#F0F5FC]"
-                                style={{
-                                  color: isActive ? ACCENT : "#334155",
-                                  background: isActive ? CHIP_BG : "transparent",
-                                }}
-                              >
-                                <span className="truncate">{category.name}</span>
-                                {isActive && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <CategoryMenu
+                sections={menuSections}
+                activeCategoryId={activeCategoryId}
+                open={isCategoryMenuOpen}
+                onOpenChange={(open) => {
+                  setIsCategoryMenuOpen(open);
+                  if (open) setIsGlossaryOpen(false);
+                }}
+                onSelect={handleSelectCategory}
+                disabled={!isBookReady}
+                labels={{
+                  button: t("catalog.jumpToCategoryLabel"),
+                  title: t("catalog.categoryMenuTitle"),
+                  searchPlaceholder: t("catalog.categorySearchPlaceholder"),
+                  searchEmpty: t("catalog.categorySearchEmpty"),
+                  current: t("catalog.categoryCurrent"),
+                  products: (count) => t("productsCount", { count }),
+                }}
+              />
 
               {/* Glosario de abreviaturas de empaque (ver
                   fix-truncamiento-y-glosario.md) — vive en el header, no en
@@ -1134,7 +1331,7 @@ export default function ProductCatalogModal({
                   style={{ borderColor: RULE, background: "#F7FAFD", color: ACCENT }}
                 >
                   <Info className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  <span className="hidden sm:inline">{t("catalog.glossaryButtonLabel")}</span>
+                  <span className="hidden xl:inline">{t("catalog.glossaryButtonLabel")}</span>
                 </button>
 
                 {isGlossaryOpen && (
@@ -1147,7 +1344,8 @@ export default function ProductCatalogModal({
                     <div
                       role="dialog"
                       aria-label={t("catalog.glossaryTitle")}
-                      className="absolute right-0 top-[calc(100%+10px)] z-40 max-h-[70vh] w-[min(340px,90vw)] overflow-y-auto rounded-2xl border bg-white p-4 text-left shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
+                      data-lenis-prevent
+                      className="absolute right-0 top-[calc(100%+10px)] z-40 max-h-[70dvh] w-[min(340px,90vw)] overflow-y-auto rounded-2xl border bg-white p-4 text-left shadow-[0_16px_44px_rgba(16,37,63,0.18)]"
                       style={{ borderColor: RULE }}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -1204,7 +1402,7 @@ export default function ProductCatalogModal({
                 style={{ background: `linear-gradient(135deg, ${ACCENT_BRIGHT}, ${ACCENT})` }}
               >
                 <Download className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                <span className="hidden sm:inline">{t("catalog.downloadPdf")}</span>
+                <span className="hidden xl:inline">{t("catalog.downloadPdf")}</span>
               </button>
 
               <button
@@ -1216,10 +1414,50 @@ export default function ProductCatalogModal({
                 style={{ borderColor: RULE, color: INK }}
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                <span className="hidden sm:inline">{t("catalog.backToSite")}</span>
+                <span className="hidden xl:inline">{t("catalog.backToSite")}</span>
               </button>
             </div>
           </div>
+
+          {/* Aviso ÚNICO de precios (no uno por producto): sin sesión invita a ingresar; con la cuenta sin lista
+              de precios explica y enlaza a WhatsApp; si el servicio de precios falla lo dice una sola vez. */}
+          {pricesStatus !== "ready" && (
+            <div
+              role="status"
+              className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-1.5 text-center text-[12px] font-medium sm:px-8"
+              style={{ background: CHIP_BG, color: INK, borderBottom: `1px solid ${RULE}` }}
+            >
+              {pricesStatus === "no-session" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClose();
+                    openProfile();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-semibold underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[#075FD8]"
+                  style={{ color: ACCENT }}
+                >
+                  <Lock className="h-3 w-3" strokeWidth={2.2} aria-hidden />
+                  {t("catalog.loginForPrices")}
+                </button>
+              )}
+              {pricesStatus === "price-list-missing" && (
+                <>
+                  <span>{t("catalog.priceListMissingNotice")}</span>
+                  <a
+                    href={site.whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-[#075FD8]"
+                    style={{ color: ACCENT }}
+                  >
+                    {t("catalog.priceListMissingCta")}
+                  </a>
+                </>
+              )}
+              {pricesStatus === "unavailable" && <span>{t("catalog.pricesUnavailable")}</span>}
+            </div>
+          )}
 
           {/* Área del libro: canto de páginas (.page-stack) a los costados,
               SOLO alrededor de esto — no del header/footer (ver
@@ -1240,6 +1478,7 @@ export default function ProductCatalogModal({
               pasando la página con el efecto de libro real (drawShadow,
               flippingTime) como antes. */}
           <div className="catalog-shell" ref={shellRef} onWheel={handleBookWheel}>
+            <DensityProbe icon={Icon} probeRef={probeRef} />
             {/* Ocultas debajo de `sm` (ver mobile-fixes-ronda2.md, punto 2):
                 cada flecha son 40px + márgenes (~52px por lado, ~104px las
                 dos) — en un panel mobile angosto (~370px) eso le comía
@@ -1332,8 +1571,28 @@ export default function ProductCatalogModal({
                 ResizeObserver: su tamaño es el espacio real disponible para el
                 libro, ya descontando flechas y cantos de página. `relative`
                 es el ancla del loader de abajo. */}
-            <div ref={bookAreaRef} className="flipbook-container relative flex h-full min-w-0 flex-1 items-center justify-center">
+            <div
+              ref={bookAreaRef}
+              className="flipbook-container relative flex h-full min-w-0 flex-1 items-center justify-center"
+              style={{
+                pointerEvents: isNavigating ? "none" : undefined,
+                opacity: isFading ? 0 : 1,
+                transition: "opacity 130ms ease",
+              }}
+            >
+              {/* IMPORTANTE (libro que se descuadraba al saltar de categoría): react-pageflip llama `updateFromHtml`
+                  — destruye y reconstruye TODAS las páginas — cada vez que cambia la identidad de `children`,
+                  o sea en cada render de este componente si los hijos se crean en línea (cerrar el menú, llegar
+                  los precios, mover el foco...). En medio de una vuelta de página eso reinicia el libro y la
+                  animación termina en otro spread. Por eso `bookChildren` está memoizado: misma identidad en
+                  todos los renders, solo cambia si cambian las páginas. NO usar `renderOnlyPageLengthChange`:
+                  en cada render el primer efecto de la librería vacía su lista de nodos (`childRef`) y con esa
+                  opción no vuelve a llenarla, así que si un render del padre coincide con el montaje el libro
+                  nunca se inicializa (spinner eterno y páginas sin pintar). Lo que cambia con el tiempo
+                  (precios, clic en un producto) llega a las páginas por contexto, no por props. */}
+              <BookLiveContext.Provider value={liveBook}>
               <HTMLFlipBook
+                key={`${channel}-${perPage}`}
                 ref={bookRef}
                 width={BOOK_WIDTH}
                 height={BOOK_HEIGHT}
@@ -1342,7 +1601,7 @@ export default function ProductCatalogModal({
                 maxWidth={860}
                 minHeight={300}
                 maxHeight={1160}
-                startPage={initialPageIndex}
+                startPage={startPage}
                 drawShadow
                 flippingTime={700}
                 usePortrait
@@ -1360,20 +1619,13 @@ export default function ProductCatalogModal({
                 style={{ width: bookBox.width, height: bookBox.height }}
                 onFlip={(e) => setCurrentPage(e.data as number)}
                 onInit={() => setIsBookReady(true)}
+                onChangeState={(e) => {
+                  if (e.data === "read") getNavigator().onIdle();
+                }}
               >
-                {bookPages.map((page, index) => (
-                  <Page key={index}>
-                    <BookPageContent
-                      page={page}
-                      family={displayFamily}
-                      allFamilies={allFamilies}
-                      icon={Icon}
-                      coverPhoto={coverPhoto}
-                      onProductClick={setSelectedProduct}
-                    />
-                  </Page>
-                ))}
+                {bookChildren}
               </HTMLFlipBook>
+              </BookLiveContext.Provider>
 
               {/* Mientras react-pageflip termina de montar, el DOM real
                   muestra la portada sin su estilo de página dura (se ve
@@ -1419,7 +1671,7 @@ export default function ProductCatalogModal({
               entre dos páginas visibles a la vez, que era el problema en el
               diseño anterior con spreads de a dos). */}
           <div
-            className="catalog-footer flex items-center justify-between gap-3 px-5 py-3 sm:px-8"
+            className="catalog-footer flex items-center justify-between gap-3 px-5 py-2 sm:px-8"
             style={{ background: INK }}
           >
             <span className="flex min-w-0 items-center gap-2">
@@ -1429,7 +1681,12 @@ export default function ProductCatalogModal({
               </span>
             </span>
             <span className="shrink-0 text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
-              {t("catalog.bookPageIndicator", { current: currentPage + 1, total: totalPages })}
+              {(() => {
+                // Páginas visibles de contenido (sin la contraportada): "Página 5 de 26" o "Páginas 5–6 de 26".
+                const shown = visiblePageIndexes(currentPage, totalPages, isPortraitBook).filter((i) => i < contentPageCount);
+                if (shown.length > 1) return t("catalog.bookPageRangeIndicator", { from: shown[0] + 1, to: shown[shown.length - 1] + 1, total: contentPageCount });
+                return t("catalog.bookPageIndicator", { current: (shown[0] ?? contentPageCount - 1) + 1, total: contentPageCount });
+              })()}
             </span>
             <span className="hidden shrink-0 text-[10px] font-medium sm:inline" style={{ color: "rgba(255,255,255,0.5)" }}>
               {t("catalog.printFooterLocation")}
@@ -1506,7 +1763,8 @@ export default function ProductCatalogModal({
         <ProductDetailModal
           product={selectedProduct}
           icon={Icon}
-          glossaryGroups={glossaryGroups}
+          price={hasDelivery(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
+          pickupPrice={hasPickup(selectedProduct) ? pickupPriceFor(selectedProduct.id) : { kind: "hidden" }}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1551,15 +1809,28 @@ function FamilyStripItem({
   );
 }
 
+// Datos que cambian con el tiempo y que las páginas del libro necesitan (ver el comentario sobre
+// renderOnlyPageLengthChange junto al <HTMLFlipBook>): llegan por contexto para no re-crear las páginas.
+interface BookLive {
+  priceFor: (itemId: string) => PriceView;
+  pickupPriceFor: (itemId: string) => PickupPriceView;
+  onProductClick: (product: ProductSummary) => void;
+  // Página visible del libro: decide qué páginas piden sus fotos (ver lib/image-window.ts).
+  currentPage: number;
+}
+const BookLiveContext = createContext<BookLive>({ priceFor: () => ({ kind: "hidden" }), pickupPriceFor: () => ({ kind: "hidden" }), onProductClick: () => {}, currentPage: 0 });
+
 function BookPageContent({
   page,
+  pageIndex,
   family,
   allFamilies,
   icon: Icon,
   coverPhoto,
-  onProductClick,
 }: {
   page: BookPage;
+  /** Posición de la página en el libro (decide cuándo pide sus fotos). */
+  pageIndex: number;
   family: HierarchyNode;
   allFamilies: HierarchyNode[];
   icon: LucideIcon;
@@ -1567,13 +1838,30 @@ function BookPageContent({
    * y SEGMENT_COVER_PHOTOS arriba) — decidida en ProductCatalogModal, este
    * componente solo la pinta. */
   coverPhoto: string | StaticImageData;
-  onProductClick: (product: ProductSummary) => void;
 }) {
   const t = useTranslations("Products");
+  const { priceFor, pickupPriceFor, onProductClick, currentPage } = useContext(BookLiveContext);
+  const loadImages = shouldLoadPageImages(pageIndex, currentPage);
   // Portafolio (a diferencia de la portada, arriba) sigue fijo para todas
   // las familias (ver reemplazar-imagenes-portada-indice.md) — no rota ni
   // depende del segmento.
   const portfolioPhoto = indicePhoto;
+
+  if (page.kind === "back") {
+    // Contraportada intencional (cierra el libro con spreads completos).
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: INK }}>
+        <Image src={mercasaLogo} alt="Mercasa" className="h-8 w-auto brightness-0 invert" />
+        <span aria-hidden className="block h-[3px] w-[42px] rounded-full bg-corp-yellow" />
+        <p className="text-[12px] font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {t("catalog.printFooterTagline")}
+        </p>
+        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+          {t("catalog.printFooterLocation")}
+        </p>
+      </div>
+    );
+  }
 
   if (page.kind === "cover") {
     return (
@@ -1688,7 +1976,7 @@ function BookPageContent({
         </p>
         <h2
           className="mt-2 font-display"
-          style={{ color: INK, fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 650, lineHeight: 1.1 }}
+          style={{ color: INK, fontSize: "clamp(18px, 4.2cqh, 28px)", fontWeight: 650, lineHeight: 1.1 }}
         >
           {t("catalog.portfolioTitle")}
         </h2>
@@ -1706,7 +1994,7 @@ function BookPageContent({
             el scroll interno tuviera sentido. `min-h-0` fuerza ese
             encogimiento así el overflow real cae dentro de ESTE div (que sí
             scrollea), no fuera de la página. */}
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain" data-lenis-prevent>
           {allFamilies.map((entry) => {
             const EntryIcon = FAMILY_ICONS[entry.id] ?? Package;
             return (
@@ -1795,7 +2083,7 @@ function BookPageContent({
             </p>
             <h2
               className="mt-2 font-display text-white"
-              style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 650, lineHeight: 1.08 }}
+              style={{ fontSize: "clamp(22px, 5.5cqh, 44px)", fontWeight: 650, lineHeight: 1.08 }}
             >
               {page.subFamily.name}
             </h2>
@@ -1808,12 +2096,48 @@ function BookPageContent({
     );
   }
 
-  // page.kind === "category": header con identidad de familia/categoría +
+  return (
+    <CategorySheet
+      family={family}
+      page={page}
+      icon={Icon}
+      loadImages={loadImages}
+      priceFor={priceFor}
+      pickupPriceFor={pickupPriceFor}
+      onProductClick={onProductClick}
+    />
+  );
+}
+
+// Hoja de categoría: encabezado con identidad de familia/categoría + línea de acento + rejilla de tarjetas de
+// producto. La usan las hojas reales del libro y la hoja de prueba oculta que decide la densidad (probe).
+function CategorySheet({
+  family,
+  page,
+  icon: Icon,
+  loadImages,
+  priceFor,
+  pickupPriceFor,
+  onProductClick,
+  probe = false,
+}: {
+  family: HierarchyNode;
+  page: Extract<BookPage, { kind: "category" }>;
+  icon: LucideIcon;
+  loadImages: boolean;
+  priceFor: (id: string) => PriceView;
+  pickupPriceFor: (id: string) => PickupPriceView;
+  onProductClick: (product: ProductSummary) => void;
+  probe?: boolean;
+}) {
+  const t = useTranslations("Products");
+  const perPage = page.perPage;
+  // Rama "category" de BookPageContent: header con identidad de familia/categoría +
   // línea de acento, grilla de tarjetas de producto con foto real (fallback
   // a ícono de familia).
   return (
-    <div className="flex h-full flex-col" style={{ padding: "clamp(16px, 5cqh, 36px)" }}>
-      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "clamp(6px, 1.7cqh, 14px)" }}>
+    <div className="flex h-full flex-col" style={{ padding: "clamp(10px, 3.4cqh, 28px)" }}>
+      <div className="flex items-start justify-between gap-3" style={{ borderBottom: `1px solid ${RULE}`, paddingBottom: "clamp(4px, 1.2cqh, 12px)" }}>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: CHIP_BG }}>
             <Icon className="h-4.5 w-4.5" strokeWidth={1.7} style={{ color: ACCENT }} aria-hidden />
@@ -1822,7 +2146,7 @@ function BookPageContent({
             <p className="text-[9.5px] font-bold uppercase" style={{ color: ACCENT, letterSpacing: "0.14em" }}>
               {family.name}
             </p>
-            <h3 className="font-display" style={{ color: INK, fontSize: "19px", fontWeight: 650, lineHeight: 1.15 }}>
+            <h3 className="font-display" style={{ color: INK, fontSize: "clamp(15px, 2.6cqh, 19px)", fontWeight: 650, lineHeight: 1.15 }}>
               {page.category.name}
             </h3>
           </div>
@@ -1836,7 +2160,7 @@ function BookPageContent({
       <span
         aria-hidden
         className="block h-[3px] w-[42px] shrink-0 rounded-full bg-corp-yellow"
-        style={{ marginTop: "clamp(6px, 1.7cqh, 16px)" }}
+        style={{ marginTop: "clamp(4px, 1.2cqh, 12px)" }}
       />
 
       {/* items-start: sin esto, CSS grid estira todas las tarjetas de una
@@ -1860,13 +2184,96 @@ function BookPageContent({
           productos en silencio — el resto de la página (header/línea de
           acento) se queda fijo arriba. */}
       <div
-        className="grid min-h-0 flex-1 grid-cols-3 content-start items-start overflow-y-auto"
-        style={{ marginTop: "clamp(6px, 2cqh, 20px)", gap: "clamp(5px, 1.4cqh, 14px)" }}
+        className="grid min-h-0 flex-1 grid-cols-3 items-stretch overflow-y-auto overscroll-contain"
+        data-lenis-prevent
+        data-per-page={perPage}
+        data-probe-grid={probe ? "" : undefined}
+        style={{
+          marginTop: "clamp(4px, 1.4cqh, 14px)",
+          gap: "var(--pc-gap, clamp(4px, 1cqh, 12px))",
+          // Filas iguales (3 con 9 tarjetas, 2 con 6) que se reparten el alto de la hoja (cada una al menos lo que
+          // mide su contenido): las tarjetas de una misma fila y de todas las filas tienen la misma altura, con o
+          // sin etiquetas.
+          gridTemplateRows: `repeat(${rowsFor(perPage)}, minmax(min-content, 1fr))`,
+        }}
       >
         {page.products.map((product) => (
-          <ProductCard key={product.id} product={product} icon={Icon} onClick={() => onProductClick(product)} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            icon={Icon}
+            loadImage={loadImages}
+            price={hasDelivery(product) ? priceFor(product.id) : { kind: "hidden" }}
+            pickupPrice={hasPickup(product) ? pickupPriceFor(product.id) : { kind: "hidden" }}
+            onClick={() => onProductClick(product)}
+          />
         ))}
+        {/* Última página de la categoría con una fila vacía como mínimo: no es un error, la categoría terminó. */}
+        {page.part === page.totalParts && page.products.length <= perPage - COLUMNS && (
+          <p
+            className="col-span-3 self-center text-center text-[11px] font-medium"
+            style={{ gridRow: rowsFor(perPage), color: "#5C6B7D" }}
+          >
+            {t("catalog.categoryEnd")}
+          </p>
+        )}
       </div>
+    </div>
+  );
+}
+
+// Hoja de prueba (peor caso) para elegir la densidad; ver el efecto de ProductCatalogModal. Nunca se ve ni se
+// enfoca: invisible, inerte y fuera del árbol de accesibilidad.
+const PROBE_BOTH: ProductAvailability = { delivery: { available: true }, pickup: { available: true, sites: [] } };
+const PROBE_PICKUP_ONLY: ProductAvailability = { delivery: { available: false }, pickup: { available: true, sites: [] } };
+const PROBE_NAME = "Helado Premium Cremoso Sabor Vainilla con Trozos de Chocolate Belga y Galleta Familiar Extra Grande";
+// Por columna: (0) los dos canales con precio en ambos, (1) los dos canales con precio de domicilio y retiro por
+// consultar (las dos etiquetas), (2) solo retiro con precio variable ("Desde ₡X IVA incluido").
+const PROBE_PRODUCTS: ProductSummary[] = Array.from({ length: 9 }, (_, i) => ({
+  id: `probe-${i}`,
+  name: PROBE_NAME,
+  packSize: "CAJA 24 x 355 ML",
+  availability: i % 3 === 2 ? PROBE_PICKUP_ONLY : PROBE_BOTH,
+}));
+const PROBE_PRICE: PriceView = { kind: "price", total: 899990, unit: "DISPLAY" };
+const PROBE_PICKUP_PRICE: PickupPriceView = { kind: "price", total: 899990, unit: "DISPLAY", varies: true, bySite: [] };
+const probePriceFor = (id: string): PriceView => (id.endsWith("2") || id.endsWith("5") || id.endsWith("8") ? { kind: "hidden" } : PROBE_PRICE);
+const probePickupPriceFor = (id: string): PickupPriceView => {
+  const column = Number(id.slice(-1)) % 3;
+  return column === 1 ? { kind: "consult" } : PROBE_PICKUP_PRICE;
+};
+
+function DensityProbe({ icon, probeRef }: { icon: LucideIcon; probeRef: React.RefObject<HTMLDivElement | null> }) {
+  const family: HierarchyNode = { id: "probe", name: "Alimentos", itemCount: 9, children: [] };
+  return (
+    <div
+      ref={probeRef}
+      aria-hidden
+      inert
+      className="pointer-events-none absolute left-0 top-0"
+      style={{ visibility: "hidden", zIndex: -1 }}
+    >
+      {([9, 6] as const).map((per) => (
+        <div key={per} data-probe={per} className="book-probe absolute left-0 top-0 overflow-hidden">
+          <CategorySheet
+            probe
+            family={family}
+            page={{
+              kind: "category",
+              category: { id: "probe-category", name: "Helados, Postres y Cremas Congeladas Premium", itemCount: 30, children: [] },
+              products: PROBE_PRODUCTS.slice(0, per),
+              part: 12,
+              totalParts: 12,
+              perPage: per,
+            }}
+            icon={icon}
+            loadImages={false}
+            priceFor={probePriceFor}
+            pickupPriceFor={probePickupPriceFor}
+            onProductClick={() => {}}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -1874,15 +2281,26 @@ function BookPageContent({
 function ProductCard({
   product,
   icon,
+  price,
+  pickupPrice,
   onClick,
+  loadImage,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
+  /** Precio de Retiro en tienda; por separado del de domicilio (nunca se mezclan). */
+  pickupPrice: PickupPriceView;
+  /** false = la página está lejos de la vista: la foto espera (ver lib/image-window.ts). */
+  loadImage: boolean;
+  price: PriceView;
   onClick: () => void;
 }) {
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
   const { addItem } = useCart();
+  const { user } = useAuth();
+  // Mientras se averigua cuántas presentaciones tiene el producto al tocar el "+" (solo con sesión y un solo canal).
+  const [checkingUnits, setCheckingUnits] = useState(false);
   // Feedback al agregar desde la grilla (ver catalogo-feedback-agregar-
   // producto.md): antes el producto se agregaba en silencio, sin ninguna
   // confirmación visual acá (a diferencia del detalle, que ya mostraba
@@ -1927,24 +2345,52 @@ function ProductCard({
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
       aria-label={t("catalog.productDetailAriaLabel", { name: product.name })}
-      className="relative flex w-full cursor-pointer flex-col items-center rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
+      className="relative flex h-full w-full cursor-pointer flex-col items-center overflow-hidden rounded-xl border bg-white text-center transition hover:-translate-y-0.5"
       style={{
         borderColor: RULE,
         boxShadow: "0 2px 8px rgba(8,43,92,0.06)",
-        padding: "clamp(5px, 1.7cqh, 10px)",
-        gap: "clamp(3px, 1.1cqh, 7px)",
+        padding: "var(--pc-card-pad, clamp(4px, 1.1cqh, 8px))",
+        gap: "var(--pc-card-gap, clamp(2px, 0.6cqh, 5px))",
       }}
     >
+      {canAddToCart(product) && (
       <button
         type="button"
-        onClick={(e) => {
+        disabled={checkingUnits}
+        aria-busy={checkingUnits}
+        onClick={async (e) => {
           e.stopPropagation();
-          addItem(product, 1);
+          // Regla del "+": un solo canal y una sola presentación -> agrega directo; varias presentaciones o los dos
+          // canales -> abre el detalle para elegir (no agrega nada sin preguntar). Con un solo canal y sesión se
+          // consulta cuántas presentaciones tiene; sin saberlo (sin sesión o si falla) se agrega la por defecto.
+          let unitCount: number | null = null;
+          if (user && needsUnitsForPlus(product)) {
+            setCheckingUnits(true);
+            const units = await fetchItemUnits(product.id);
+            setCheckingUnits(false);
+            unitCount = units ? units.length : null;
+          }
+          const action = plusAction(product, unitCount);
+          if (action === "open-detail") {
+            onClick();
+            return;
+          }
+          addItem(product, 1, undefined, action === "add-pickup" ? "pickup" : "delivery");
           setJustAdded(true);
           setTimeout(() => setJustAdded(false), 1400);
         }}
-        aria-label={tCart("quickAddAria", { name: product.name })}
-        title={justAdded ? tCart("addedConfirmation") : tCart("addToCartCta")}
+        aria-label={
+          hasDelivery(product) && hasPickup(product)
+            ? tCart("chooseOptionsAria", { name: product.name })
+            : tCart("quickAddAria", { name: product.name })
+        }
+        title={
+          justAdded
+            ? tCart("addedConfirmation")
+            : hasDelivery(product) && hasPickup(product)
+              ? tCart("chooseOptionsCta")
+              : tCart("addToCartCta")
+        }
         className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all duration-300 hover:opacity-85"
         style={{ background: justAdded ? INK : ACCENT, transform: justAdded ? "scale(1.18)" : "scale(1)" }}
       >
@@ -1954,31 +2400,62 @@ function ProductCard({
           <Plus className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
         )}
       </button>
+      )}
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ background: CHIP_BG, height: "clamp(36px, 9.5cqh, 76px)", width: "clamp(36px, 9.5cqh, 76px)" }}
+        style={{ background: CHIP_BG, height: "clamp(24px, var(--pc-img, 7cqh), 64px)", width: "clamp(24px, var(--pc-img, 7cqh), 64px)" }}
       >
         <ProductImage
           itemId={product.id}
           name={product.name}
           familyIcon={icon}
           size="s"
+          defer={!loadImage}
           className="h-full w-full object-contain p-1.5"
+          // Mismo cuadro que una foto, pero el ícono de reemplazo ocupa menos y en un tono suave: no le gana
+          // protagonismo a las fotos reales de las tarjetas vecinas.
+          errorIconClassName="h-[58%] w-[58%] text-[#9AB0C8]"
         />
       </div>
-      {/* Sin line-clamp/truncamiento a propósito (ver
-          fix-truncamiento-y-glosario.md): este catálogo es estático, no
-          hay forma de ver el nombre completo si se corta con "...", así
-          que el nombre SIEMPRE tiene que verse entero, sin importar
-          cuántas líneas necesite. */}
-      <p className="text-[10.5px] font-semibold leading-snug" style={{ color: INK }}>
-        {product.name}
+      {/* Nombre: hasta 3 líneas (con el nombre completo en el tooltip y, al hacer clic, en el detalle del
+          producto). Antes se mostraba siempre entero (fix-truncamiento-y-glosario.md, cuando no existía el
+          detalle); con las etiquetas de canal y el precio de retiro, un nombre de 5 líneas ya no deja entrar la
+          rejilla 3×3 en la hoja. */}
+      <p
+        className="text-[10px] font-semibold leading-[1.2]"
+        title={productTitle(product.name).title}
+        style={{
+          color: INK,
+          textWrap: "balance",
+          overflowWrap: "anywhere",
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          // 3 líneas; 2 en pantallas bajas o angostas (ver --pc-name-lines en product-catalog-overlay.css).
+          WebkitLineClamp: "var(--pc-name-lines, 3)" as unknown as number,
+          overflow: "hidden",
+        }}
+      >
+        {productTitle(product.name).title}
       </p>
       {product.packSize && (
         <p className="text-[9.5px] font-medium" style={{ color: MUTED }}>
           {product.packSize}
         </p>
       )}
+      {hasDelivery(product) ? (
+        <>
+          <PriceTag view={price} />
+          {/* Con el precio de cmer el de retiro es el mismo: un solo precio por presentación y las dos etiquetas. */}
+          {hasPickup(product) && !samePrice(price, pickupPrice) && <PickupPriceTag view={pickupPrice} role="secondary" />}
+        </>
+      ) : (
+        <PickupPriceTag view={pickupPrice} role="primary" />
+      )}
+      <span className="mt-auto" />
+      <ChannelBadges
+        product={product}
+        omitPickup={hasDelivery(product) && hasPickup(product) && pickupPrice.kind === "price" && !samePrice(price, pickupPrice)}
+      />
     </div>
   );
 }

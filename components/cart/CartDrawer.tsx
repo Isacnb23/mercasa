@@ -1,348 +1,522 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShoppingBag, Sparkle, Trash2, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
+import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
+import { itemsInChannel, resolvePickupSite } from "@/lib/cart-logic";
+import type { CartChannel } from "@/lib/cart-types";
+import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
+import { ORDERING_ENABLED } from "@/lib/feature-flags";
+import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
+import { useOrderPreview } from "@/lib/order-preview";
+import { submitOrder } from "@/lib/order-submit";
+import {
+  buildCreateOrderBody,
+  buildCreateOrderContent,
+  createOrderContentKey,
+  resolveRequestId,
+  type RequestIdState,
+} from "@/lib/order-create";
+import type { CheckoutStep, PaymentMethod } from "@/lib/order-types";
+import CartCheckoutInfo from "@/components/cart/CartCheckoutInfo";
+import CartLines from "@/components/cart/CartLines";
+import CheckoutStepper from "@/components/cart/CheckoutStepper";
+import ConfirmStep, { type SubmitState } from "@/components/cart/ConfirmStep";
+import DeliveryStep from "@/components/cart/DeliveryStep";
+import OrderSummary, { GrandTotal } from "@/components/cart/OrderSummary";
+import PickupSiteSelector from "@/components/cart/PickupSiteSelector";
+import PaymentStep from "@/components/cart/PaymentStep";
+import { RetryLine } from "@/components/cart/checkout-bits";
+import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
+import {
+  BEIGE,
+  BODY_BG,
+  FOCUS_RING,
+  GOLD,
+  INK,
+  PRIMARY_BUTTON,
+  SECONDARY_BUTTON,
+  RULE,
+  TEXT_MUTED,
+} from "@/components/ui/drawer-tokens";
 import { site } from "@/lib/data";
 import { buildWhatsappHref } from "@/lib/utils";
+import { unitLabel } from "@/lib/presentations";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
-import ProductImage from "@/components/modals/product-catalog/ProductImage";
-
-const INK = "#082B5C";
-const ACCENT = "#075FD8";
-const MUTED = "#8493A5";
-const RULE = "#E2E8F0";
-// Beige cálido de la paleta de marca (ver carrito-rediseno-y-copy-
-// precios.md, pedido de consistencia con navy/beige/gold del resto del
-// sitio) — reemplaza el gris-azulado CHIP_BG de la ronda anterior en los
-// fondos de imagen/ícono, para que el carrito se sienta parte de la misma
-// paleta que Contacto/Customer Class en vez de un gris genérico de
-// e-commerce.
-const BEIGE = "#F1ECE4";
-// Acento dorado real de la marca: corp-yellow (#FFD21A) — el mismo que ya
-// usa el badge de conteo en CartButton.tsx y la línea bajo títulos/CTAs en
-// el resto del sitio (ver ese comentario). No inventa un nuevo dorado.
-const GOLD = "#FFD21A";
 
 // Arma el mensaje de WhatsApp con el detalle del pedido — mismo patrón que
-// ContactSection/CustomerClassSection (buildWhatsappHref), sin precios (ver
-// montar-carrito-en-base-al-catalogo.md): es una lista para que un vendedor
-// cotice, no una transacción.
+// ContactSection/CustomerClassSection (buildWhatsappHref): una lista para que un vendedor cotice, no una
+// transacción. Puede incluir el total estimado validado por el servidor y la fecha elegida; nunca la dirección.
 function buildOrderMessage(
-  items: { name: string; packSize?: string; quantity: number }[],
-  t: ReturnType<typeof useTranslations>
+  items: { name: string; packSize?: string; quantity: number; unitId?: string; channel?: CartChannel }[],
+  t: ReturnType<typeof useTranslations>,
+  extraLines: string[],
+  locale: string,
+  pickupLabel: string
 ) {
   const lines = items.map((item) => {
     const pack = item.packSize ? ` (${item.packSize})` : "";
-    return `- ${item.name}${pack} x${item.quantity}`;
+    const unit = item.unitId ? ` ${unitLabel(item.unitId, locale)}` : "";
+    // Las líneas de retiro en tienda se marcan para que el vendedor las distinga de las de domicilio.
+    const channel = item.channel === "pickup" ? ` [${pickupLabel}]` : "";
+    return `- ${item.name}${pack} x${item.quantity}${unit}${channel}`;
   });
-  return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${t("whatsappOutro")}`;
+  const extra = extraLines.length > 0 ? `${extraLines.join("\n")}\n\n` : "";
+  return `${t("whatsappIntro")}\n\n${lines.join("\n")}\n\n${extra}${t("whatsappOutro")}`;
 }
 
 export default function CartDrawer() {
   const t = useTranslations("Cart");
-  const { items, isOpen, closeCart, removeItem, setQuantity, clear, totalCount } = useCart();
+  const tCheckout = useTranslations("Cart.checkout");
+  const tOrder = useTranslations("Cart.order");
+  const locale = useLocale();
+  const { user, openProfile } = useAuth();
+  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite } = useCart();
+  const { addressId, revision: addressRevision } = useActiveAddress();
+  const { status: addressesStatus } = useAddresses();
 
-  // Este componente vive montado SIEMPRE en el Header (a diferencia de
-  // ProductCatalogModal, que solo se monta tras un click) — createPortal
-  // corre en cada render, incluyendo el pase de servidor, donde `document`
-  // no existe. `mounted` retrasa ese createPortal hasta después del primer
-  // render en el cliente.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // Todo el estado del flujo vive en memoria del componente (nada en localStorage ni cookies).
+  const [step, setStep] = useState<CheckoutStep>("cart");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  // Instrucciones de entrega opcionales del pedido.
+  const [notes, setNotes] = useState("");
+  // requestId de la confirmación: NUEVO por cada pantalla de pago (se descarta al abrirla) y el MISMO en los reintentos de esa
+  // confirmación (timeout o red), para que un doble clic o un reintento no duplique el pedido. Se descarta tras un 201/202.
+  const requestIdRef = useRef<RequestIdState | null>(null);
+  // Evita dos envíos simultáneos aunque el estado de React todavía no se haya actualizado (doble clic muy rápido).
+  const submittingRef = useRef(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
+  // Fecha de entrega elegida, atada a la dirección activa: si cambia la dirección, la elección anterior deja
+  // de aplicar sin necesidad de un efecto que la borre.
+  // La fecha elegida vale solo para esa dirección Y esa versión de ella: si se edita (cambian sus días de entrega), se vuelve a elegir.
+  const [chosenDate, setChosenDate] = useState<{ addressId: number; revision: number; date: string } | null>(null);
+  const selectedDate = chosenDate && chosenDate.addressId === addressId && chosenDate.revision === addressRevision ? chosenDate.date : null;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") closeCart();
+  // Dos grupos: domicilio y retiro en tienda (una línea por producto, presentación y canal).
+  const deliveryItems = itemsInChannel(items, "delivery");
+  const pickupItems = itemsInChannel(items, "pickup");
+  const present = { delivery: deliveryItems.length > 0, pickup: pickupItems.length > 0 };
+  // Tienda de retiro: la elegida o, sin elección, una propuesta donde haya existencia de lo que lleva el cliente.
+  const pickupSite = resolvePickupSite(items, pickupSiteId);
+
+  // Vista previa del servidor: precios, totales, mínimo y errores por grupo. Sin sesión no se llama; el grupo de
+  // domicilio necesita además una dirección y el de retiro, una tienda.
+  const order = useOrderPreview({ cartItems: items, addressId, addressRevision, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite });
+  const preview = order.preview;
+  const expectDelivery = !!user && addressId !== null;
+  const expectPickup = !!user && present.pickup && pickupSite !== null;
+  const expectPrices = expectDelivery || expectPickup;
+
+  // Flujo de 4 pasos solo con la bandera encendida y sesión, y (si hay domicilio) con dirección; si no, "cotización
+  // por WhatsApp". Un carrito solo de retiro no necesita dirección.
+  const flow = ORDERING_ENABLED && expectPrices && (!present.delivery || expectDelivery) && (!present.pickup || expectPickup);
+  const currentStep: CheckoutStep = flow && items.length > 0 ? step : "cart";
+  const selection = { deliveryDate: selectedDate, paymentMethod };
+
+  const selectedLabel = selectedDate ? formatDeliveryDate(selectedDate, locale) : null;
+  const extraLines: string[] = [];
+  if (preview && !order.stale) {
+    extraLines.push(tOrder("whatsappTotalLine", { total: formatColones(preview.grandTotals.total, locale, 2) }));
+  }
+  if (selectedLabel) extraLines.push(tCheckout("whatsappDeliveryLine", { date: selectedLabel }));
+  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale, tOrder("groupPickupTitle")));
+
+  const goTo = (target: CheckoutStep) => {
+    if (submittingRef.current) return;
+    // Abrir la pantalla de pago desde otro paso empieza una confirmación nueva (otro requestId). Volver del resumen al pago
+    // conserva el mismo: es la misma confirmación.
+    if (target === "payment" && step !== "summary") requestIdRef.current = null;
+    setSubmit({ status: "idle" });
+    setStep(target);
+  };
+
+  const changeAddress = () => {
+    // La lista de direcciones vive en el perfil; el estado del pedido se conserva en memoria al volver.
+    closeCart();
+    openProfile();
+  };
+
+  const confirm = async () => {
+    if (submittingRef.current || submit.status === "sending") return;
+
+    // Zonas que se coordinan con servicio al cliente no tienen fecha: no se puede pedir en línea todavía.
+    if (present.delivery && preview?.delivery.requiresCoordination) {
+      setSubmit({ status: "error", code: "delivery_coordination_not_supported" });
+      return;
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeCart]);
 
-  const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t));
+    // Solo ids, cantidades y selecciones: nunca precios, totales ni la cuenta (sale del JWT en el servidor).
+    const content = buildCreateOrderContent(items, { addressId, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite }, notes);
+    if (!content) {
+      setSubmit({ status: "error", code: "invalid_request" });
+      return;
+    }
 
-  if (!mounted) return null;
+    requestIdRef.current = resolveRequestId(requestIdRef.current, createOrderContentKey(content));
+    submittingRef.current = true;
+    setSubmit({ status: "sending" });
+    try {
+      const result = await submitOrder(buildCreateOrderBody(content, requestIdRef.current.id));
+      if (result.ok) {
+        requestIdRef.current = null; // el pedido ya salió: el próximo es otro
+        setSubmit({ status: "done", kind: result.kind, orderNumber: result.orderNumber });
+      } else {
+        setSubmit({ status: "error", code: result.code, errors: result.errors });
+      }
+    } finally {
+      submittingRef.current = false;
+    }
+  };
 
-  return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            key="cart-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[300]"
-            style={{ background: "rgba(8,20,40,0.45)", backdropFilter: "blur(2px)" }}
-            onClick={closeCart}
-            aria-hidden
-          />
-          <motion.div
-            key="cart-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("title")}
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
-            className="fixed inset-y-0 right-0 z-[310] flex w-full max-w-[440px] flex-col bg-white shadow-[0_0_70px_rgba(8,20,40,0.3)]"
-          >
-            {/* Header navy — mismo lenguaje que la barra del catálogo
-                (ProductCatalogModal): chip de ícono + eyebrow + título, no un
-                header blanco genérico. Ícono con anillo dorado (ver
-                carrito-rediseno-y-copy-precios.md — antes un chip plano
-                bg-white/12, se sentía genérico) + badge de conteo dorado
-                junto al título, mismo acento (corp-yellow) que ya usa
-                CartButton.tsx para el badge del ícono en la barra — así el
-                carrito cerrado y abierto hablan el mismo idioma visual.
-                Línea ondulada sutil abajo (ver carrito-rediseno-concreto-
-                v2.md: "conectar el header con el mismo patrón de curvas
-                onduladas que usa el resto del sitio") — mismo espíritu que
-                SoftCurve.tsx pero un trazo propio más bajo (este header
-                mide ~80px, no una sección completa), blanco a baja opacidad
-                sobre el navy. */}
-            <div
-              className="relative flex items-center justify-between gap-3 overflow-hidden px-6 py-5"
-              style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)` }}
-            >
-              <svg
-                className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 opacity-[0.08]"
-                viewBox="0 0 320 320"
-                fill="none"
-                aria-hidden
-              >
-                <circle cx="160" cy="160" r="140" stroke="#fff" strokeWidth="1.5" />
-                <circle cx="160" cy="160" r="95" stroke="#fff" strokeWidth="1.5" />
-              </svg>
-              <svg
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-6 w-full opacity-[0.16]"
-                viewBox="0 0 440 24"
-                preserveAspectRatio="none"
-                fill="none"
-                aria-hidden
-              >
-                <path d="M0,14 C 70,22 140,4 220,12 C 300,20 370,2 440,10" stroke="#fff" strokeWidth="1.5" />
-              </svg>
-              <div className="relative flex items-center gap-3">
-                <span
-                  className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/12"
-                  style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,210,26,0.35)" }}
-                >
-                  <ShoppingBag className="h-5 w-5 text-white" strokeWidth={1.7} aria-hidden />
-                  {totalCount > 0 && (
-                    <span
-                      className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10.5px] font-extrabold leading-none"
-                      style={{ background: GOLD, color: INK, boxShadow: "0 2px 6px rgba(8,20,40,0.35)" }}
-                      aria-hidden
-                    >
-                      {totalCount > 99 ? "99+" : totalCount}
-                    </span>
-                  )}
-                </span>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-white/60" style={{ letterSpacing: "0.16em" }}>
-                    {t("eyebrow")}
-                  </p>
-                  <p className="font-display text-[19px] font-semibold leading-tight text-white">{t("title")}</p>
-                </div>
+  const openOrders = () => {
+    closeCart();
+    openProfile();
+  };
+
+  const finish = () => {
+    clear();
+    setSubmit({ status: "idle" });
+    setStep("cart");
+    setTermsAccepted(false);
+    setPaymentMethod(null);
+    setNotes("");
+    requestIdRef.current = null;
+    closeCart();
+  };
+
+  const orderingOff = submit.status === "error" && (submit.code === "ordering_disabled" || submit.code === "ordering_not_available");
+  const done = submit.status === "done";
+
+  // ----- Contenido del paso "Carrito" (también es todo el cuerpo en modo cotización por WhatsApp) -----
+  const groupSection = (channel: CartChannel) => {
+    const groupItems = channel === "delivery" ? deliveryItems : pickupItems;
+    if (groupItems.length === 0) return null;
+    const expect = channel === "delivery" ? expectDelivery : expectPickup;
+    const groupCount = groupItems.reduce((sum, item) => sum + item.quantity, 0);
+    const group = preview ? groupFor(preview, channel) : null;
+    const titleId = `cart-group-${channel}`;
+
+    return (
+      <section key={channel} aria-labelledby={titleId} className="mb-7 last:mb-0">
+        <h3 id={titleId} className="mb-3 flex items-baseline justify-between gap-3 font-display text-[16px] font-semibold" style={{ color: INK }}>
+          {channel === "delivery" ? tOrder("groupDeliveryTitle") : tOrder("groupPickupTitle")}
+          <span className="text-[12.5px] font-semibold" style={{ color: TEXT_MUTED }}>
+            {t("itemsCount", { count: groupCount })}
+          </span>
+        </h3>
+
+        {channel === "pickup" && preview?.pickupGroup && (
+          <div className="mb-3">
+            <PickupSiteSelector
+              sites={preview.pickupGroup.sites}
+              selectedId={preview.pickupGroup.siteId}
+              proposed={pickupSiteId === null}
+              onSelect={setPickupSite}
+            />
+          </div>
+        )}
+
+        <CartLines
+          items={groupItems}
+          channel={channel}
+          preview={preview}
+          expectPrices={expect}
+          onQuantity={(item, quantity) => setQuantity(item.id, quantity, item.unitId, item.channel)}
+          onRemove={(item) => removeItem(item.id, item.unitId, item.channel)}
+          onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId, item.channel)}
+        />
+
+        {expect && preview && group && !order.error && (
+          <div className="mt-4">
+            <OrderSummary preview={preview} channel={channel} stale={order.stale} />
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  const cartStep = (
+    <>
+      {groupSection("delivery")}
+      {groupSection("pickup")}
+
+      {expectPrices && preview && present.delivery && present.pickup && (
+        <div className="mb-2 mt-2">
+          <GrandTotal preview={preview} stale={order.stale} />
+        </div>
+      )}
+
+      {expectPrices && (
+        <div className="mt-6">
+          {order.status === "error" ? (
+            <div className="rounded-2xl border bg-white px-4 py-3.5" style={{ borderColor: RULE }} role="alert">
+              <p className="flex items-start gap-2 text-[13.5px] font-medium leading-snug" style={{ color: INK }}>
+                <AlertCircle className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                {order.error === "session" ? tOrder("sessionExpired") : tOrder("previewError")}
+              </p>
+              {order.error !== "session" && (
+                <RetryLine message="" retryLabel={tCheckout("retry")} onRetry={order.retry} />
+              )}
+            </div>
+          ) : !preview && order.status === "loading" ? (
+            <div role="status" className="rounded-2xl border bg-white px-4 py-4" style={{ borderColor: RULE }}>
+              <span className="sr-only">{tOrder("recalculating")}</span>
+              <div className="flex flex-col gap-2.5" aria-hidden>
+                <span className="h-3 w-2/5 rounded-full motion-safe:animate-pulse" style={{ background: BEIGE }} />
+                <span className="h-3 w-3/4 rounded-full motion-safe:animate-pulse" style={{ background: BEIGE }} />
+                <span className="h-6 w-1/2 rounded-full motion-safe:animate-pulse" style={{ background: BEIGE }} />
               </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {user && present.delivery && addressId === null && addressesStatus === "ready" && (
+        <p className="mt-6 rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed" style={{ background: BEIGE, color: TEXT_MUTED }}>
+          {present.pickup ? tOrder("noAddressForDelivery") : tOrder("noAddressForPrices")}
+        </p>
+      )}
+
+      {/* Sin el flujo de pasos: aviso de sesión o fechas de entrega (la elegida viaja en el WhatsApp). */}
+      {!flow && <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })} />}
+    </>
+  );
+
+  // ----- Motivo por el que no se puede continuar desde el carrito -----
+  let cartBlockedReason: string | null = null;
+  if (flow && currentStep === "cart" && preview && !order.stale) {
+    const belowMinimum = [preview.deliveryGroup, preview.pickupGroup].find((g) => g?.belowMinimum);
+    if (hasLineErrors(preview)) cartBlockedReason = tOrder("blockedLineErrors");
+    else if (hasError(preview, "price_list_missing")) cartBlockedReason = null; // el resumen ya lo explica
+    else if (belowMinimum) {
+      cartBlockedReason = tOrder("minimumShortfall", { amount: formatColones(belowMinimum.shortfall, locale, 2) });
+    }
+  }
+  // Carrito y entrega exigen una respuesta fresca del servidor (precios, mínimo, fecha válida); el pago solo depende
+  // del método elegido, así que no se bloquea mientras se vuelve a validar.
+  const advanceOk =
+    canAdvance(currentStep, preview, selection, present) && order.status !== "error" && (currentStep === "payment" || (!order.stale && order.status === "ready"));
+
+  const quoteButton = (
+    <a
+      href={whatsappHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={PRIMARY_BUTTON}
+      style={{ background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" }}
+    >
+      <WhatsAppIcon className="h-[19px] w-[19px]" />
+      {orderingOff ? tOrder("sendQuote") : t("checkoutCta")}
+    </a>
+  );
+
+  const clearLink = (
+    <button
+      type="button"
+      onClick={clear}
+      className={`mx-auto mt-2.5 block rounded px-1 text-[13px] font-medium underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+      style={{ color: TEXT_MUTED }}
+    >
+      {t("clearCta")}
+    </button>
+  );
+
+  const primaryStyle = { background: INK, boxShadow: "0 10px 22px rgba(8,43,92,0.25)" } as const;
+
+  return (
+    // Este componente vive montado SIEMPRE en el Header; DrawerShell crea el portal solo ya
+    // en el navegador (en el servidor no existe `document`).
+    <DrawerShell isOpen={isOpen} onClose={closeCart} label={t("title")} name="cart">
+      <DrawerHeader
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        closeLabel={t("close")}
+        onClose={closeCart}
+        badge={
+          totalCount > 0 ? (
+            <span
+              className="flex h-6 min-w-[24px] shrink-0 items-center justify-center rounded-full px-2 text-[12px] font-extrabold leading-none"
+              style={{ background: GOLD, color: INK }}
+              aria-hidden
+            >
+              {totalCount > 99 ? "99+" : totalCount}
+            </span>
+          ) : undefined
+        }
+      />
+
+      {flow && items.length > 0 && !done && <CheckoutStepper current={currentStep} />}
+
+      {items.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-8" style={{ background: BODY_BG }}>
+          <div className="flex w-full max-w-[280px] flex-col items-center gap-3 text-center">
+            <span
+              className="flex h-16 w-16 items-center justify-center rounded-full"
+              style={{ background: BEIGE, boxShadow: `inset 0 0 0 2px ${GOLD}` }}
+            >
+              <ShoppingBag className="h-7 w-7" strokeWidth={1.6} style={{ color: INK }} aria-hidden />
+            </span>
+            <p className="font-display text-[18px] font-semibold" style={{ color: INK }}>
+              {t("emptyTitle")}
+            </p>
+            <p className="text-[14px] leading-relaxed" style={{ color: TEXT_MUTED }}>
+              {t("empty")}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <DrawerBody>
+          {currentStep === "cart" && cartStep}
+
+          {currentStep === "delivery" && (
+            <DeliveryStep
+              selectedDate={selectedDate}
+              onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })}
+              onChangeAddress={changeAddress}
+              showDelivery={present.delivery}
+              pickup={
+                present.pickup
+                  ? { group: preview?.pickupGroup ?? null, proposed: pickupSiteId === null, onSelectSite: setPickupSite }
+                  : null
+              }
+            />
+          )}
+
+          {currentStep === "payment" && <PaymentStep value={paymentMethod} onChange={setPaymentMethod} />}
+
+          {currentStep === "summary" &&
+            (preview ? (
+              <ConfirmStep
+                preview={preview}
+                stale={order.stale}
+                deliveryDate={selectedDate}
+                paymentMethod={paymentMethod}
+                termsAccepted={termsAccepted}
+                onTermsChange={setTermsAccepted}
+                submit={submit}
+                notes={notes}
+                onNotesChange={setNotes}
+                onOpenOrders={openOrders}
+                contactHref={site.whatsappHref}
+              />
+            ) : (
+              <div className="rounded-2xl border bg-white px-4 py-3.5" style={{ borderColor: RULE }} role="alert">
+                <p className="text-[13.5px] font-medium" style={{ color: INK }}>
+                  {tOrder("previewError")}
+                </p>
+                <RetryLine message="" retryLabel={tCheckout("retry")} onRetry={order.retry} />
+              </div>
+            ))}
+        </DrawerBody>
+      )}
+
+      {items.length > 0 && (
+        <DrawerFooter>
+          {/* Modo cotización: precios validados (si hay) y envío por WhatsApp, como siempre. */}
+          {!flow && (
+            <>
+              <p className="mb-2.5 text-center text-[12px] leading-snug" style={{ color: TEXT_MUTED }}>
+                {t("checkoutHint")}
+              </p>
+              {quoteButton}
+              {clearLink}
+            </>
+          )}
+
+          {flow && done && (
+            <button type="button" onClick={finish} className={PRIMARY_BUTTON} style={primaryStyle}>
+              {tOrder("done")}
+            </button>
+          )}
+
+          {flow && !done && currentStep === "cart" && (
+            <>
+              {cartBlockedReason && (
+                <p className="mb-2.5 text-center text-[12.5px] font-medium leading-snug" style={{ color: "#8A5A00" }} role="status">
+                  {cartBlockedReason}
+                </p>
+              )}
               <button
                 type="button"
-                onClick={closeCart}
-                aria-label={t("close")}
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+                disabled={!advanceOk}
+                onClick={() => goTo(nextStep(currentStep))}
+                className={PRIMARY_BUTTON}
+                style={primaryStyle}
               >
-                <X className="h-4 w-4 text-white" strokeWidth={2} aria-hidden />
+                {tOrder("continue")}
+                <ArrowRight className="h-4 w-4" strokeWidth={2.2} aria-hidden />
+              </button>
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mx-auto mt-2.5 block w-fit rounded px-1 text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+                style={{ color: "#075FD8" }}
+              >
+                {t("checkoutCta")}
+              </a>
+              {clearLink}
+            </>
+          )}
+
+          {flow && !done && (currentStep === "delivery" || currentStep === "payment") && (
+            <div className="grid grid-cols-[auto_1fr] gap-3">
+              <button type="button" onClick={() => goTo(previousStep(currentStep))} className={`${SECONDARY_BUTTON} !w-auto`} style={{ borderColor: RULE, color: INK }}>
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.2} aria-hidden />
+                {tOrder("back")}
+              </button>
+              <button
+                type="button"
+                disabled={!advanceOk}
+                onClick={() => goTo(nextStep(currentStep))}
+                className={PRIMARY_BUTTON}
+                style={primaryStyle}
+              >
+                {tOrder("continue")}
+                <ArrowRight className="h-4 w-4" strokeWidth={2.2} aria-hidden />
               </button>
             </div>
+          )}
 
-            {items.length === 0 ? (
-              // Rediseño del estado vacío (ver carrito-rediseno-concreto-
-              // v2.md — la v1, ícono de carrito gris en círculo beige
-              // plano + texto suelto sobre blanco, seguía sintiéndose
-              // plana). Todo el conjunto vive ahora dentro de su propia
-              // tarjeta beige compacta (en vez de flotar solo en el medio
-              // de un panel blanco vacío) + ícono de BOLSA (mismo que el
-              // header/CartButton, no un carrito genérico distinto) sobre
-              // un fondo con degradado radial beige→blanco y anillo dorado
-              // — mismo tratamiento "ilustrado" que se le pide acá, no un
-              // círculo sólido plano.
-              <div className="flex flex-1 items-center justify-center px-8">
-                <div
-                  className="flex w-full max-w-[280px] flex-col items-center gap-3 rounded-[24px] px-8 py-9 text-center"
-                  style={{ background: BEIGE, boxShadow: "0 16px 40px -24px rgba(8,43,92,0.35)" }}
-                >
-                  <span
-                    className="relative flex h-16 w-16 items-center justify-center rounded-full"
-                    style={{
-                      background: "radial-gradient(circle at 35% 30%, #FFFFFF, #F1ECE4 70%)",
-                      boxShadow: `inset 0 0 0 2px ${GOLD}`,
-                    }}
-                  >
-                    <ShoppingBag className="h-7 w-7" strokeWidth={1.6} style={{ color: INK }} aria-hidden />
-                    {/* Detalle dorado decorativo (ver doc: "acento puntual
-                        gold en el estado vacío") — un destello, no un
-                        badge de conteo (acá siempre está en 0). */}
-                    <span
-                      className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full"
-                      style={{ background: GOLD, boxShadow: "0 2px 6px rgba(8,20,40,0.25)" }}
-                      aria-hidden
-                    >
-                      <Sparkle className="h-2.5 w-2.5" fill={INK} style={{ color: INK }} strokeWidth={0} />
-                    </span>
-                  </span>
-                  <p className="font-display text-[16px] font-semibold" style={{ color: INK }}>
-                    {t("emptyTitle")}
-                  </p>
-                  <p className="text-[13.5px] leading-relaxed" style={{ color: "#5C6B7D" }}>
-                    {t("empty")}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto px-5 py-4">
-                {/* Conteo como chip beige en vez de texto uppercase plano
-                    (ver carrito-rediseno-y-copy-precios.md) — más jerarquía
-                    de "encabezado de sección" para la lista de abajo. */}
-                <span
-                  className="mb-3 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase"
-                  style={{ background: BEIGE, color: INK, letterSpacing: "0.08em" }}
-                >
-                  {t("itemsCount", { count: totalCount })}
-                </span>
-                <ul className="flex flex-col gap-3">
-                  {items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl border bg-white p-3 transition hover:shadow-[0_6px_20px_rgba(8,43,92,0.1)]"
-                      style={{ borderColor: RULE }}
-                    >
-                      {/* Filete dorado a la izquierda (ver carrito-rediseno-
-                          concreto-v2.md: "mismo criterio de calidez, acentos
-                          gold" también en las tarjetas de producto, no solo
-                          en el estado vacío) — detalle puntual, no un
-                          cambio de color grande. */}
-                      <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: GOLD }} />
-                      <div
-                        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl"
-                        style={{ background: "radial-gradient(circle at 35% 30%, #FFFFFF, #F1ECE4 75%)" }}
-                      >
-                        <ProductImage itemId={item.id} name={item.name} size="s" className="h-full w-full object-contain p-1.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13.5px] font-semibold leading-snug" style={{ color: INK }}>
-                          {item.name}
-                        </p>
-                        {item.packSize && (
-                          <p className="mt-0.5 text-[11.5px] font-medium" style={{ color: MUTED }}>
-                            {item.packSize}
-                          </p>
-                        )}
-                        {/* Stepper unificado en una sola píldora con borde
-                            (ver carrito-rediseno-y-copy-precios.md — antes
-                            tres elementos sueltos flotando con gap) — se
-                            lee como un solo control de cantidad, no tres
-                            piezas separadas. */}
-                        <div
-                          className="mt-2.5 inline-flex items-center overflow-hidden rounded-full border"
-                          style={{ borderColor: RULE }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setQuantity(item.id, item.quantity - 1)}
-                            aria-label={t("decreaseAria", { name: item.name })}
-                            className="flex h-7 w-7 items-center justify-center transition hover:bg-black/[0.03]"
-                            style={{ color: ACCENT }}
-                          >
-                            <Minus className="h-3 w-3" strokeWidth={2.4} aria-hidden />
-                          </button>
-                          <span
-                            className="flex h-7 w-8 items-center justify-center border-x text-[13px] font-bold"
-                            style={{ borderColor: RULE, background: "rgba(255,210,26,0.14)", color: INK }}
-                          >
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setQuantity(item.id, item.quantity + 1)}
-                            aria-label={t("increaseAria", { name: item.name })}
-                            className="flex h-7 w-7 items-center justify-center transition hover:bg-black/[0.03]"
-                            style={{ color: ACCENT }}
-                          >
-                            <Plus className="h-3 w-3" strokeWidth={2.4} aria-hidden />
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        aria-label={t("removeAria", { name: item.name })}
-                        className="shrink-0 self-start rounded-full p-2 transition hover:bg-red-50"
-                        style={{ color: MUTED }}
-                      >
-                        <Trash2 className="h-4 w-4" strokeWidth={1.8} aria-hidden />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {items.length > 0 && (
-              // Panel beige propio para el footer (ver carrito-rediseno-y-
-              // copy-precios.md) — antes era el mismo blanco que la lista de
-              // arriba, con solo un border-top separándolo; ahora se lee
-              // como su propio bloque de "cierre", misma paleta beige que
-              // el resto del sitio usa para segmentar secciones. Línea
-              // dorada fina arriba, mismo acento que el header/badge.
-              <div className="relative flex flex-col gap-3 px-5 pb-5 pt-6" style={{ background: BEIGE }}>
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-[3px]"
-                  style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }}
-                />
-                <p className="text-center text-[12.5px] leading-relaxed" style={{ color: "#5C6B7D" }}>
-                  {t("checkoutHint")}
-                </p>
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2.5 rounded-full py-3.5 text-[15px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:brightness-110"
-                  style={{ background: `linear-gradient(135deg, ${INK}, #0B3A78)`, boxShadow: "0 12px 24px rgba(8,43,92,0.28)" }}
-                >
-                  <WhatsAppIcon className="h-[19px] w-[19px]" />
-                  {t("checkoutCta")}
-                </a>
+          {flow && !done && currentStep === "summary" && (
+            <>
+              {orderingOff ? (
+                quoteButton
+              ) : (
                 <button
                   type="button"
-                  onClick={clear}
-                  className="mx-auto text-[12.5px] font-semibold underline underline-offset-4 transition hover:opacity-70"
-                  style={{ color: MUTED }}
+                  disabled={!preview?.canOrder || order.stale || !termsAccepted || submit.status === "sending"}
+                  onClick={confirm}
+                  className={PRIMARY_BUTTON}
+                  style={primaryStyle}
+                  aria-busy={submit.status === "sending"}
                 >
-                  {t("clearCta")}
+                  {submit.status === "sending" ? tOrder("confirming") : tOrder("confirm")}
                 </button>
-              </div>
-            )}
-          </motion.div>
-        </>
+              )}
+              {preview && !preview.canOrder && !order.stale && (
+                <p className="mt-2.5 text-center text-[12.5px] font-medium leading-snug" style={{ color: "#8A5A00" }} role="status">
+                  {tOrder("reviewOrder")}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => goTo("payment")}
+                className={`mx-auto mt-2.5 flex items-center gap-1.5 rounded px-1 text-[13px] font-medium underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+                style={{ color: TEXT_MUTED }}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                {tOrder("back")}
+              </button>
+            </>
+          )}
+        </DrawerFooter>
       )}
-    </AnimatePresence>,
-    document.body
+    </DrawerShell>
   );
 }

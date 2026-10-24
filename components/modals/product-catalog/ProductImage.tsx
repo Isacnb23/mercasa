@@ -24,6 +24,7 @@ export default function ProductImage({
   className,
   errorIconClassName,
   onStatusChange,
+  defer = false,
 }: {
   itemId: string;
   name: string;
@@ -40,6 +41,9 @@ export default function ProductImage({
    * catalogo-detalle-producto.md) — el detalle ampliado lo usa para
    * mostrar un texto "Foto no disponible" además del ícono cuando falla. */
   onStatusChange?: (status: "loading" | "loaded" | "error") => void;
+  /** Con true NO se pide la foto todavía (la página del libro está lejos de la vista); se muestra el mismo
+   * marcador de posición y la foto se pide en cuanto `defer` pasa a false. Ver lib/image-window.ts. */
+  defer?: boolean;
 }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const updateStatus = (next: "loading" | "loaded" | "error") => {
@@ -57,7 +61,7 @@ export default function ProductImage({
 
   return (
     <span className="relative block h-full w-full">
-      {status === "loading" && (
+      {(status === "loading" || defer) && (
         <span
           className="absolute inset-0 animate-pulse"
           style={{ background: "rgba(8, 43, 92, 0.08)" }}
@@ -66,8 +70,10 @@ export default function ProductImage({
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/api/product-images/${encodeURIComponent(itemId)}?size=${size}`}
+        src={defer ? undefined : `/api/product-images/${encodeURIComponent(itemId)}?size=${size}`}
         alt={name}
+        loading="lazy"
+        decoding="async"
         onLoad={() => updateStatus("loaded")}
         onError={() => updateStatus("error")}
         className={className}

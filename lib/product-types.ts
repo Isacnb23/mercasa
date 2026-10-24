@@ -3,6 +3,33 @@
 // en un archivo separado, sin `import "server-only"`, para que un client
 // component pueda importar el tipo sin arrastrar el módulo server-only al
 // bundle del navegador.
+/**
+ * Tienda donde hay existencia para retiro (datos configurados en homex-api: lista oficial de sucursales).
+ * Los campos opcionales solo están si el servidor los trae; la web omite los que falten.
+ */
+export interface PickupSite {
+  siteId: string;
+  name: string;
+  /** Ciudad o zona ("Cartago, El Guarco"). */
+  city?: string;
+  address?: string;
+  /** Horario de la tienda (no una ventana de retiro). */
+  hours?: string;
+  /** Enlace de Google Maps (solo http/https; ver safeMapUrl). */
+  mapUrl?: string;
+}
+
+/**
+ * Cómo se consigue un producto (catálogo único): A domicilio (compañía cmer, se puede pedir en la web) y/o
+ * Retiro en tienda (compañía fmcm, con las tiendas donde hay existencia; en esta fase solo se muestra).
+ * Cada canal trae su propia unidad de venta, que puede diferir. Sin precios: el navegador nunca decide
+ * compañía, precios ni existencias.
+ */
+export interface ProductAvailability {
+  delivery: { available: boolean; unit?: string | null };
+  pickup: { available: boolean; unit?: string | null; sites: PickupSite[] };
+}
+
 export interface ProductSummary {
   /** ItemId de la API. */
   id: string;
@@ -14,6 +41,11 @@ export interface ProductSummary {
    * los productos tienen uno.
    */
   packSize?: string;
+  /**
+   * A domicilio / Retiro en tienda. Ausente (lectura de respaldo del catálogo viejo) = solo A domicilio,
+   * como era hasta ahora.
+   */
+  availability?: ProductAvailability;
 }
 
 export interface HierarchyNode {

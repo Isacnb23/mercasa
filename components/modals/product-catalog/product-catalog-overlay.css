@@ -13,8 +13,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: clamp(0.5rem, 2.5vmin, 2rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: catalog-backdrop-appear 0.25s ease-out;
 }
 
@@ -25,8 +26,11 @@
 .catalog-panel {
   width: 100%;
   max-width: 1400px;
-  height: 90vh;
-  max-height: 90vh;
+  height: 96vh;
+  max-height: 96vh;
+  /* dvh: 100vh incluye las barras del navegador y recortaba el pie. */
+  height: min(96dvh, calc(100dvh - 1rem));
+  max-height: calc(100dvh - 1rem);
   background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
@@ -138,7 +142,76 @@
   .catalog-panel {
     height: 96vh;
     max-height: 96vh;
+    height: 96dvh;
+    max-height: 96dvh;
     border-radius: 10px;
+  }
+}
+
+/* Pantallas bajas (laptops con escala 125-150 %: viewport ~1229x691): el
+   panel aprovecha casi todo el alto y la barra superior se compacta para
+   dejarle más espacio al libro. */
+@media (max-height: 700px) {
+  .catalog-backdrop {
+    padding: 0.5rem;
+  }
+
+  .catalog-panel {
+    height: calc(100dvh - 1rem);
+  }
+
+  .catalog-header {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* ---- Detalle de producto (ProductDetailModal) ----
+   Tres zonas en un diálogo de alto máximo = viewport: imagen (alto acotado),
+   información (scroll interno) y barra inferior fija con cantidad + "Agregar
+   al carrito", que así nunca queda fuera de pantalla. */
+.pd-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100dvh - 1.5rem);
+  overflow: hidden;
+}
+
+.pd-media {
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: min(40dvh, 420px);
+}
+
+.pd-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.pd-info {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Alto < 700 px con ancho suficiente: imagen a un lado, datos al otro. */
+@media (max-height: 699px) and (min-width: 640px) {
+  .pd-dialog {
+    flex-direction: row;
+    max-width: min(820px, 100%);
+  }
+
+  .pd-media {
+    height: auto;
+    width: 44%;
+    min-height: 220px;
   }
 }
 
@@ -146,4 +219,83 @@
   .page-stack {
     display: none;
   }
+}
+
+/* Cambio de precio al alternar presentación: solo opacidad (no mueve nada); sin animación con
+   prefers-reduced-motion. */
+.pd-price-swap {
+  animation: pd-price-in 0.2s ease-out;
+}
+
+@keyframes pd-price-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-price-swap {
+    animation: none;
+  }
+}
+
+/* Densidad de las hojas del libro. NO depende de umbrales de la ventana: ProductCatalogModal mide una hoja de prueba
+   "peor caso" del tamaño real de las hojas (ver lib/book-density.ts) y fija data-density (1, 2 o 3) en el panel.
+   Nivel 1: nombre de 3 líneas y etiquetas normales. Nivel 2: nombre de 2 líneas y foto un poco más chica. Nivel 3:
+   además etiquetas compactas y menos relleno. (Con 6 tarjetas por hoja se repiten los mismos niveles, con filas más
+   altas.) El nombre completo siempre queda en el tooltip y en el detalle del producto.
+   Cada nivel define TODAS las variables (`initial` = valor por defecto de quien las usa): la hoja de prueba lleva su
+   propio data-density dentro del panel y, si no, heredaría las del nivel que el panel tenga en ese momento. */
+.catalog-panel,
+[data-density="1"] {
+  --pc-name-lines: 3;
+  --pc-img: initial;
+  --pc-gap: initial;
+  --pc-card-pad: initial;
+  --pc-card-gap: initial;
+  --pc-badge-pad: initial;
+  --pc-badge-font: initial;
+  --pc-badge-mb: initial;
+  --pc-badge-ws: initial;
+}
+
+[data-density="2"] {
+  --pc-name-lines: 2;
+  --pc-img: 5.4cqh;
+  --pc-gap: initial;
+  --pc-card-pad: initial;
+  --pc-card-gap: initial;
+  --pc-badge-pad: initial;
+  --pc-badge-font: initial;
+  --pc-badge-mb: initial;
+  --pc-badge-ws: initial;
+}
+
+[data-density="3"] {
+  --pc-name-lines: 2;
+  --pc-img: 5cqh;
+  --pc-gap: 3px;
+  --pc-card-pad: 3px;
+  --pc-card-gap: 1px;
+  --pc-badge-pad: 1px 5px;
+  --pc-badge-font: 9px;
+  --pc-badge-mb: 0px;
+  /* En hojas minúsculas la etiqueta puede partirse en dos líneas en vez de salirse de la tarjeta. */
+  --pc-badge-ws: normal;
+}
+
+/* Etiquetas de canal de la tarjeta ("A domicilio" / "Retiro en tienda"): legibles y con aire al borde. */
+.pc-badge {
+  padding: var(--pc-badge-pad, 2px 6px);
+  font-size: var(--pc-badge-font, clamp(9px, 1.85cqh, 10.5px));
+  white-space: var(--pc-badge-ws, nowrap);
+  text-align: center;
+  max-width: 100%;
+}
+
+.pc-badges {
+  margin-bottom: var(--pc-badge-mb, 2px);
 }
