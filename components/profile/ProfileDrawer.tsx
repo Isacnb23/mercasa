@@ -7,7 +7,7 @@ import { useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import type { SavedAddress } from "@/lib/auth-types";
 import type { AddressNotice } from "@/lib/addresses-edit";
-import { REGISTRATION_ENABLED } from "@/lib/feature-flags";
+import { ORDERING_ENABLED, REGISTRATION_ENABLED } from "@/lib/feature-flags";
 import RegistrationFlow from "@/components/registration/RegistrationFlow";
 import { DrawerBody, DrawerFooter, DrawerHeader, DrawerShell } from "@/components/ui/Drawer";
 import {
@@ -80,7 +80,7 @@ export default function ProfileDrawer() {
   const historyAvailable = user && historyProbe?.account === user.accountNum ? historyProbe.available : null;
 
   useEffect(() => {
-    if (!user || !isOpen || historyAvailable !== null) return;
+    if (!ORDERING_ENABLED || !user || !isOpen || historyAvailable !== null) return;
     const account = user.accountNum;
     let cancelled = false;
 
@@ -194,8 +194,8 @@ export default function ProfileDrawer() {
               </span>
             </div>
 
-            {/* Mis pedidos: solo si el servidor no respondió history_disabled. */}
-            {historyAvailable === true && (
+            {/* Mis pedidos: solo con NEXT_PUBLIC_ENABLE_ORDERING=true y si el servidor no respondió history_disabled. */}
+            {ORDERING_ENABLED && historyAvailable === true && (
               <button
                 type="button"
                 onClick={() => setShowingOrders(true)}
