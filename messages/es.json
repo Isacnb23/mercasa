@@ -569,6 +569,8 @@
       "selectPlaceholder": "Seleccioná una opción",
       "loadingOptions": "Cargando...",
       "optionsError": "No se pudieron cargar las opciones. Intentá de nuevo.",
+      "searchPlaceholder": "Escribí para buscar",
+      "noResults": "Sin resultados",
       "cityNotApplicable": "Este distrito no tiene ciudades registradas; no hace falta elegir una.",
       "streetLabel": "Señas",
       "streetPlaceholder": "Ej. 200 m norte de la iglesia, casa blanca con portón negro",

@@ -19,6 +19,7 @@ import {
   RULE,
   TEXT_MUTED,
 } from "@/components/ui/drawer-tokens";
+import Combobox from "@/components/ui/Combobox";
 import type { LatLng } from "./PinMap";
 
 // Leaflet necesita `window`: el mapa solo se renderiza en el navegador.
@@ -285,33 +286,20 @@ export default function AddressFlow({
     state: { options: Option[]; loading: boolean; failed: boolean },
     locked: boolean
   ) => (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[12px] font-semibold" style={{ color: INK }}>
-        {label}
-      </span>
-      <select
-        id={id}
-        required
-        value={value}
-        disabled={locked || state.loading || state.options.length === 0}
-        onChange={(e) => onChange(e.target.value)}
-        className={inputClass}
-        style={{ borderColor: RULE, color: INK }}
-      >
-        <option value="">{state.loading ? t("loadingOptions") : t("selectPlaceholder")}</option>
-        {state.options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
-      {state.failed && (
-        <span className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: DANGER_TEXT }}>
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-          {t("optionsError")}
-        </span>
-      )}
-    </label>
+    <Combobox
+      id={id}
+      label={label}
+      value={value}
+      options={state.options}
+      onChange={onChange}
+      disabled={locked}
+      loading={state.loading}
+      error={state.failed ? t("optionsError") : null}
+      placeholder={t("selectPlaceholder")}
+      loadingText={t("loadingOptions")}
+      searchPlaceholder={t("searchPlaceholder")}
+      emptyText={t("noResults")}
+    />
   );
 
   return (

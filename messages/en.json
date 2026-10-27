@@ -569,6 +569,8 @@
       "selectPlaceholder": "Select an option",
       "loadingOptions": "Loading...",
       "optionsError": "Couldn't load the options. Please try again.",
+      "searchPlaceholder": "Type to search",
+      "noResults": "No results",
       "cityNotApplicable": "This district has no registered cities; there's no need to pick one.",
       "streetLabel": "Directions",
       "streetPlaceholder": "e.g. 200 m north of the church, white house with a black gate",
