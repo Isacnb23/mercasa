@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
@@ -12,6 +12,7 @@ import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { ORDERING_ENABLED } from "@/lib/feature-flags";
 import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
 import { useOrderPreview } from "@/lib/order-preview";
+import { onAccountStateCleared } from "@/lib/account-state";
 import { submitOrder } from "@/lib/order-submit";
 import {
   buildCreateOrderBody,
@@ -96,6 +97,21 @@ export default function CartDrawer() {
   // La fecha elegida vale solo para esa dirección Y esa versión de ella: si se edita (cambian sus días de entrega), se vuelve a elegir.
   const [chosenDate, setChosenDate] = useState<{ addressId: number; revision: number; date: string } | null>(null);
   const selectedDate = chosenDate && chosenDate.addressId === addressId && chosenDate.revision === addressRevision ? chosenDate.date : null;
+
+  // Cierre de sesión o sesión expirada: los borradores del checkout son de la cuenta y se descartan (las líneas del carrito no).
+  useEffect(
+    () =>
+      onAccountStateCleared(() => {
+        setStep("cart");
+        setPaymentMethod(null);
+        setTermsAccepted(false);
+        setSubmit({ status: "idle" });
+        setNotes("");
+        setChosenDate(null);
+        requestIdRef.current = null;
+      }),
+    [],
+  );
 
   // Dos grupos: domicilio y retiro en tienda (una línea por producto, presentación y canal).
   const deliveryItems = itemsInChannel(items, "delivery");

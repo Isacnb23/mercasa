@@ -15,11 +15,14 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { ProductSummary } from "./product-types";
 import type { CartChannel, CartItem } from "./cart-types";
 import { canAddToCart, defaultAddChannel } from "./catalog-channel";
+import { hashAccount, onAccountStateCleared, reconcileCartOwner } from "./account-state";
+import { useAuth } from "./auth-context";
 import {
   addToCart,
   CART_STORAGE_KEY,
   changeLineUnit,
   loadPersistedCart,
+  loadPersistedOwner,
   removeLine,
   serializeCart,
   setLineQuantity,
@@ -47,8 +50,12 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth();
+  const accountNum = user?.accountNum ?? null;
   const [items, setItems] = useState<CartItem[]>([]);
   const [pickupSiteId, setPickupSiteId] = useState<string | null>(null);
+  // Hash de la cuenta dueña del carrito; null = de visitante (o guardado antes de que existiera el dueño).
+  const [owner, setOwner] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   // Evita pisar localStorage con el array vacío inicial ANTES de que termine de leerse lo persistido (el primer render
   // en el cliente siempre arranca en []). Es estado (no ref) para que el guardado espere al render que ya trae los
@@ -75,6 +82,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(stored.items);
       setPickupSiteId(stored.pickupSiteId);
+      setOwner(loadPersistedOwner(window.localStorage));
     } catch {
       // localStorage no disponible (modo privado, etc.) — el carrito sigue
       // funcionando en memoria para esta sesión de pestaña.
@@ -86,11 +94,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(serializeCart(items, pickupSiteId)));
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(serializeCart(items, pickupSiteId, owner)));
     } catch {
       // idem arriba — no romper el carrito si falla el guardado.
     }
-  }, [hydrated, items, pickupSiteId]);
+  }, [hydrated, items, pickupSiteId, owner]);
+
+  // Al iniciar sesión (y al recargar con sesión) se compara el dueño del carrito con la cuenta: sin dueño se asigna, el mismo se
+  // conserva, otro se vacía junto con su tienda de retiro. Sin sesión no se toca nada. Se espera a que la sesión esté resuelta y
+  // el carrito leído; se aplica una vez por cuenta (reconciled) y no vuelve a vaciar lo que el cliente agregue después.
+  const reconciled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hydrated || authLoading) return;
+    if (!accountNum) {
+      reconciled.current = null;
+      return;
+    }
+    if (reconciled.current === accountNum) return;
+    reconciled.current = accountNum;
+    const result = reconcileCartOwner(items, owner, hashAccount(accountNum));
+    if (result.owner !== owner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOwner(result.owner);
+    }
+    if (result.emptied) {
+      setItems([]);
+      setPickupSiteId(null);
+    }
+  }, [hydrated, authLoading, accountNum, items, owner]);
+
+  // Cierre de sesión o sesión expirada (clearAccountState): la tienda de retiro elegida es de la cuenta; las líneas se quedan.
+  useEffect(() => onAccountStateCleared(() => setPickupSiteId(null)), []);
 
   // No abre el drawer automáticamente (ver montar-carrito-en-base-al-
   // catalogo.md): agregar varios productos seguidos desde la grilla del

@@ -11,6 +11,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { AuthUser, LoginCredentials } from "./auth-types";
 import { isServiceUnavailable } from "./login-errors";
 import { installSessionExpiryGuard } from "./session-client";
+import { clearAccountState } from "./account-state";
 
 // `unavailable` = el servicio de ingreso no respondió (503/504): NO son credenciales malas.
 type LoginResult = { ok: true } | { ok: false; error: string; unavailable?: boolean };
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchSession()
       .then((session) => {
         if (cancelled || !session) return;
+        if (!session.user && session.expired) clearAccountState();
         setUser(session.user);
         if (session.expired) setSessionExpired(true);
       })
@@ -78,6 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (document.visibilityState !== "visible" || !userRef.current) return;
       void fetchSession().then((session) => {
         if (!session) return;
+        // La sesión dejó de servir sin que la persona la cerrara: se limpia el estado de la cuenta (no las líneas del carrito).
+        if (!session.user && userRef.current) clearAccountState();
         setUser(session.user);
         if (session.expired) setSessionExpired(true);
       });
@@ -93,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       baseHref: window.location.href,
       isLoggedIn: () => userRef.current !== null,
       onExpired: () => {
+        clearAccountState();
         setUser(null);
         setSessionExpired(true);
         setIsOpen(true);
@@ -128,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    clearAccountState();
     setUser(null);
     setSessionExpired(false);
     try {
