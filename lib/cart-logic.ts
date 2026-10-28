@@ -171,12 +171,30 @@ export function readStoredCart(v2: unknown, v1: unknown): StoredCartState {
   return { items: parseStoredCart(v1), pickupSiteId: null };
 }
 
-export function serializeCart(items: CartItem[], pickupSiteId: string | null) {
-  return { version: 2, items, pickupSiteId };
+// owner = hash de la cuenta dueña del carrito (ver account-state.ts); null/ausente = carrito de visitante. Se guarda
+// solo cuando hay dueño, así los carritos anteriores (sin la clave) siguen siendo válidos y se tratan como de visitante.
+export function serializeCart(items: CartItem[], pickupSiteId: string | null, owner: string | null = null) {
+  return { version: 2, items, pickupSiteId, ...(owner ? { owner } : {}) };
+}
+
+// Dueño guardado junto al carrito v2; null si no hay o no tiene la forma de un hash (migración tolerante).
+export function readStoredOwner(v2: unknown): string | null {
+  if (typeof v2 !== "object" || v2 === null || Array.isArray(v2)) return null;
+  const owner = (v2 as Record<string, unknown>).owner;
+  return typeof owner === "string" && /^[0-9a-f]{64}$/.test(owner) ? owner : null;
 }
 
 // Lee el carrito guardado de un Storage (v2; si no hay, migra v1 sin borrarlo). Devuelve null si el almacenamiento no
 // está disponible o trae JSON inválido: quien llama sigue con el carrito vacío en memoria.
+export function loadPersistedOwner(storage: Pick<Storage, "getItem">): string | null {
+  try {
+    const v2 = storage.getItem(CART_STORAGE_KEY);
+    return v2 ? readStoredOwner(JSON.parse(v2)) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function loadPersistedCart(storage: Pick<Storage, "getItem">): StoredCartState | null {
   try {
     const v2 = storage.getItem(CART_STORAGE_KEY);
