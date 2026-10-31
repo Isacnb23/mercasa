@@ -56,7 +56,8 @@ function hasStockAtSite(product: Pick<ProductSummary, "availability">, units: Re
 
 // Regla del "+" de la tarjeta con la tienda del carrito (`cartSiteId`: la tienda de retiro del carrito, o null si no hay):
 //   - solo domicilio: igual que siempre (plusAction);
-//   - con retiro: si el carrito ya tiene tienda y el producto tiene existencia allí en su presentación por defecto, se agrega directo al retiro
+//   - domicilio Y retiro: abre el modal SIN canal preelegido (el cliente elige), como siempre;
+//   - SOLO retiro: si el carrito ya tiene tienda y el producto tiene existencia allí en su presentación por defecto, se agrega directo al retiro
 //     de esa tienda; si no hay tienda, o no hay existencia, se abre el modal en el paso de retiro (nunca se agrega al retiro sin tienda).
 export function plusDecision(product: Pick<ProductSummary, "availability">, units: ReadonlyArray<PlusUnit> | null, cartSiteId: string | null): PlusDecision {
   const delivery = canAddToCart(product, "delivery");
@@ -65,14 +66,15 @@ export function plusDecision(product: Pick<ProductSummary, "availability">, unit
   if (!pickup) {
     return plusAction(product, units ? units.length : null) === "add-delivery" ? { action: "add-delivery" } : { action: "open-detail", step: null };
   }
+  if (delivery) return { action: "open-detail", step: null };
   if (cartSiteId && hasStockAtSite(product, units, cartSiteId)) return { action: "add-pickup", siteId: cartSiteId };
   return { action: "open-detail", step: "pickup" };
 }
 
 // ¿Hace falta saber las presentaciones antes de decidir el "+"? Solo con un canal y sesión (con los dos canales ya
 // se sabe que abre el modal).
-export const needsUnitsForPlus = (product: Pick<ProductSummary, "availability">, cartSiteId: string | null = null): boolean =>
-  canAddToCart(product, "delivery") !== canAddToCart(product, "pickup") || (canAddToCart(product, "pickup") && !!cartSiteId);
+export const needsUnitsForPlus = (product: Pick<ProductSummary, "availability">): boolean =>
+  canAddToCart(product, "delivery") !== canAddToCart(product, "pickup");
 
 export type ChannelButtonState =
   | { enabled: true }

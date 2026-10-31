@@ -2369,13 +2369,14 @@ function ProductCard({
         onClick={async (e) => {
           e.stopPropagation();
           // Regla del "+" (ver plusDecision en lib/add-rules.ts): solo domicilio, igual que siempre (una sola presentación -> agrega
-          // directo; varias -> abre el detalle). Con retiro: si el carrito ya tiene tienda de retiro y el producto tiene existencia allí
-          // en su presentación por defecto, se agrega directo al retiro de esa tienda; si no hay tienda o no hay existencia, se abre
-          // el detalle en el paso de retiro (nunca se agrega al retiro sin tienda). Con sesión se consultan las presentaciones; sin
-          // ellas (sin sesión o si falla) se decide con lo que ya trae el producto.
+          // directo; varias -> abre el detalle). Domicilio Y retiro: abre el detalle sin canal preelegido (el cliente elige). SOLO retiro:
+          // si el carrito ya tiene tienda de retiro y el producto tiene existencia allí en su presentación por defecto, se agrega directo
+          // al retiro de esa tienda; si no hay tienda o no hay existencia, se abre el detalle en el paso de retiro (nunca se agrega al
+          // retiro sin tienda). Con sesión se consultan las presentaciones (con un solo canal); sin ellas (sin sesión o si falla) se
+          // decide con lo que ya trae el producto.
           const cartSite = cartPickupSite(cartItems, pickupSiteId);
           let units: Awaited<ReturnType<typeof fetchItemUnits>> = null;
-          if (user && needsUnitsForPlus(product, cartSite)) {
+          if (user && needsUnitsForPlus(product)) {
             setCheckingUnits(true);
             units = await fetchItemUnits(product.id);
             setCheckingUnits(false);
