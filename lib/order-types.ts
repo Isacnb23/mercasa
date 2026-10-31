@@ -92,6 +92,10 @@ export interface OrderPreviewSite {
   address: string;
   hours: string;
   mapUrl: string;
+  // Coordenadas (nulas si la tienda no las tiene) y existencia para ESTE grupo sin cantidades: available | low | out.
+  lat: number | null;
+  lng: number | null;
+  status: "available" | "low" | "out";
 }
 
 export interface OrderPreviewPickupGroup extends OrderPreviewGroup {

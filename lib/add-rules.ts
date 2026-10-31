@@ -54,6 +54,40 @@ export function channelButtonState(
   return { enabled: true };
 }
 
+export type PrimaryAddState =
+  | { channel: CartChannel; enabled: true }
+  // channel = el producto no se consigue por ese canal; unit = presentación no retirable; out = la tienda elegida no tiene existencia de
+  // la presentación elegida.
+  | { channel: CartChannel; enabled: false; reason: "channel" | "unit" | "out" };
+
+// UN solo botón principal de agregar: sin tienda elegida agrega a domicilio; con tienda elegida, a retiro en esa tienda (y el de
+// domicilio queda deshabilitado hasta que se quite la tienda). Un producto solo de retiro agrega a retiro (la tienda es opcional: el
+// carrito propone una). null = el producto no se consigue por ningún canal. `siteStatus` es la existencia de la tienda elegida en la
+// presentación elegida (null = no se sabe: no bloquea, el servidor valida).
+export function primaryAddState(
+  product: Pick<ProductSummary, "availability">,
+  unit: Pick<CatalogUnit, "pickupAvailable"> | null,
+  siteId: string | null,
+  siteStatus: string | null
+): PrimaryAddState | null {
+  const delivery = canAddToCart(product, "delivery");
+  const pickup = canAddToCart(product, "pickup");
+  const chosen = pickup && !!siteId;
+  if (chosen || (!delivery && pickup)) {
+    const base = channelButtonState(product, "pickup", unit);
+    if (!base.enabled) return { channel: "pickup", enabled: false, reason: base.reason };
+    if (chosen && siteStatus === "out") return { channel: "pickup", enabled: false, reason: "out" };
+    return { channel: "pickup", enabled: true };
+  }
+  if (!delivery) return null;
+  const base = channelButtonState(product, "delivery", unit);
+  return base.enabled ? { channel: "delivery", enabled: true } : { channel: "delivery", enabled: false, reason: base.reason };
+}
+
+// ¿Se muestra el botón de domicilio deshabilitado (con "Quitar tienda")? Solo con tienda elegida y un producto que SÍ se entrega.
+export const showDisabledDeliveryButton = (product: Pick<ProductSummary, "availability">, siteId: string | null): boolean =>
+  !!siteId && canAddToCart(product, "delivery") && canAddToCart(product, "pickup");
+
 // Tope de cantidad: no pasa del máximo que el servidor calculó para esa presentación (maxAvailable). Sin máximo
 // conocido (null) no se limita en el navegador: el servidor valida. Nunca baja de 1 salvo que no haya existencia (0).
 export function clampToMax(quantity: number, maxAvailable: number | null): number {

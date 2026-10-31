@@ -205,6 +205,15 @@ function parsePickupGroup(raw: unknown): OrderPreviewPickupGroup | null {
       address: text(s.address),
       hours: text(s.hours),
       mapUrl: text(s.mapUrl),
+      lat: isNumber(s.lat) ? s.lat : null,
+      lng: isNumber(s.lng) ? s.lng : null,
+      // Sin estado del servidor, por el conteo de productos que faltan (como antes).
+      status:
+        s.status === "available" || s.status === "low" || s.status === "out"
+          ? s.status
+          : isNumber(s.unavailableItems) && s.unavailableItems > 0
+            ? "out"
+            : "available",
     });
   }
   return { ...base, siteId: typeof g.siteId === "string" ? g.siteId : "", sites };

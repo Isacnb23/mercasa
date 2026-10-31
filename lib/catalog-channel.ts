@@ -168,6 +168,11 @@ function parseAvailability(raw: unknown): ProductAvailability {
             const value = str(s[key]).trim();
             if (value) site[key] = value;
           }
+          // Coordenadas: solo si ambas son números válidos (el cálculo de cercanía es del navegador).
+          if (typeof s.lat === "number" && Number.isFinite(s.lat) && typeof s.lng === "number" && Number.isFinite(s.lng)) {
+            site.lat = s.lat;
+            site.lng = s.lng;
+          }
           return site;
         })
     : [];

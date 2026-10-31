@@ -17,6 +17,9 @@ export interface PickupSite {
   hours?: string;
   /** Enlace de Google Maps (solo http/https; ver safeMapUrl). */
   mapUrl?: string;
+  /** Coordenadas de la tienda (para ordenar por cercanía en el navegador); ausentes si no las tiene. */
+  lat?: number;
+  lng?: number;
 }
 
 /**

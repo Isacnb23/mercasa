@@ -21,6 +21,8 @@ export interface CatalogUnit {
   // ¿Se puede retirar en tienda esta presentación? (con el precio de cmer, todas las del producto si tiene retiro;
   // la existencia depende de la tienda y la valida el servidor al armar el pedido). false si el servidor no lo dice.
   pickupAvailable: boolean;
+  // Existencia por tienda EN ESTA presentación, sin cantidades (available | low | out). null = el servidor no la informó.
+  pickupBySite: { siteId: string; status: "available" | "low" | "out" }[] | null;
 }
 
 // Precio de catálogo de un producto: SIN IVA, con la unidad de venta del dato (la del listado). Solo
@@ -138,6 +140,18 @@ export function sanitizeCatalogPricesBody(body: unknown): { itemIds: string[]; w
   return { itemIds: itemIds.map((id) => id.trim()), withUnits };
 }
 
+// Estado por tienda de una presentación: lo que no se entiende se ignora (la tienda queda sin estado). Sin lista: null.
+function parsePickupBySite(raw: unknown): CatalogUnit["pickupBySite"] {
+  if (!Array.isArray(raw)) return null;
+  const sites: NonNullable<CatalogUnit["pickupBySite"]> = [];
+  for (const entry of raw) {
+    const s = entry as { siteId?: unknown; status?: unknown } | null;
+    if (!s || typeof s.siteId !== "string" || (s.status !== "available" && s.status !== "low" && s.status !== "out")) continue;
+    sites.push({ siteId: s.siteId, status: s.status });
+  }
+  return sites;
+}
+
 // Presentaciones de un ítem: undefined/null = no se pidieron; false = forma inválida.
 function parseUnits(raw: unknown): CatalogUnit[] | null | false {
   if (raw === undefined || raw === null) return null;
@@ -168,6 +182,7 @@ function parseUnits(raw: unknown): CatalogUnit[] | null | false {
       available: u.available,
       isDefault: u.isDefault === true,
       pickupAvailable: (entry as { pickupAvailable?: unknown }).pickupAvailable === true,
+      pickupBySite: parsePickupBySite((entry as { pickupBySite?: unknown }).pickupBySite),
     });
   }
   return units;

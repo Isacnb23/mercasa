@@ -30,6 +30,9 @@ export default function PickupSiteSelector({ sites, selectedId, proposed, onSele
 
   if (sites.length === 0) return null;
 
+  // Las tiendas sin existencia para este pedido van al final (el resto conserva su orden).
+  const ordered = [...sites.filter((s) => s.status !== "out"), ...sites.filter((s) => s.status === "out")];
+
   const optionLabel = (s: OrderPreviewSite) =>
     s.unavailableItems > 0
       ? t("pickupStoreOptionMissing", { name: s.name || s.siteId, city: s.city, count: s.unavailableItems })
@@ -49,7 +52,7 @@ export default function PickupSiteSelector({ sites, selectedId, proposed, onSele
         className={`${FIELD_CLASS} !min-h-[44px] !py-2 text-[13.5px] font-semibold`}
         style={{ borderColor: RULE, color: INK }}
       >
-        {sites.map((s) => (
+        {ordered.map((s) => (
           <option key={s.siteId} value={s.siteId}>
             {optionLabel(s)}
           </option>

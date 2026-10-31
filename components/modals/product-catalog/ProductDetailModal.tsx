@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, Minus, Plus, X, type LucideIcon } from "lucide-react";
+import { ChevronDown, ImageOff, Minus, Plus, Store, X, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
@@ -15,9 +15,11 @@ import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { canAddToCart } from "@/lib/catalog-channel";
-import { channelButtonState } from "@/lib/add-rules";
-import { AddNote, ChannelButtons } from "./AddToCartButtons";
+import { primaryAddState } from "@/lib/add-rules";
+import type { StoreStatus } from "@/lib/pickup-stores";
+import { AddButtons, AddNote } from "./AddToCartButtons";
 import { ChannelAvailability } from "./ChannelBadges";
+import PickupStoreChooser from "./PickupStoreChooser";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
 // producto ENCIMA del catálogo (no reemplaza el flipbook, no navega a otra
@@ -55,13 +57,20 @@ export default function ProductDetailModal({
   // nombre comercial sin el sufijo de empaque ("24U/C 60C/T"), que sugiere presentaciones que pueden no existir.
   const { title, packagingText } = productTitle(product.name);
 
-  const { addItem } = useCart();
+  const { addItem, items: cartItems, pickupSiteId, setPickupSite } = useCart();
   // Fase 2: cada canal en que se consigue el producto tiene su botón de agregar (domicilio y/o retiro en tienda). Las
   // presentaciones (unidad, caja, tarima) siguen siendo las de domicilio; el retiro agrega la presentación por defecto.
   const deliverable = canAddToCart(product, "delivery");
   const pickupable = canAddToCart(product, "pickup");
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState<CartChannel | null>(null);
+  // Retiro en tienda: la sección de tiendas se abre a pedido (y recién entonces se pide la ubicación); la tienda elegida decide el botón
+  // principal. Arranca sin tienda (a domicilio), salvo que el carrito ya tenga retiro con una tienda de este producto: una sola tienda por pedido.
+  const pickupSites = product.availability?.pickup.sites ?? [];
+  const [pickupOpen, setPickupOpen] = useState(false);
+  const [siteId, setSiteId] = useState<string | null>(() =>
+    pickupSiteId && cartItems.some((i) => i.channel === "pickup") && pickupSites.some((s) => s.siteId === pickupSiteId) ? pickupSiteId : null
+  );
 
   // Presentaciones vendibles (solo con sesión). El modal abre con la MISMA presentación que muestra la tarjeta
   // (la unidad del listado). Si esa unidad no estuviera entre las presentaciones, no se ofrece selector y se
@@ -85,14 +94,22 @@ export default function ProductDetailModal({
     closeButtonRef.current?.focus();
   }, []);
 
-  // Cada botón (AddToCartButtons) se habilita solo si la presentación elegida está disponible en ese canal.
+  // Existencia de cada tienda EN la presentación elegida (la del servidor, sin cantidades); sin sesión o sin dato no hay estado.
+  const statusFor = (id: string): StoreStatus | null =>
+    selected?.pickupBySite?.find((s) => s.siteId.toUpperCase() === id.toUpperCase())?.status ?? null;
+  const chooserStores = pickupSites.map((s) => ({ ...s, status: statusFor(s.siteId) }));
+  const chosenSite = siteId ? pickupSites.find((s) => s.siteId === siteId) ?? null : null;
 
-  const handleAddToCart = (channel: CartChannel) => {
-    if (!channelButtonState(product, channel, selected).enabled) return;
+  // UN botón principal: sin tienda agrega a domicilio; con tienda elegida, a retiro en esa tienda.
+  const addState = primaryAddState(product, selected, chosenSite ? chosenSite.siteId : null, chosenSite ? statusFor(chosenSite.siteId) : null);
+
+  const handleAddToCart = () => {
+    if (!addState?.enabled) return;
     // La presentación por defecto no se guarda: así una misma presentación nunca queda en dos líneas.
     const unit = selected && !selected.isDefault ? selected.unitId : undefined;
-    addItem(product, quantity, unit, channel);
-    setJustAdded(channel);
+    if (addState.channel === "pickup" && chosenSite) setPickupSite(chosenSite.siteId);
+    addItem(product, quantity, unit, addState.channel);
+    setJustAdded(addState.channel);
     setQuantity(1);
     setTimeout(() => setJustAdded(null), 1800);
   };
@@ -210,15 +227,52 @@ export default function ProductDetailModal({
               // Con el precio de cmer el de retiro es el mismo: no se repite como si fuera otro.
               pickupPrice={samePrice(price, pickupPrice) ? { kind: "hidden" } : pickupPrice}
             />
+
+            {pickupable && pickupSites.length > 0 && (
+              <section className="flex flex-col gap-2.5" aria-label={tCart("storeChooserAria", { name: title })}>
+                <button
+                  type="button"
+                  id="pd-pickup-toggle"
+                  aria-expanded={pickupOpen}
+                  aria-controls="pd-pickup-stores"
+                  onClick={() => setPickupOpen((open) => !open)}
+                  className="flex w-full items-center gap-3 rounded-2xl border bg-white px-4 py-3 text-left outline-none transition hover:border-[#B9C6D8] hover:bg-[#FBF9F5] focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
+                  style={{ borderColor: chosenSite ? INK : RULE }}
+                >
+                  <Store className="h-4 w-4 shrink-0" style={{ color: INK }} strokeWidth={2} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold leading-snug" style={{ color: INK }}>
+                      {tCart("pickupSectionTitle")}
+                    </span>
+                    <span className="block text-[12.5px] leading-snug" style={{ color: TEXT_SOFT }}>
+                      {chosenSite ? tCart("pickupSectionChosen", { store: chosenSite.name }) : tCart("pickupSectionHintNone")}
+                    </span>
+                  </span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 motion-safe:transition-transform ${pickupOpen ? "rotate-180" : ""}`} style={{ color: INK }} strokeWidth={2.2} aria-hidden />
+                </button>
+                {pickupOpen && (
+                  <div id="pd-pickup-stores">
+                    <PickupStoreChooser
+                      stores={chooserStores}
+                      chosenId={siteId}
+                      onChoose={setSiteId}
+                      unitBlocked={!!selected && !selected.pickupAvailable}
+                      active={pickupOpen}
+                      labelledBy="pd-pickup-toggle"
+                    />
+                  </div>
+                )}
+              </section>
+            )}
           </div>
 
           {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
               — carrito de pedido sin precios, no e-commerce; el checkout
               real pasa por WhatsApp desde el drawer del carrito. Barra fija
               al pie del diálogo: SIEMPRE visible. La cantidad muestra la unidad elegida ("2 Cajas"). */}
-          <AddNote product={product} selected={selected} />
+          <AddNote product={product} selected={selected} state={addState} />
           {!deliverable && !pickupable ? null : (
-          <div className="flex shrink-0 items-center gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
+          <div className="flex shrink-0 items-start gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -247,7 +301,14 @@ export default function ProductDetailModal({
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
               </button>
             </div>
-            <ChannelButtons product={product} selected={selected} justAdded={justAdded} onAdd={handleAddToCart} />
+            <AddButtons
+              product={product}
+              state={addState}
+              site={chosenSite ? { id: chosenSite.siteId, name: chosenSite.name } : null}
+              justAdded={justAdded}
+              onAdd={handleAddToCart}
+              onClearSite={() => setSiteId(null)}
+            />
           </div>
           )}
         </div>
