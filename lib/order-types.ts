@@ -66,6 +66,9 @@ export interface OrderPreviewDelivery {
   date: string | null;
   valid: boolean;
   requiresCoordination: boolean;
+  // Opcionales del servidor: motivo de la coordinación y tipo de la fecha elegida (route | plan = sin costo de envío; special = con cobro).
+  coordinationReason: string | null;
+  dateType: string | null;
 }
 
 // Resultado de UN grupo (domicilio o retiro). canOrder y errors son del grupo; el método de pago es global.

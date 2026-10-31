@@ -23,6 +23,7 @@ import {
   changeLineUnit,
   loadPersistedCart,
   loadPersistedOwner,
+  moveDeliveryToPickup as moveLinesToPickup,
   removeLine,
   serializeCart,
   setLineQuantity,
@@ -41,6 +42,8 @@ interface CartContextValue {
   setQuantity: (id: string, quantity: number, unitId?: string, channel?: CartChannel) => void;
   // Cambia la presentación de una línea (si ya hay otra con la presentación destino, se suman).
   changeUnit: (id: string, fromUnitId: string | undefined, toUnitId: string | undefined, channel?: CartChannel) => void;
+  // Pasa a retiro en tienda las líneas de domicilio que también se consiguen en tienda (zona que se coordina con un asesor).
+  moveDeliveryToPickup: () => void;
   // Tienda de retiro elegida por el cliente (una sola para todo el grupo); null = sin elegir (se propone una).
   pickupSiteId: string | null;
   setPickupSite: (siteId: string | null) => void;
@@ -165,6 +168,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((current) => changeLineUnit(current, id, fromUnitId, toUnitId, channel));
   };
 
+  const moveDeliveryToPickup = () => {
+    setItems((current) => moveLinesToPickup(current));
+  };
+
   const clear = () => {
     setItems([]);
     setPickupSiteId(null);
@@ -183,6 +190,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     setQuantity,
     changeUnit,
+    moveDeliveryToPickup,
     pickupSiteId,
     setPickupSite: setPickupSiteId,
     pickupDate,

@@ -42,10 +42,19 @@ export interface MinimumAmountInfo {
 
 // Próximas fechas de entrega de la dirección activa (GET /api/checkout/delivery-dates).
 // `dates` son fechas de calendario "yyyy-MM-dd" (sin hora ni zona). Con
-// `requiresCoordination` no hay fechas automáticas: se coordina con servicio al cliente.
+// `requiresCoordination` no hay fechas automáticas: un asesor coordina la entrega (`coordinationReason`: no_city | no_free_day |
+// unconfigured_zone). `options` (opcional) trae el tipo de cada fecha: route y plan = sin costo de envío; special = con cobro (`freight`).
+export interface DeliveryDateOption {
+  date: string;
+  type: "route" | "plan" | "special";
+  freight: number;
+}
+
 export interface DeliveryDatesInfo {
   dates: string[];
   requiresCoordination: boolean;
+  coordinationReason: string | null;
+  options: DeliveryDateOption[];
 }
 
 // Fechas de retiro en tienda (GET /api/checkout/pickup-dates): "yyyy-MM-dd", sin hora ni zona.

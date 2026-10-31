@@ -2,8 +2,11 @@
 
 import { useId } from "react";
 import { CalendarDays } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useAddresses } from "@/lib/addresses-context";
+import { useCart } from "@/lib/cart-context";
+import { hasPickup } from "@/lib/catalog-channel";
+import { formatColones } from "@/lib/checkout-format";
 import { useActiveDeliveryDates } from "@/lib/checkout-info";
 import { site } from "@/lib/data";
 import { ACCENT, BEIGE, FOCUS_RING, INK, TEXT_MUTED } from "@/components/ui/drawer-tokens";
@@ -21,9 +24,18 @@ interface Props {
 // "Entrega" del flujo del pedido. `requiresCoordination` → mensaje de coordinación con servicio al cliente.
 export default function DeliveryDates({ selectedDate, onSelectDate }: Props) {
   const t = useTranslations("Cart.checkout");
+  const locale = useLocale();
+  const { items, moveDeliveryToPickup } = useCart();
   const { activeAddress, status: addressesStatus } = useAddresses();
   const dates = useActiveDeliveryDates();
   const groupId = useId();
+
+  // Sin costo de envío para las fechas de ruta y de plan; las especiales (apagadas hoy) muestran su costo.
+  const captions: Record<string, string> = {};
+  for (const option of dates.data?.options ?? []) {
+    captions[option.date] = option.type === "special" ? formatColones(option.freight, locale) : t("freeShipping");
+  }
+  const canMoveToPickup = items.some((item) => item.channel === "delivery" && hasPickup(item));
 
   const datesLoading = addressesStatus === "loading" || dates.status === "loading";
   const datesError = addressesStatus === "error" || dates.status === "error";
@@ -67,6 +79,9 @@ export default function DeliveryDates({ selectedDate, onSelectDate }: Props) {
             <p className="text-[14px] font-semibold leading-snug" style={{ color: INK }}>
               {t("coordination")}
             </p>
+            <p className="mt-1 text-[12.5px] leading-snug" style={{ color: TEXT_MUTED }}>
+              {t("coordinationBody")}
+            </p>
             <a
               href={site.whatsappHref}
               target="_blank"
@@ -76,11 +91,21 @@ export default function DeliveryDates({ selectedDate, onSelectDate }: Props) {
             >
               {t("coordinationCta")}
             </a>
+            {canMoveToPickup && (
+              <button
+                type="button"
+                onClick={moveDeliveryToPickup}
+                className={`mt-3 block rounded-full border bg-white px-4 py-2 text-[13px] font-semibold motion-safe:transition hover:bg-[#FBF9F5] ${FOCUS_RING}`}
+                style={{ borderColor: INK, color: INK }}
+              >
+                {t("coordinationToPickup")}
+              </button>
+            )}
           </div>
         )}
 
         {hasDates && dates.data && (
-          <DateChips dates={dates.data.dates} selectedDate={selectedDate} onSelectDate={onSelectDate} labelledBy={`${groupId}-title`} hint={t("datesHint")} />
+          <DateChips dates={dates.data.dates} selectedDate={selectedDate} onSelectDate={onSelectDate} labelledBy={`${groupId}-title`} hint={t("datesHint")} captions={captions} />
         )}
       </div>
     </div>

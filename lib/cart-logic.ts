@@ -53,6 +53,17 @@ export function addToCart(
   ];
 }
 
+// Pasa a retiro en tienda las líneas de domicilio cuyo producto también se consigue en tienda (las que no, se quedan en domicilio). Si ya
+// hay una línea de retiro con el mismo producto y presentación, se suman. El servidor vuelve a validar existencia, precio y presentación.
+export function moveDeliveryToPickup(items: CartItem[]): CartItem[] {
+  // Misma regla que hasPickup (catalog-channel): sin `availability` el producto no se consigue en tienda. Aquí no se importa para que este archivo
+  // siga cargándose solo con tipos (sin imports en tiempo de ejecución).
+  const movable = (item: CartItem) => item.channel === "delivery" && (item.availability?.pickup.available ?? false);
+  return items
+    .filter(movable)
+    .reduce((current, item) => addToCart(current, item, item.quantity, item.unitId, "pickup"), items.filter((item) => !movable(item)));
+}
+
 export function removeLine(items: CartItem[], id: string, unitId?: string | null, channel: CartChannel = "delivery"): CartItem[] {
   return items.filter((item) => !sameLine(item, id, unitId, channel));
 }

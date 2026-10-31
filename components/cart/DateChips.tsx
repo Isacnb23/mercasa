@@ -4,7 +4,7 @@ import { useId } from "react";
 import { Check } from "lucide-react";
 import { useLocale } from "next-intl";
 import { formatDeliveryChip, formatDeliveryDate } from "@/lib/checkout-format";
-import { INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
+import { ACCENT, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 
 interface Props {
   // Fechas de calendario "yyyy-MM-dd" a ofrecer.
@@ -15,11 +15,13 @@ interface Props {
   // id del título que nombra el grupo de radios.
   labelledBy: string;
   hint: string;
+  // Texto corto bajo cada fecha (p. ej. "Sin costo de envío"), por fecha "yyyy-MM-dd". Sin entrada = sin texto.
+  captions?: Record<string, string>;
 }
 
 // Chips de fecha como un grupo de radios accesible. Lo comparten las fechas de entrega a domicilio y las de retiro en tienda: mismo
 // aspecto y mismo formato (America/Costa_Rica, sin correr el día).
-export default function DateChips({ dates, selectedDate, onSelectDate, labelledBy, hint }: Props) {
+export default function DateChips({ dates, selectedDate, onSelectDate, labelledBy, hint, captions }: Props) {
   const locale = useLocale();
   const groupId = useId();
 
@@ -30,6 +32,7 @@ export default function DateChips({ dates, selectedDate, onSelectDate, labelledB
           const chip = formatDeliveryChip(iso, locale);
           const full = formatDeliveryDate(iso, locale);
           if (!chip || !full) return null;
+          const caption = captions?.[iso];
           return (
             <label key={iso} className="relative block cursor-pointer">
               <input
@@ -38,7 +41,7 @@ export default function DateChips({ dates, selectedDate, onSelectDate, labelledB
                 value={iso}
                 checked={selectedDate === iso}
                 onChange={() => onSelectDate(iso)}
-                aria-label={full}
+                aria-label={caption ? `${full}. ${caption}` : full}
                 className="peer sr-only"
               />
               <span
@@ -53,6 +56,11 @@ export default function DateChips({ dates, selectedDate, onSelectDate, labelledB
                 <span className="mt-1.5 text-[11px] font-bold uppercase leading-none" style={{ letterSpacing: "0.1em" }}>
                   {chip.month}
                 </span>
+                {caption && (
+                  <span className="mt-1.5 px-0.5 text-[10.5px] font-semibold leading-tight" style={{ color: ACCENT }}>
+                    {caption}
+                  </span>
+                )}
               </span>
               <span
                 aria-hidden

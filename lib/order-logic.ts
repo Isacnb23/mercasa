@@ -257,6 +257,8 @@ export function parseOrderPreview(raw: unknown): OrderPreview | null {
       date: typeof delivery.date === "string" ? delivery.date : null,
       valid: delivery.valid === true,
       requiresCoordination: delivery.requiresCoordination === true,
+      coordinationReason: typeof delivery.coordinationReason === "string" ? delivery.coordinationReason : null,
+      dateType: typeof delivery.dateType === "string" ? delivery.dateType : null,
     },
     canOrder: r.canOrder,
     errors,

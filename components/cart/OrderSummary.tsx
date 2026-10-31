@@ -78,9 +78,13 @@ export default function OrderSummary({ preview, channel = "delivery", stale, sho
 
   // El flete solo se pide con fecha de entrega elegida (y una zona que no se coordina aparte): sin ella se invita a elegirla.
   const freightNeedsDate = channel === "delivery" && deliveryDate === null && !preview.delivery.requiresCoordination;
+  // Fecha de ruta o de plan (o flete 0 de AX): "Sin costo", no ₡0.
+  const freeShipping = preview.freight === 0 || preview.delivery.dateType === "route" || preview.delivery.dateType === "plan";
   const freightValue =
-    preview.freight !== null
-      ? money(preview.freight)
+    freeShipping && preview.freight !== null
+      ? t("freightFree")
+      : preview.freight !== null
+        ? money(preview.freight)
       : freightNeedsDate
         ? t("freightPickDate")
         : preview.freightPending

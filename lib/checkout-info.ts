@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth-context";
 import { useActiveAddress } from "./addresses-context";
-import type { DeliveryDatesInfo, MinimumAmountInfo, PickupDatesInfo } from "./auth-types";
+import type { DeliveryDateOption, DeliveryDatesInfo, MinimumAmountInfo, PickupDatesInfo } from "./auth-types";
 
 export type CheckoutStatus = "idle" | "loading" | "ready" | "error";
 
@@ -29,11 +29,27 @@ function parseMinimumAmount(raw: unknown): MinimumAmountInfo | null {
   return { minimumAmount, isDefault: isDefault === true };
 }
 
-function parseDeliveryDates(raw: unknown): DeliveryDatesInfo | null {
+// `dateOptions` es opcional: lo que no se reconoce se ignora (la fecha sigue ofreciéndose, solo sin etiqueta).
+function parseDateOptions(raw: unknown): DeliveryDateOption[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((entry): DeliveryDateOption[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { date, type, freight } = entry as Record<string, unknown>;
+    if (typeof date !== "string" || (type !== "route" && type !== "plan" && type !== "special")) return [];
+    return [{ date, type, freight: typeof freight === "number" && Number.isFinite(freight) ? freight : 0 }];
+  });
+}
+
+export function parseDeliveryDates(raw: unknown): DeliveryDatesInfo | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { dates, requiresCoordination } = raw as Record<string, unknown>;
+  const { dates, requiresCoordination, coordinationReason, dateOptions } = raw as Record<string, unknown>;
   if (!Array.isArray(dates) || !dates.every((d) => typeof d === "string")) return null;
-  return { dates: dates as string[], requiresCoordination: requiresCoordination === true };
+  return {
+    dates: dates as string[],
+    requiresCoordination: requiresCoordination === true,
+    coordinationReason: typeof coordinationReason === "string" ? coordinationReason : null,
+    options: parseDateOptions(dateOptions),
+  };
 }
 
 function parsePickupDates(raw: unknown): PickupDatesInfo | null {
