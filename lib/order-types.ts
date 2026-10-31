@@ -21,6 +21,8 @@ export interface OrderDeliveryGroupInput {
 export interface OrderPickupGroupInput {
   // Código de UNA tienda oficial de retiro.
   siteId: string;
+  // "yyyy-MM-dd", una de las fechas de GET /api/checkout/pickup-dates. Ausente = sin fecha elegida.
+  pickupDate?: string;
   lines: OrderLineInput[];
 }
 

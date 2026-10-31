@@ -27,6 +27,8 @@ interface Params {
   paymentMethod: PaymentMethod | null;
   // Tienda de retiro (la elegida o la propuesta); null = sin grupo de retiro.
   pickupSiteId: string | null;
+  // Fecha de retiro elegida ("yyyy-MM-dd"); null/ausente = sin fecha (no viaja).
+  pickupDate?: string | null;
 }
 
 interface State {
@@ -55,7 +57,7 @@ function errorFor(status: number): OrderPreviewError {
   return "unknown";
 }
 
-export function useOrderPreview({ cartItems, addressId, addressRevision = 0, deliveryDate, paymentMethod, pickupSiteId }: Params): OrderPreviewResult {
+export function useOrderPreview({ cartItems, addressId, addressRevision = 0, deliveryDate, paymentMethod, pickupSiteId, pickupDate = null }: Params): OrderPreviewResult {
   const { user } = useAuth();
   const accountNum = user?.accountNum ?? null;
   const [attempt, setAttempt] = useState(0);
@@ -65,9 +67,9 @@ export function useOrderPreview({ cartItems, addressId, addressRevision = 0, del
   // Sin sesión, sin líneas o sin ningún grupo armable (ej. solo domicilio y sin dirección) no se pide nada.
   const body = useMemo(() => {
     if (!accountNum || cartItems.length === 0) return null;
-    const request = buildOrderRequest(cartItems, { addressId, deliveryDate, paymentMethod, pickupSiteId });
+    const request = buildOrderRequest(cartItems, { addressId, deliveryDate, paymentMethod, pickupSiteId, pickupDate });
     return request.delivery || request.pickup ? orderRequestKey(request) : null;
-  }, [accountNum, addressId, cartItems, deliveryDate, paymentMethod, pickupSiteId]);
+  }, [accountNum, addressId, cartItems, deliveryDate, paymentMethod, pickupSiteId, pickupDate]);
 
   const requestKey = body && accountNum ? `${accountNum}|${body}#${attempt}.${addressRevision}` : null;
 

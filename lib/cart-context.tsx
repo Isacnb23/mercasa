@@ -44,6 +44,9 @@ interface CartContextValue {
   // Tienda de retiro elegida por el cliente (una sola para todo el grupo); null = sin elegir (se propone una).
   pickupSiteId: string | null;
   setPickupSite: (siteId: string | null) => void;
+  // Fecha de retiro elegida ("yyyy-MM-dd"); null = sin elegir. Solo en memoria (no se guarda): las fechas ofrecidas cambian cada día.
+  pickupDate: string | null;
+  setPickupDate: (date: string | null) => void;
   clear: () => void;
 }
 
@@ -54,6 +57,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const accountNum = user?.accountNum ?? null;
   const [items, setItems] = useState<CartItem[]>([]);
   const [pickupSiteId, setPickupSiteId] = useState<string | null>(null);
+  const [pickupDate, setPickupDate] = useState<string | null>(null);
   // Hash de la cuenta dueña del carrito; null = de visitante (o guardado antes de que existiera el dueño).
   const [owner, setOwner] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -120,11 +124,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (result.emptied) {
       setItems([]);
       setPickupSiteId(null);
+      setPickupDate(null);
     }
   }, [hydrated, authLoading, accountNum, items, owner]);
 
   // Cierre de sesión o sesión expirada (clearAccountState): la tienda de retiro elegida es de la cuenta; las líneas se quedan.
-  useEffect(() => onAccountStateCleared(() => setPickupSiteId(null)), []);
+  useEffect(
+    () =>
+      onAccountStateCleared(() => {
+        setPickupSiteId(null);
+        setPickupDate(null);
+      }),
+    [],
+  );
 
   // No abre el drawer automáticamente (ver montar-carrito-en-base-al-
   // catalogo.md): agregar varios productos seguidos desde la grilla del
@@ -156,6 +168,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clear = () => {
     setItems([]);
     setPickupSiteId(null);
+    setPickupDate(null);
   };
 
   const totalCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
@@ -172,6 +185,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     changeUnit,
     pickupSiteId,
     setPickupSite: setPickupSiteId,
+    pickupDate,
+    setPickupDate,
     clear,
   };
 

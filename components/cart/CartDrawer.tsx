@@ -12,6 +12,7 @@ import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { ORDERING_ENABLED } from "@/lib/feature-flags";
 import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
 import { useOrderPreview } from "@/lib/order-preview";
+import { usePickupDates } from "@/lib/checkout-info";
 import { onAccountStateCleared } from "@/lib/account-state";
 import { submitOrder } from "@/lib/order-submit";
 import {
@@ -75,7 +76,7 @@ export default function CartDrawer() {
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
   const { user, openProfile } = useAuth();
-  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite } = useCart();
+  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite, pickupDate, setPickupDate } = useCart();
   const { addressId, revision: addressRevision } = useActiveAddress();
   const { status: addressesStatus } = useAddresses();
 
@@ -122,7 +123,10 @@ export default function CartDrawer() {
 
   // Vista previa del servidor: precios, totales, mínimo y errores por grupo. Sin sesión no se llama; el grupo de
   // domicilio necesita además una dirección y el de retiro, una tienda.
-  const order = useOrderPreview({ cartItems: items, addressId, addressRevision, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite });
+  // Fechas de retiro (solo con grupo de retiro, sesión y tienda). La fecha elegida solo viaja si sigue entre las ofrecidas.
+  const pickupDates = usePickupDates(!!user && present.pickup && pickupSite !== null);
+  const selectedPickupDate = pickupDate && pickupDates.data?.dates.includes(pickupDate) ? pickupDate : null;
+  const order = useOrderPreview({ cartItems: items, addressId, addressRevision, deliveryDate: selectedDate, paymentMethod, pickupSiteId: pickupSite, pickupDate: selectedPickupDate });
   const preview = order.preview;
   const expectDelivery = !!user && addressId !== null;
   const expectPickup = !!user && present.pickup && pickupSite !== null;
@@ -397,7 +401,14 @@ export default function CartDrawer() {
               showDelivery={present.delivery}
               pickup={
                 present.pickup
-                  ? { group: preview?.pickupGroup ?? null, proposed: pickupSiteId === null, onSelectSite: setPickupSite }
+                  ? {
+                      group: preview?.pickupGroup ?? null,
+                      proposed: pickupSiteId === null,
+                      onSelectSite: setPickupSite,
+                      dates: pickupDates,
+                      selectedDate: selectedPickupDate,
+                      onSelectDate: setPickupDate,
+                    }
                   : null
               }
             />

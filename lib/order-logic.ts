@@ -37,6 +37,8 @@ export interface OrderSelection {
   paymentMethod: PaymentMethod | null;
   // Tienda de retiro; sin ella no se arma el grupo de retiro.
   pickupSiteId: string | null;
+  // Fecha de retiro elegida ("yyyy-MM-dd"); ausente o null = sin fecha (el campo no viaja).
+  pickupDate?: string | null;
 }
 
 // Arma el cuerpo del pedido SOLO con itemId, presentación elegida (si la hay) y cantidad (+ selecciones). Cada
@@ -52,7 +54,10 @@ export function buildOrderRequest(cartItems: ReadonlyArray<CartLineLike>, select
       deliveryLines.length > 0 && selection.addressId !== null
         ? { addressId: selection.addressId, deliveryDate: selection.deliveryDate, lines: deliveryLines }
         : null,
-    pickup: pickupLines.length > 0 && selection.pickupSiteId ? { siteId: selection.pickupSiteId, lines: pickupLines } : null,
+    pickup:
+      pickupLines.length > 0 && selection.pickupSiteId
+        ? { siteId: selection.pickupSiteId, ...(selection.pickupDate ? { pickupDate: selection.pickupDate } : {}), lines: pickupLines }
+        : null,
   };
 }
 
@@ -104,9 +109,11 @@ export function sanitizeOrderRequest(raw: unknown): OrderRequest | null {
     const g = body.pickup as Record<string, unknown>;
     const siteId = g.siteId;
     if (typeof siteId !== "string" || siteId.trim() === "" || siteId.length > MAX_SITE_ID_LENGTH) return null;
+    const pickupDate = g.pickupDate ?? null;
+    if (pickupDate !== null && (typeof pickupDate !== "string" || !ISO_DATE.test(pickupDate))) return null;
     const lines = cleanLines(g.lines);
     if (!lines) return null;
-    pickup = { siteId: siteId.trim(), lines };
+    pickup = { siteId: siteId.trim(), ...(pickupDate !== null ? { pickupDate } : {}), lines };
   }
 
   if (!delivery && !pickup) return null;
@@ -320,6 +327,33 @@ export function hasError(preview: OrderPreview, code: string): boolean {
   );
 }
 
+// Código con que mercasa-api rechaza un domicilio que AX no puede atender. Cada razón viene como un error aparte, SIN itemId, con la
+// razón de AX en `message`.
+export const DELIVERY_NOT_POSSIBLE = "delivery_not_possible";
+// Código con que mercasa-api rechaza una fecha de retiro que no se ofrece.
+export const PICKUP_DATE_INVALID = "pickup_date_invalid";
+
+// Razones (textos de AX, sin repetir ni vacías) por las que el grupo a domicilio no se puede entregar. Vacía = sin ese error.
+export function deliveryNotPossibleReasons(preview: OrderPreview): string[] {
+  const reasons: string[] = [];
+  for (const error of preview.deliveryGroup?.errors ?? []) {
+    if (error.code !== DELIVERY_NOT_POSSIBLE || error.itemId) continue;
+    const reason = error.message.trim();
+    if (reason !== "" && !reasons.includes(reason)) reasons.push(reason);
+  }
+  return reasons;
+}
+
+// ¿El grupo a domicilio trae delivery_not_possible? (aunque la razón venga vacía, el grupo no se puede entregar).
+export function isDeliveryNotPossible(preview: OrderPreview): boolean {
+  return (preview.deliveryGroup?.errors ?? []).some((e) => e.code === DELIVERY_NOT_POSSIBLE && !e.itemId);
+}
+
+// ¿El servidor rechazó la fecha de retiro elegida?
+export function isPickupDateInvalid(preview: OrderPreview): boolean {
+  return (preview.pickupGroup?.errors ?? []).some((e) => e.code === PICKUP_DATE_INVALID);
+}
+
 export interface OrderGroupsPresent {
   delivery: boolean;
   pickup: boolean;
@@ -346,15 +380,20 @@ export function canAdvance(
       if (present.pickup && !preview.pickupGroup) return false;
       const hasLines = groups.some((g) => g && g.lines.length > 0);
       const belowMinimum = groups.some((g) => g?.belowMinimum);
-      return hasLines && !hasLineErrors(preview) && !hasError(preview, "price_list_missing") && !belowMinimum;
+      // Un domicilio que AX no puede atender bloquea el avance (el aviso con las razones sale en el resumen de ese grupo).
+      const notDeliverable = present.delivery && isDeliveryNotPossible(preview);
+      return hasLines && !hasLineErrors(preview) && !hasError(preview, "price_list_missing") && !belowMinimum && !notDeliverable;
     }
     case "delivery": {
       const deliveryOk = !present.delivery
         ? true
-        : preview.delivery.requiresCoordination
-          ? selection.deliveryDate === null && preview.delivery.valid
-          : selection.deliveryDate !== null && preview.delivery.valid;
-      const pickupOk = !present.pickup ? true : !!preview.pickupGroup && preview.pickupGroup.siteId !== "";
+        : isDeliveryNotPossible(preview)
+          ? false
+          : preview.delivery.requiresCoordination
+            ? selection.deliveryDate === null && preview.delivery.valid
+            : selection.deliveryDate !== null && preview.delivery.valid;
+      // La fecha de retiro es opcional por ahora; si se eligió una y el servidor no la ofrece, no se avanza.
+      const pickupOk = !present.pickup ? true : !!preview.pickupGroup && preview.pickupGroup.siteId !== "" && !isPickupDateInvalid(preview);
       return deliveryOk && pickupOk;
     }
     case "payment":

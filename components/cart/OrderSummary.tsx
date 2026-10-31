@@ -4,7 +4,7 @@ import { AlertCircle, Receipt } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { formatColones } from "@/lib/checkout-format";
 import type { CartChannel } from "@/lib/cart-types";
-import { groupFor, hasError } from "@/lib/order-logic";
+import { deliveryNotPossibleReasons, groupFor, hasError, isDeliveryNotPossible } from "@/lib/order-logic";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 
@@ -31,6 +31,28 @@ export default function OrderSummary({ preview, channel = "delivery", stale, sho
   const priceListMissing = channel === "delivery" && hasError(preview, "price_list_missing");
 
   if (!group) return null;
+
+  // AX no puede atender el domicilio: aviso con las razones y sin totales (el grupo no avanza).
+  if (channel === "delivery" && isDeliveryNotPossible(preview)) {
+    const reasons = deliveryNotPossibleReasons(preview);
+    return (
+      <div role="alert" className="rounded-2xl px-4 py-3.5" style={{ background: DANGER_BG, color: DANGER_TEXT }}>
+        <p className="flex items-start gap-2 text-[14px] font-semibold leading-snug">
+          <AlertCircle className="mt-px h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+          {t("deliveryNotPossibleTitle")}
+        </p>
+        <p className="mt-1.5 text-[13px] leading-snug">{t("deliveryNotPossibleIntro")}</p>
+        {reasons.length > 0 && (
+          <ul className="mt-1.5 list-disc pl-5 text-[13px] leading-snug">
+            {reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-1.5 text-[13px] leading-snug">{t("deliveryNotPossibleHelp")}</p>
+      </div>
+    );
+  }
 
   if (priceListMissing) {
     return (

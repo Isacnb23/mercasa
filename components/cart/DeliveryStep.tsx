@@ -6,6 +6,9 @@ import { useActiveAddress } from "@/lib/addresses-context";
 import { FOCUS_RING, INK, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import type { OrderPreviewPickupGroup } from "@/lib/order-types";
 import DeliveryDates from "./DeliveryDates";
+import type { PickupDatesInfo } from "@/lib/auth-types";
+import type { CheckoutStatus } from "@/lib/checkout-info";
+import PickupDates from "./PickupDates";
 import PickupSiteSelector from "./PickupSiteSelector";
 
 interface Props {
@@ -16,7 +19,15 @@ interface Props {
   // ¿El carrito tiene grupo de domicilio? Solo entonces se piden dirección y fecha.
   showDelivery?: boolean;
   // Grupo de retiro (con la tienda elegida) si el carrito lo tiene; solo entonces se muestra la tienda.
-  pickup?: { group: OrderPreviewPickupGroup | null; proposed: boolean; onSelectSite: (siteId: string) => void } | null;
+  pickup?: {
+    group: OrderPreviewPickupGroup | null;
+    proposed: boolean;
+    onSelectSite: (siteId: string) => void;
+    // Fechas de retiro (usePickupDates), la elegida ("yyyy-MM-dd") y cómo cambiarla; se muestran después de elegir la tienda.
+    dates: { status: CheckoutStatus; data: PickupDatesInfo | null; retry: () => void };
+    selectedDate: string | null;
+    onSelectDate: (date: string) => void;
+  } | null;
 }
 
 // Paso 2: con grupo de domicilio, la dirección activa (cambiar abre "Mis direcciones" del perfil) y las fechas
@@ -37,12 +48,22 @@ export default function DeliveryStep({ selectedDate, onSelectDate, onChangeAddre
             {t("pickupStepIntro")} {!showDelivery && t("pickupOnlyNote")}
           </p>
           {pickup.group ? (
-            <PickupSiteSelector
-              sites={pickup.group.sites}
-              selectedId={pickup.group.siteId}
-              proposed={pickup.proposed}
-              onSelect={pickup.onSelectSite}
-            />
+            <div className="flex flex-col gap-5">
+              <PickupSiteSelector
+                sites={pickup.group.sites}
+                selectedId={pickup.group.siteId}
+                proposed={pickup.proposed}
+                onSelect={pickup.onSelectSite}
+              />
+              {pickup.group.siteId !== "" && (
+                <PickupDates
+                  dates={pickup.dates}
+                  selectedDate={pickup.selectedDate}
+                  onSelectDate={pickup.onSelectDate}
+                  invalid={pickup.group.errors.some((e) => e.code === "pickup_date_invalid")}
+                />
+              )}
+            </div>
           ) : (
             <p className="rounded-2xl border bg-white px-4 py-3.5 text-[13px]" style={{ borderColor: RULE, color: TEXT_MUTED }}>
               {t("pickupNoSite")}

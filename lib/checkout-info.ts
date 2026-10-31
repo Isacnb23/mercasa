@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth-context";
 import { useActiveAddress } from "./addresses-context";
-import type { DeliveryDatesInfo, MinimumAmountInfo } from "./auth-types";
+import type { DeliveryDatesInfo, MinimumAmountInfo, PickupDatesInfo } from "./auth-types";
 
 export type CheckoutStatus = "idle" | "loading" | "ready" | "error";
 
@@ -34,6 +34,13 @@ function parseDeliveryDates(raw: unknown): DeliveryDatesInfo | null {
   const { dates, requiresCoordination } = raw as Record<string, unknown>;
   if (!Array.isArray(dates) || !dates.every((d) => typeof d === "string")) return null;
   return { dates: dates as string[], requiresCoordination: requiresCoordination === true };
+}
+
+function parsePickupDates(raw: unknown): PickupDatesInfo | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { dates } = raw as Record<string, unknown>;
+  if (!Array.isArray(dates) || !dates.every((d) => typeof d === "string")) return null;
+  return { dates: dates as string[] };
 }
 
 // `resourceKey` identifica qué se está pidiendo (cliente + dirección): al cambiar,
@@ -98,6 +105,19 @@ export function useDeliveryDates(addressId: number | null, revision = 0): Resour
     active ? `${accountNum}:${addressId}:${revision}` : null,
     active ? `/api/checkout/delivery-dates?addressId=${addressId}` : null,
     parseDeliveryDates
+  );
+}
+
+// Fechas de retiro en tienda Homex (iguales para todas las tiendas). Solo se piden con sesión y con `enabled` (el carrito tiene
+// grupo de retiro); "idle" si no.
+export function usePickupDates(enabled: boolean): Resource<PickupDatesInfo> {
+  const { user } = useAuth();
+  const accountNum = user?.accountNum ?? null;
+  const active = enabled && accountNum !== null;
+  return useCheckoutResource(
+    active ? `${accountNum}:pickup` : null,
+    active ? "/api/checkout/pickup-dates" : null,
+    parsePickupDates
   );
 }
 

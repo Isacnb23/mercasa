@@ -48,6 +48,11 @@ export interface DeliveryDatesInfo {
   requiresCoordination: boolean;
 }
 
+// Fechas de retiro en tienda (GET /api/checkout/pickup-dates): "yyyy-MM-dd", sin hora ni zona.
+export interface PickupDatesInfo {
+  dates: string[];
+}
+
 // Dirección de entrega guardada (GET /api/addresses). `city` es el código
 // original (CI###, se necesita para editar); los cuatro nombres vienen
 // resueltos desde el servidor y son null si el código no está (o es ambiguo)
