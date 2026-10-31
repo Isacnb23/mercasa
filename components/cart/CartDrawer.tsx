@@ -10,7 +10,7 @@ import { itemsInChannel, resolvePickupSite } from "@/lib/cart-logic";
 import type { CartChannel } from "@/lib/cart-types";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { ORDERING_ENABLED } from "@/lib/feature-flags";
-import { canAdvance, groupFor, hasError, hasLineErrors, nextStep, previousStep } from "@/lib/order-logic";
+import { canAdvance, groupFor, hasError, hasLineErrors, isPickupDateInvalid, nextStep, previousStep } from "@/lib/order-logic";
 import { useOrderPreview } from "@/lib/order-preview";
 import { usePickupDates } from "@/lib/checkout-info";
 import { onAccountStateCleared } from "@/lib/account-state";
@@ -136,7 +136,7 @@ export default function CartDrawer() {
   // por WhatsApp". Un carrito solo de retiro no necesita dirección.
   const flow = ORDERING_ENABLED && expectPrices && (!present.delivery || expectDelivery) && (!present.pickup || expectPickup);
   const currentStep: CheckoutStep = flow && items.length > 0 ? step : "cart";
-  const selection = { deliveryDate: selectedDate, paymentMethod };
+  const selection = { deliveryDate: selectedDate, paymentMethod, pickupDate: selectedPickupDate };
 
   const selectedLabel = selectedDate ? formatDeliveryDate(selectedDate, locale) : null;
   const extraLines: string[] = [];
@@ -317,6 +317,12 @@ export default function CartDrawer() {
       cartBlockedReason = tOrder("minimumShortfall", { amount: formatColones(belowMinimum.shortfall, locale, 2) });
     }
   }
+  // Motivo por el que no se puede continuar desde la entrega: con retiro, la fecha es obligatoria y no puede estar rechazada.
+  let deliveryBlockedReason: string | null = null;
+  if (flow && currentStep === "delivery" && preview && !order.stale && present.pickup) {
+    if (isPickupDateInvalid(preview)) deliveryBlockedReason = tOrder("pickupDateInvalid");
+    else if (!selectedPickupDate) deliveryBlockedReason = tOrder("pickupDateRequired");
+  }
   // Carrito y entrega exigen una respuesta fresca del servidor (precios, mínimo, fecha válida); el pago solo depende
   // del método elegido, así que no se bloquea mientras se vuelve a validar.
   const advanceOk =
@@ -489,6 +495,12 @@ export default function CartDrawer() {
               </a>
               {clearLink}
             </>
+          )}
+
+          {flow && !done && deliveryBlockedReason && (
+            <p className="mb-2.5 text-center text-[12.5px] font-medium leading-snug" style={{ color: "#8A5A00" }} role="status">
+              {deliveryBlockedReason}
+            </p>
           )}
 
           {flow && !done && (currentStep === "delivery" || currentStep === "payment") && (

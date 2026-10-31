@@ -362,14 +362,15 @@ export interface OrderGroupsPresent {
 // ¿Se puede pasar al paso siguiente? Reglas del flujo:
 //   cart     -> sin errores por línea, con lista de precios y por encima del mínimo de CADA grupo presente.
 //   delivery -> con grupo de domicilio: fecha elegida y válida (o zona por coordinar); con grupo de retiro: tienda
-//               elegida y con respuesta del servidor. Sin ese grupo no se pide nada de él.
+//               elegida, con respuesta del servidor, y fecha de retiro elegida y no rechazada por el servidor.
+//               Sin ese grupo no se pide nada de él.
 //   payment  -> método de pago elegido.
 //   summary  -> canOrder global.
 // `present` dice qué grupos tiene el carrito (por defecto solo domicilio, como antes de la fase 2).
 export function canAdvance(
   step: CheckoutStep,
   preview: OrderPreview | null,
-  selection: { deliveryDate: string | null; paymentMethod: PaymentMethod | null },
+  selection: { deliveryDate: string | null; paymentMethod: PaymentMethod | null; pickupDate?: string | null },
   present: OrderGroupsPresent = { delivery: true, pickup: false }
 ): boolean {
   if (!preview) return false;
@@ -392,8 +393,10 @@ export function canAdvance(
           : preview.delivery.requiresCoordination
             ? selection.deliveryDate === null && preview.delivery.valid
             : selection.deliveryDate !== null && preview.delivery.valid;
-      // La fecha de retiro es opcional por ahora; si se eligió una y el servidor no la ofrece, no se avanza.
-      const pickupOk = !present.pickup ? true : !!preview.pickupGroup && preview.pickupGroup.siteId !== "" && !isPickupDateInvalid(preview);
+      // Con retiro la fecha es OBLIGATORIA: sin elegirla (o si el servidor la rechaza) no se avanza.
+      const pickupOk = !present.pickup
+        ? true
+        : !!preview.pickupGroup && preview.pickupGroup.siteId !== "" && !!selection.pickupDate && !isPickupDateInvalid(preview);
       return deliveryOk && pickupOk;
     }
     case "payment":

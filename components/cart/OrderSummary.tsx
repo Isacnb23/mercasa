@@ -49,6 +49,7 @@ export default function OrderSummary({ preview, channel = "delivery", stale, sho
             ))}
           </ul>
         )}
+        <p className="mt-1.5 text-[13px] font-medium leading-snug">{t("deliveryNotPossibleOptions")}</p>
         <p className="mt-1.5 text-[13px] leading-snug">{t("deliveryNotPossibleHelp")}</p>
       </div>
     );
