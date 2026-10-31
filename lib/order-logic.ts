@@ -333,6 +333,14 @@ export const DELIVERY_NOT_POSSIBLE = "delivery_not_possible";
 // Código con que mercasa-api rechaza una fecha de retiro que no se ofrece.
 export const PICKUP_DATE_INVALID = "pickup_date_invalid";
 
+// Precio de UNA unidad CON IVA de una línea validada: (precio unitario sin IVA x cantidad + IVA de la línea) / cantidad. Solo para
+// MOSTRAR junto al total de la línea (que ya lleva IVA), igual que el catálogo muestra "IVA incluido"; todos los números salen de
+// la respuesta del servidor y los totales del pedido siguen siendo los suyos. null si la línea no tiene cantidad.
+export function unitPriceWithTax(line: { unitPrice: number; tax: number; quantity: number }): number | null {
+  if (!(line.quantity > 0)) return null;
+  return (line.unitPrice * line.quantity + line.tax) / line.quantity;
+}
+
 // Razones (textos de AX, sin repetir ni vacías) por las que el grupo a domicilio no se puede entregar. Vacía = sin ese error.
 export function deliveryNotPossibleReasons(preview: OrderPreview): string[] {
   const reasons: string[] = [];

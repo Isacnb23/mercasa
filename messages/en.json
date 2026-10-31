@@ -386,6 +386,11 @@
       "tax": "Tax",
       "freight": "Shipping",
       "freightPending": "Calculated at confirmation",
+      "freightPickDate": "Choose the date to calculate shipping",
+      "unitPriceVatIncluded": "{price} each, VAT included",
+      "tabDelivery": "Delivery ({count})",
+      "tabPickup": "Pickup ({count})",
+      "groupTabsAria": "Jump to an order group",
       "total": "Total",
       "discountsNote": "Discounts and promotions are applied at confirmation.",
       "priceNote": "Price according to your account.",
@@ -503,7 +508,8 @@
       "coordinationCta": "Message us on WhatsApp",
       "error": "We couldn't load this information.",
       "retry": "Retry",
-      "whatsappDeliveryLine": "Preferred delivery date: {date}"
+      "whatsappDeliveryLine": "Preferred delivery date: {date}",
+      "whatsappPickupLine": "Preferred pickup date: {date}"
     },
     "whatsappIntro": "Hi, I'd like to place an order for the following products:",
     "whatsappOutro": "Could you help me with availability and pricing? Thank you."

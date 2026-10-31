@@ -386,6 +386,11 @@
       "tax": "Impuesto",
       "freight": "Flete",
       "freightPending": "Se calcula al confirmar",
+      "freightPickDate": "Elegí la fecha para calcular el flete",
+      "unitPriceVatIncluded": "{price} c/u IVA incluido",
+      "tabDelivery": "Domicilio ({count})",
+      "tabPickup": "Retiro ({count})",
+      "groupTabsAria": "Ir a un grupo del pedido",
       "total": "Total",
       "discountsNote": "Los descuentos y promociones se aplican al confirmar.",
       "priceNote": "Precio según tu cuenta.",
@@ -503,7 +508,8 @@
       "coordinationCta": "Escribir por WhatsApp",
       "error": "No pudimos cargar esta información.",
       "retry": "Reintentar",
-      "whatsappDeliveryLine": "Fecha de entrega preferida: {date}"
+      "whatsappDeliveryLine": "Fecha de entrega preferida: {date}",
+      "whatsappPickupLine": "Fecha de retiro preferida: {date}"
     },
     "whatsappIntro": "Hola, quisiera hacer un pedido de los siguientes productos:",
     "whatsappOutro": "¿Podrían ayudarme con la disponibilidad y cotización? Gracias."

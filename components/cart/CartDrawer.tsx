@@ -28,7 +28,9 @@ import CartLines from "@/components/cart/CartLines";
 import CheckoutStepper from "@/components/cart/CheckoutStepper";
 import ConfirmStep, { type SubmitState } from "@/components/cart/ConfirmStep";
 import DeliveryStep from "@/components/cart/DeliveryStep";
+import GroupTabs, { GROUP_CARD_IDS } from "@/components/cart/GroupTabs";
 import OrderSummary, { GrandTotal } from "@/components/cart/OrderSummary";
+import PickupDates from "@/components/cart/PickupDates";
 import PickupSiteSelector from "@/components/cart/PickupSiteSelector";
 import PaymentStep from "@/components/cart/PaymentStep";
 import { RetryLine } from "@/components/cart/checkout-bits";
@@ -118,6 +120,8 @@ export default function CartDrawer() {
   const deliveryItems = itemsInChannel(items, "delivery");
   const pickupItems = itemsInChannel(items, "pickup");
   const present = { delivery: deliveryItems.length > 0, pickup: pickupItems.length > 0 };
+  const deliveryCount = deliveryItems.reduce((sum, item) => sum + item.quantity, 0);
+  const pickupCount = pickupItems.reduce((sum, item) => sum + item.quantity, 0);
   // Tienda de retiro: la elegida o, sin elección, una propuesta donde haya existencia de lo que lleva el cliente.
   const pickupSite = resolvePickupSite(items, pickupSiteId);
 
@@ -144,6 +148,8 @@ export default function CartDrawer() {
     extraLines.push(tOrder("whatsappTotalLine", { total: formatColones(preview.grandTotals.total, locale, 2) }));
   }
   if (selectedLabel) extraLines.push(tCheckout("whatsappDeliveryLine", { date: selectedLabel }));
+  const pickupLabel = present.pickup && selectedPickupDate ? formatDeliveryDate(selectedPickupDate, locale) : null;
+  if (pickupLabel) extraLines.push(tCheckout("whatsappPickupLine", { date: pickupLabel }));
   const whatsappHref = buildWhatsappHref(site.whatsappHref, buildOrderMessage(items, t, extraLines, locale, tOrder("groupPickupTitle")));
 
   const goTo = (target: CheckoutStep) => {
@@ -213,6 +219,10 @@ export default function CartDrawer() {
   const done = submit.status === "done";
 
   // ----- Contenido del paso "Carrito" (también es todo el cuerpo en modo cotización por WhatsApp) -----
+  // Cada grupo es una tarjeta autocontenida.
+  //   Domicilio: productos -> fecha de entrega -> mínimo (barra compacta) -> flete -> total del envío.
+  //   Retiro:    tienda -> fecha de retiro -> productos -> total del retiro (sin bloque de mínimo cuando es 0).
+  // Con el flujo de pasos las fechas se eligen en el paso "Entrega"; sin él (cotización por WhatsApp) van dentro de la tarjeta.
   const groupSection = (channel: CartChannel) => {
     const groupItems = channel === "delivery" ? deliveryItems : pickupItems;
     if (groupItems.length === 0) return null;
@@ -222,7 +232,13 @@ export default function CartDrawer() {
     const titleId = `cart-group-${channel}`;
 
     return (
-      <section key={channel} aria-labelledby={titleId} className="mb-7 last:mb-0">
+      <section
+        key={channel}
+        id={GROUP_CARD_IDS[channel]}
+        aria-labelledby={titleId}
+        className="mb-5 scroll-mt-20 rounded-3xl border p-3.5 last:mb-0 sm:p-4"
+        style={{ borderColor: RULE, background: BEIGE }}
+      >
         <h3 id={titleId} className="mb-3 flex items-baseline justify-between gap-3 font-display text-[16px] font-semibold" style={{ color: INK }}>
           {channel === "delivery" ? tOrder("groupDeliveryTitle") : tOrder("groupPickupTitle")}
           <span className="text-[12.5px] font-semibold" style={{ color: TEXT_MUTED }}>
@@ -231,13 +247,21 @@ export default function CartDrawer() {
         </h3>
 
         {channel === "pickup" && preview?.pickupGroup && (
-          <div className="mb-3">
+          <div className="mb-4 flex flex-col gap-4">
             <PickupSiteSelector
               sites={preview.pickupGroup.sites}
               selectedId={preview.pickupGroup.siteId}
               proposed={pickupSiteId === null}
               onSelect={setPickupSite}
             />
+            {!flow && preview.pickupGroup.siteId !== "" && (
+              <PickupDates
+                dates={pickupDates}
+                selectedDate={selectedPickupDate}
+                onSelectDate={setPickupDate}
+                invalid={isPickupDateInvalid(preview)}
+              />
+            )}
           </div>
         )}
 
@@ -251,9 +275,15 @@ export default function CartDrawer() {
           onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId, item.channel)}
         />
 
+        {channel === "delivery" && !flow && user && (
+          <div className="mb-1">
+            <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })} />
+          </div>
+        )}
+
         {expect && preview && group && !order.error && (
           <div className="mt-4">
-            <OrderSummary preview={preview} channel={channel} stale={order.stale} />
+            <OrderSummary preview={preview} channel={channel} stale={order.stale} deliveryDate={channel === "delivery" ? selectedDate : undefined} />
           </div>
         )}
       </section>
@@ -262,14 +292,9 @@ export default function CartDrawer() {
 
   const cartStep = (
     <>
+      {present.delivery && present.pickup && <GroupTabs deliveryCount={deliveryCount} pickupCount={pickupCount} />}
       {groupSection("delivery")}
       {groupSection("pickup")}
-
-      {expectPrices && preview && present.delivery && present.pickup && (
-        <div className="mb-2 mt-2">
-          <GrandTotal preview={preview} stale={order.stale} />
-        </div>
-      )}
 
       {expectPrices && (
         <div className="mt-6">
@@ -302,8 +327,8 @@ export default function CartDrawer() {
         </p>
       )}
 
-      {/* Sin el flujo de pasos: aviso de sesión o fechas de entrega (la elegida viaja en el WhatsApp). */}
-      {!flow && <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={(date) => addressId !== null && setChosenDate({ addressId, revision: addressRevision, date })} />}
+      {/* Sin el flujo de pasos y sin sesión: aviso para iniciar sesión (las fechas van dentro de cada tarjeta). */}
+      {!flow && !user && <CartCheckoutInfo selectedDate={selectedDate} onSelectDate={() => {}} />}
     </>
   );
 
@@ -450,6 +475,13 @@ export default function CartDrawer() {
 
       {items.length > 0 && (
         <DrawerFooter>
+          {/* Total general con el total de cada grupo (cuando hay los dos), siempre a la vista junto al botón. */}
+          {currentStep === "cart" && expectPrices && preview && !order.error && (
+            <div className="mb-2.5">
+              <GrandTotal preview={preview} stale={order.stale} compact />
+            </div>
+          )}
+
           {/* Modo cotización: precios validados (si hay) y envío por WhatsApp, como siempre. */}
           {!flow && (
             <>

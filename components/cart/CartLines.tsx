@@ -7,7 +7,7 @@ import { formatColones } from "@/lib/checkout-format";
 import { cartLineKey } from "@/lib/cart-logic";
 import { unitLabel } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
-import { groupFor, lineErrorsByItem, matchPreviewLines } from "@/lib/order-logic";
+import { groupFor, lineErrorsByItem, matchPreviewLines, unitPriceWithTax } from "@/lib/order-logic";
 import { canIncrease, clampToMax, shouldWarnMax } from "@/lib/add-rules";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, MUTED, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
@@ -144,7 +144,7 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
                   <div className="mt-1" aria-live="polite">
                     {priced && line ? (
                       <p className="text-[12.5px]" style={{ color: TEXT_MUTED }}>
-                        {tOrder("unitPrice", { price: formatColones(line.unitPrice, locale, 2) })}
+                        {tOrder("unitPriceVatIncluded", { price: formatColones(unitPriceWithTax(line) ?? line.unitPrice, locale, 2) })}
                       </p>
                     ) : (
                       <span
