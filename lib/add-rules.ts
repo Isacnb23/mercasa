@@ -31,10 +31,48 @@ export function plusAction(product: Pick<ProductSummary, "availability">, unitCo
   return delivery ? "add-delivery" : "add-pickup";
 }
 
+export type PlusDecision =
+  | { action: "add-delivery" }
+  // Agrega la presentación por defecto al retiro de la tienda que ya tiene el carrito.
+  | { action: "add-pickup"; siteId: string }
+  // step "pickup": el modal abre en el paso de retiro (con la tienda del carrito si la hay).
+  | { action: "open-detail"; step: "pickup" | null };
+
+type PlusUnit = Pick<CatalogUnit, "isDefault" | "pickupAvailable" | "pickupBySite">;
+
+const sameSite = (a: string, b: string) => a.trim().toUpperCase() === b.trim().toUpperCase();
+
+// ¿El producto tiene existencia en la tienda del carrito en su presentación por defecto? Con las presentaciones conocidas, la por defecto debe
+// ser retirable y la tienda no puede estar "out" para ella. Sin presentaciones (sin sesión, o un producto solo de retiro, que el servidor no
+// presenta) solo se sabe que la tienda está entre las que tienen el producto.
+function hasStockAtSite(product: Pick<ProductSummary, "availability">, units: ReadonlyArray<PlusUnit> | null, siteId: string): boolean {
+  const sites = product.availability?.pickup.sites ?? [];
+  if (!sites.some((s) => sameSite(s.siteId, siteId))) return false;
+  if (!units || units.length === 0) return true;
+  const unit = units.find((u) => u.isDefault) ?? units[0];
+  if (!unit.pickupAvailable) return false;
+  return unit.pickupBySite?.find((s) => sameSite(s.siteId, siteId))?.status !== "out";
+}
+
+// Regla del "+" de la tarjeta con la tienda del carrito (`cartSiteId`: la tienda de retiro del carrito, o null si no hay):
+//   - solo domicilio: igual que siempre (plusAction);
+//   - con retiro: si el carrito ya tiene tienda y el producto tiene existencia allí en su presentación por defecto, se agrega directo al retiro
+//     de esa tienda; si no hay tienda, o no hay existencia, se abre el modal en el paso de retiro (nunca se agrega al retiro sin tienda).
+export function plusDecision(product: Pick<ProductSummary, "availability">, units: ReadonlyArray<PlusUnit> | null, cartSiteId: string | null): PlusDecision {
+  const delivery = canAddToCart(product, "delivery");
+  const pickup = canAddToCart(product, "pickup");
+  if (!delivery && !pickup) return { action: "open-detail", step: null };
+  if (!pickup) {
+    return plusAction(product, units ? units.length : null) === "add-delivery" ? { action: "add-delivery" } : { action: "open-detail", step: null };
+  }
+  if (cartSiteId && hasStockAtSite(product, units, cartSiteId)) return { action: "add-pickup", siteId: cartSiteId };
+  return { action: "open-detail", step: "pickup" };
+}
+
 // ¿Hace falta saber las presentaciones antes de decidir el "+"? Solo con un canal y sesión (con los dos canales ya
 // se sabe que abre el modal).
-export const needsUnitsForPlus = (product: Pick<ProductSummary, "availability">): boolean =>
-  canAddToCart(product, "delivery") !== canAddToCart(product, "pickup");
+export const needsUnitsForPlus = (product: Pick<ProductSummary, "availability">, cartSiteId: string | null = null): boolean =>
+  canAddToCart(product, "delivery") !== canAddToCart(product, "pickup") || (canAddToCart(product, "pickup") && !!cartSiteId);
 
 export type ChannelButtonState =
   | { enabled: true }

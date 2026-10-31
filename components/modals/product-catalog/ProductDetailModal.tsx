@@ -52,11 +52,14 @@ export default function ProductDetailModal({
   product,
   icon,
   price,
+  startAtPickup = false,
   onClose,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
   price: PriceView;
+  // Abierto desde el "+" de la tarjeta sin poder agregar directo al retiro: empieza con "Retiro en tienda" elegido (paso de tiendas).
+  startAtPickup?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
@@ -83,7 +86,7 @@ export default function ProductDetailModal({
   // ---- La selección: lo que eligió el cliente, normalizado contra lo que informa el servidor ----
   // UNA tienda de retiro por carrito: si el carrito ya tiene retiro con tienda elegida, el modal viene con esa tienda preseleccionada.
   const cartSite = cartPickupSite(cartItems, pickupSiteId);
-  const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: null, siteId: cartSite });
+  const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: startAtPickup ? "pickup" : null, siteId: cartSite });
   // Tienda distinta a la del carrito pendiente de confirmar ("¿Cambiar todo el retiro a Y?").
   const [pendingSite, setPendingSite] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);

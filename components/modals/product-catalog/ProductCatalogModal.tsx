@@ -27,7 +27,8 @@ import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
 import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
-import { needsUnitsForPlus, plusAction } from "@/lib/add-rules";
+import { needsUnitsForPlus, plusDecision } from "@/lib/add-rules";
+import { cartPickupSite } from "@/lib/cart-logic";
 import { fetchItemUnits } from "@/lib/fetch-units";
 import { site } from "@/lib/data";
 import PriceTag, { PickupPriceTag } from "./PriceTag";
@@ -1082,11 +1083,17 @@ export default function ProductCatalogModal({
   // abrir/cerrar, así que cerrar el detalle deja al usuario exactamente en
   // la misma página/categoría de antes. `selectedProduct` null = cerrado.
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+  // "pickup" = el detalle se abrió desde el "+" de la tarjeta y empieza en el paso de retiro.
+  const [selectedStep, setSelectedStep] = useState<"pickup" | null>(null);
+  const openProduct = useCallback((product: ProductSummary, step?: "pickup" | null) => {
+    setSelectedStep(step === "pickup" ? "pickup" : null);
+    setSelectedProduct(product);
+  }, [setSelectedProduct, setSelectedStep]);
 
   // Lo que cambia con el tiempo y necesitan las páginas (precios, abrir el detalle de un producto): por contexto.
   const liveBook = useMemo(
-    () => ({ priceFor, pickupPriceFor, onProductClick: setSelectedProduct, currentPage }),
-    [priceFor, pickupPriceFor, setSelectedProduct, currentPage]
+    () => ({ priceFor, pickupPriceFor, onProductClick: openProduct, currentPage }),
+    [priceFor, pickupPriceFor, openProduct, currentPage]
   );
 
   // Hijos del libro con identidad ESTABLE (ver el comentario junto al <HTMLFlipBook>).
@@ -1764,6 +1771,7 @@ export default function ProductCatalogModal({
           product={selectedProduct}
           icon={Icon}
           price={hasDelivery(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
+          startAtPickup={selectedStep === "pickup"}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1813,7 +1821,7 @@ function FamilyStripItem({
 interface BookLive {
   priceFor: (itemId: string) => PriceView;
   pickupPriceFor: (itemId: string) => PickupPriceView;
-  onProductClick: (product: ProductSummary) => void;
+  onProductClick: (product: ProductSummary, step?: "pickup" | null) => void;
   // Página visible del libro: decide qué páginas piden sus fotos (ver lib/image-window.ts).
   currentPage: number;
 }
@@ -2126,7 +2134,7 @@ function CategorySheet({
   loadImages: boolean;
   priceFor: (id: string) => PriceView;
   pickupPriceFor: (id: string) => PickupPriceView;
-  onProductClick: (product: ProductSummary) => void;
+  onProductClick: (product: ProductSummary, step?: "pickup" | null) => void;
   probe?: boolean;
 }) {
   const t = useTranslations("Products");
@@ -2204,7 +2212,7 @@ function CategorySheet({
             loadImage={loadImages}
             price={hasDelivery(product) ? priceFor(product.id) : { kind: "hidden" }}
             pickupPrice={hasPickup(product) ? pickupPriceFor(product.id) : { kind: "hidden" }}
-            onClick={() => onProductClick(product)}
+            onClick={(step) => onProductClick(product, step)}
           />
         ))}
         {/* Última página de la categoría con una fila vacía como mínimo: no es un error, la categoría terminó. */}
@@ -2292,11 +2300,12 @@ function ProductCard({
   /** false = la página está lejos de la vista: la foto espera (ver lib/image-window.ts). */
   loadImage: boolean;
   price: PriceView;
-  onClick: () => void;
+  // step "pickup": abre el detalle en el paso de retiro (lo usa el "+" cuando no puede agregar directo al retiro).
+  onClick: (step?: "pickup" | null) => void;
 }) {
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
-  const { addItem } = useCart();
+  const { addItem, items: cartItems, pickupSiteId } = useCart();
   const { user } = useAuth();
   // Mientras se averigua cuántas presentaciones tiene el producto al tocar el "+" (solo con sesión y un solo canal).
   const [checkingUnits, setCheckingUnits] = useState(false);
@@ -2334,7 +2343,7 @@ function ProductCard({
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={() => onClick()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -2359,22 +2368,24 @@ function ProductCard({
         aria-busy={checkingUnits}
         onClick={async (e) => {
           e.stopPropagation();
-          // Regla del "+": un solo canal y una sola presentación -> agrega directo; varias presentaciones o los dos
-          // canales -> abre el detalle para elegir (no agrega nada sin preguntar). Con un solo canal y sesión se
-          // consulta cuántas presentaciones tiene; sin saberlo (sin sesión o si falla) se agrega la por defecto.
-          let unitCount: number | null = null;
-          if (user && needsUnitsForPlus(product)) {
+          // Regla del "+" (ver plusDecision en lib/add-rules.ts): solo domicilio, igual que siempre (una sola presentación -> agrega
+          // directo; varias -> abre el detalle). Con retiro: si el carrito ya tiene tienda de retiro y el producto tiene existencia allí
+          // en su presentación por defecto, se agrega directo al retiro de esa tienda; si no hay tienda o no hay existencia, se abre
+          // el detalle en el paso de retiro (nunca se agrega al retiro sin tienda). Con sesión se consultan las presentaciones; sin
+          // ellas (sin sesión o si falla) se decide con lo que ya trae el producto.
+          const cartSite = cartPickupSite(cartItems, pickupSiteId);
+          let units: Awaited<ReturnType<typeof fetchItemUnits>> = null;
+          if (user && needsUnitsForPlus(product, cartSite)) {
             setCheckingUnits(true);
-            const units = await fetchItemUnits(product.id);
+            units = await fetchItemUnits(product.id);
             setCheckingUnits(false);
-            unitCount = units ? units.length : null;
           }
-          const action = plusAction(product, unitCount);
-          if (action === "open-detail") {
-            onClick();
+          const decision = plusDecision(product, units, cartSite);
+          if (decision.action === "open-detail") {
+            onClick(decision.step);
             return;
           }
-          addItem(product, 1, undefined, action === "add-pickup" ? "pickup" : "delivery");
+          addItem(product, 1, undefined, decision.action === "add-pickup" ? "pickup" : "delivery");
           setJustAdded(true);
           setTimeout(() => setJustAdded(false), 1400);
         }}
