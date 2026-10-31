@@ -1764,7 +1764,6 @@ export default function ProductCatalogModal({
           product={selectedProduct}
           icon={Icon}
           price={hasDelivery(selectedProduct) ? priceFor(selectedProduct.id) : { kind: "hidden" }}
-          pickupPrice={hasPickup(selectedProduct) ? pickupPriceFor(selectedProduct.id) : { kind: "hidden" }}
           onClose={() => setSelectedProduct(null)}
         />
       )}

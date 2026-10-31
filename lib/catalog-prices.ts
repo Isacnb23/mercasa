@@ -23,6 +23,8 @@ export interface CatalogUnit {
   pickupAvailable: boolean;
   // Existencia por tienda EN ESTA presentación, sin cantidades (available | low | out). null = el servidor no la informó.
   pickupBySite: { siteId: string; status: "available" | "low" | "out" }[] | null;
+  // Existencia a domicilio de ESTA presentación, sin cantidades (available | low | out). null = el servidor no la informó.
+  deliveryStatus: "available" | "low" | "out" | null;
 }
 
 // Precio de catálogo de un producto: SIN IVA, con la unidad de venta del dato (la del listado). Solo
@@ -140,6 +142,10 @@ export function sanitizeCatalogPricesBody(body: unknown): { itemIds: string[]; w
   return { itemIds: itemIds.map((id) => id.trim()), withUnits };
 }
 
+function parseStatus(raw: unknown): "available" | "low" | "out" | null {
+  return raw === "available" || raw === "low" || raw === "out" ? raw : null;
+}
+
 // Estado por tienda de una presentación: lo que no se entiende se ignora (la tienda queda sin estado). Sin lista: null.
 function parsePickupBySite(raw: unknown): CatalogUnit["pickupBySite"] {
   if (!Array.isArray(raw)) return null;
@@ -183,6 +189,7 @@ function parseUnits(raw: unknown): CatalogUnit[] | null | false {
       isDefault: u.isDefault === true,
       pickupAvailable: (entry as { pickupAvailable?: unknown }).pickupAvailable === true,
       pickupBySite: parsePickupBySite((entry as { pickupBySite?: unknown }).pickupBySite),
+      deliveryStatus: parseStatus((entry as { deliveryStatus?: unknown }).deliveryStatus),
     });
   }
   return units;

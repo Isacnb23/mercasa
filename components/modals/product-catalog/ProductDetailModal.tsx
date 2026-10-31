@@ -1,24 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ImageOff, Minus, Plus, Store, X, type LucideIcon } from "lucide-react";
+import { ImageOff, X, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ProductSummary } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
-import type { CartChannel } from "@/lib/cart-types";
 import ProductImage from "./ProductImage";
 import PriceTag from "./PriceTag";
 import PresentationPanel, { type PanelLabels } from "./PresentationPanel";
-import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
+import type { PriceView } from "@/lib/catalog-prices";
 import { formatColones } from "@/lib/checkout-format";
 import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { canAddToCart } from "@/lib/catalog-channel";
-import { primaryAddState } from "@/lib/add-rules";
-import type { StoreStatus } from "@/lib/pickup-stores";
-import { AddButtons, AddNote } from "./AddToCartButtons";
-import { ChannelAvailability } from "./ChannelBadges";
+import {
+  addTarget,
+  channelOptions,
+  maxQuantity,
+  normalize,
+  selectChannel,
+  selectSite,
+  selectUnit,
+  storeStatusOf,
+  type Notice,
+  type Selection,
+} from "@/lib/purchase";
+import AddBar from "./AddBar";
+import ChannelStep from "./ChannelStep";
 import PickupStoreChooser from "./PickupStoreChooser";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
@@ -27,26 +36,25 @@ import PickupStoreChooser from "./PickupStoreChooser";
 // tocar `currentPage` del libro, así cerrar vuelve exacto a la misma
 // página. Fuera de alcance a propósito (ver el doc): sin prev/next entre
 // productos, sin zoom interactivo, sin mostrar familia/sub-familia acá.
+//
+// La compra va en tres pasos con UNA fuente de verdad (lib/purchase.ts: presentación -> canal -> tienda): 1) presentación, 2) "¿Cómo lo
+// querés?" (domicilio | retiro, según la presentación elegida), 3) la tienda (solo retiro) y, en la barra fija al pie, cantidad y un solo botón.
 
 const INK = "#082B5C";
 const MUTED = "#8493A5";
 // Texto secundario legible (contraste AA sobre blanco); MUTED queda para etiquetas y detalles.
 const TEXT_SOFT = "#5C6B7D";
-const RULE = "#E2E8F0";
 const CHIP_BG = "#F4F6F9";
 
 export default function ProductDetailModal({
   product,
   icon,
   price,
-  pickupPrice,
   onClose,
 }: {
   product: ProductSummary;
   icon: LucideIcon;
   price: PriceView;
-  /** Precio de Retiro en tienda (por separado del de domicilio). */
-  pickupPrice: PickupPriceView;
   onClose: () => void;
 }) {
   const t = useTranslations("Products");
@@ -58,19 +66,8 @@ export default function ProductDetailModal({
   const { title, packagingText } = productTitle(product.name);
 
   const { addItem, items: cartItems, pickupSiteId, setPickupSite } = useCart();
-  // Fase 2: cada canal en que se consigue el producto tiene su botón de agregar (domicilio y/o retiro en tienda). Las
-  // presentaciones (unidad, caja, tarima) siguen siendo las de domicilio; el retiro agrega la presentación por defecto.
   const deliverable = canAddToCart(product, "delivery");
-  const pickupable = canAddToCart(product, "pickup");
-  const [quantity, setQuantity] = useState(1);
-  const [justAdded, setJustAdded] = useState<CartChannel | null>(null);
-  // Retiro en tienda: la sección de tiendas se abre a pedido (y recién entonces se pide la ubicación); la tienda elegida decide el botón
-  // principal. Arranca sin tienda (a domicilio), salvo que el carrito ya tenga retiro con una tienda de este producto: una sola tienda por pedido.
   const pickupSites = product.availability?.pickup.sites ?? [];
-  const [pickupOpen, setPickupOpen] = useState(false);
-  const [siteId, setSiteId] = useState<string | null>(() =>
-    pickupSiteId && cartItems.some((i) => i.channel === "pickup") && pickupSites.some((s) => s.siteId === pickupSiteId) ? pickupSiteId : null
-  );
 
   // Presentaciones vendibles (solo con sesión). El modal abre con la MISMA presentación que muestra la tarjeta
   // (la unidad del listado). Si esa unidad no estuviera entre las presentaciones, no se ofrece selector y se
@@ -80,9 +77,42 @@ export default function ProductDetailModal({
   const listingUnit = price.kind === "price" ? price.unit : null;
   const initialUnit = pickInitialUnit(rawUnits, listingUnit);
   const units = rawUnits && (initialUnit || !listingUnit) ? sortUnits(rawUnits) : null;
-  const [chosenUnit, setChosenUnit] = useState<string | null>(null);
-  const selected = units?.find((u) => u.unitId === chosenUnit) ?? initialUnit ?? null;
+
+  // ---- La selección: lo que eligió el cliente, normalizado contra lo que informa el servidor ----
+  const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: null, siteId: null });
+  const [notice, setNotice] = useState<Notice>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [justAdded, setJustAdded] = useState(false);
+
+  const { selection, notice: derivedNotice } = normalize(product, units, { ...chosen, unitId: chosen.unitId ?? initialUnit?.unitId ?? null });
+  const selected = units?.find((u) => u.unitId === selection.unitId) ?? null;
+  const options = channelOptions(product, selected);
   const quantityUnit = selected?.unitId ?? (price.kind === "price" ? price.unit : "");
+
+  // Una sola tienda por pedido: al pasar a retiro se propone la del grupo de retiro del carrito (si tiene la presentación).
+  const cartSite = pickupSiteId && cartItems.some((i) => i.channel === "pickup") ? pickupSiteId : null;
+
+  const onSelectUnit = (unitId: string) => {
+    const next = selectUnit(product, units, selection, unitId);
+    setChosen(next.selection);
+    setNotice(next.notice);
+  };
+  const onSelectChannel = (channel: "delivery" | "pickup") => {
+    setChosen(selectChannel(product, units, selection, channel, cartSite));
+    setNotice(null);
+  };
+  const onSelectSite = (siteId: string) => {
+    setChosen(selectSite(product, units, selection, siteId));
+    setNotice(null);
+  };
+
+  // La cantidad nunca pasa de lo que se puede saber que hay (sin mostrar el número); se recorta al cambiar la presentación o la tienda.
+  const max = maxQuantity(product, units, selection);
+  const shownQuantity = max >= 1 ? Math.min(quantity, max) : quantity;
+
+  const target = addTarget(product, units, selection);
+  const chosenSite = selection.siteId ? pickupSites.find((s) => s.siteId === selection.siteId) ?? null : null;
+  const chooserStores = pickupSites.map((s) => ({ ...s, status: storeStatusOf(selected, s.siteId) }));
 
   // El sufijo de empaque del nombre solo se muestra (como dato informativo) cuando NO hay presentaciones reales
   // que lo reemplacen, y nunca como si fuera una presentación disponible.
@@ -94,24 +124,13 @@ export default function ProductDetailModal({
     closeButtonRef.current?.focus();
   }, []);
 
-  // Existencia de cada tienda EN la presentación elegida (la del servidor, sin cantidades); sin sesión o sin dato no hay estado.
-  const statusFor = (id: string): StoreStatus | null =>
-    selected?.pickupBySite?.find((s) => s.siteId.toUpperCase() === id.toUpperCase())?.status ?? null;
-  const chooserStores = pickupSites.map((s) => ({ ...s, status: statusFor(s.siteId) }));
-  const chosenSite = siteId ? pickupSites.find((s) => s.siteId === siteId) ?? null : null;
-
-  // UN botón principal: sin tienda agrega a domicilio; con tienda elegida, a retiro en esa tienda.
-  const addState = primaryAddState(product, selected, chosenSite ? chosenSite.siteId : null, chosenSite ? statusFor(chosenSite.siteId) : null);
-
   const handleAddToCart = () => {
-    if (!addState?.enabled) return;
-    // La presentación por defecto no se guarda: así una misma presentación nunca queda en dos líneas.
-    const unit = selected && !selected.isDefault ? selected.unitId : undefined;
-    if (addState.channel === "pickup" && chosenSite) setPickupSite(chosenSite.siteId);
-    addItem(product, quantity, unit, addState.channel);
-    setJustAdded(addState.channel);
+    if (!target.ok || max < 1) return;
+    if (target.channel === "pickup" && target.siteId) setPickupSite(target.siteId);
+    addItem(product, shownQuantity, target.unitId, target.channel);
+    setJustAdded(true);
     setQuantity(1);
-    setTimeout(() => setJustAdded(null), 1800);
+    setTimeout(() => setJustAdded(false), 1800);
   };
 
   const labels: PanelLabels = {
@@ -124,6 +143,8 @@ export default function ProductDetailModal({
     equivalence: (big, amount, small) => t("catalog.equivalenceLine", { big, amount, small }),
     soldBy: (unit) => t("catalog.soldBy", { unit }),
   };
+
+  const canBuy = options.length > 0;
 
   return (
     <div
@@ -182,8 +203,8 @@ export default function ProductDetailModal({
         </div>
 
         <div className="pd-main">
-          {/* Zonas con aire: título, precio, presentación, equivalencias. Scroll interno si no entra; la barra de
-              cantidad/agregar queda fuera de esta zona y SIEMPRE visible. */}
+          {/* Zonas con aire: título, presentación, "¿Cómo lo querés?" y tiendas. Scroll interno si no entra; la barra de cantidad/agregar
+              queda fuera de esta zona y SIEMPRE visible. */}
           <div className="pd-info flex flex-col gap-5 p-5 sm:p-6" data-lenis-prevent>
             <div className="flex flex-col gap-1.5">
               {/* Título: la misma sans-serif de las tarjetas (no la serif de display), peso 600, interlineado
@@ -201,11 +222,12 @@ export default function ProductDetailModal({
               )}
             </div>
 
+            {/* Paso 1: presentación (precio con IVA incluido y equivalencia de cada una; con una sola, fija). */}
             {units && selected ? (
               <PresentationPanel
                 units={units}
                 selectedUnitId={selected.unitId}
-                onSelect={setChosenUnit}
+                onSelect={onSelectUnit}
                 locale={locale}
                 formatPrice={(amount) => formatColones(amount, locale, 2)}
                 formatTotal={(amount) => formatColones(amount, locale)}
@@ -221,95 +243,36 @@ export default function ProductDetailModal({
               <PriceTag view={price} size="detail" />
             ) : null}
 
-            <ChannelAvailability
-              availability={product.availability}
-              deliveryPrice={price}
-              // Con el precio de cmer el de retiro es el mismo: no se repite como si fuera otro.
-              pickupPrice={samePrice(price, pickupPrice) ? { kind: "hidden" } : pickupPrice}
-            />
+            {/* Paso 2: ¿Cómo lo querés? según la presentación elegida. */}
+            {canBuy && <ChannelStep options={options} value={selection.channel} onChange={onSelectChannel} notice={notice ?? derivedNotice} />}
 
-            {pickupable && pickupSites.length > 0 && (
-              <section className="flex flex-col gap-2.5" aria-label={tCart("storeChooserAria", { name: title })}>
-                <button
-                  type="button"
-                  id="pd-pickup-toggle"
-                  aria-expanded={pickupOpen}
-                  aria-controls="pd-pickup-stores"
-                  onClick={() => setPickupOpen((open) => !open)}
-                  className="flex w-full items-center gap-3 rounded-2xl border bg-white px-4 py-3 text-left outline-none transition hover:border-[#B9C6D8] hover:bg-[#FBF9F5] focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                  style={{ borderColor: chosenSite ? INK : RULE }}
-                >
-                  <Store className="h-4 w-4 shrink-0" style={{ color: INK }} strokeWidth={2} aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold leading-snug" style={{ color: INK }}>
-                      {tCart("pickupSectionTitle")}
-                    </span>
-                    <span className="block text-[12.5px] leading-snug" style={{ color: TEXT_SOFT }}>
-                      {chosenSite ? tCart("pickupSectionChosen", { store: chosenSite.name }) : tCart("pickupSectionHintNone")}
-                    </span>
-                  </span>
-                  <ChevronDown className={`h-4 w-4 shrink-0 motion-safe:transition-transform ${pickupOpen ? "rotate-180" : ""}`} style={{ color: INK }} strokeWidth={2.2} aria-hidden />
-                </button>
-                {pickupOpen && (
-                  <div id="pd-pickup-stores">
-                    <PickupStoreChooser
-                      stores={chooserStores}
-                      chosenId={siteId}
-                      onChoose={setSiteId}
-                      unitBlocked={!!selected && !selected.pickupAvailable}
-                      active={pickupOpen}
-                      labelledBy="pd-pickup-toggle"
-                    />
-                  </div>
-                )}
+            {/* Paso 3 (retiro): lista única de tiendas con esa presentación. La cantidad y el botón van en la barra fija de abajo. */}
+            {selection.channel === "pickup" && (
+              <section className="flex flex-col gap-2.5" aria-labelledby="pd-stores-title">
+                <h3 id="pd-stores-title" className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }}>
+                  {tCart("storesStepTitle")}
+                </h3>
+                <PickupStoreChooser stores={chooserStores} chosenId={selection.siteId} onChoose={onSelectSite} labelledBy="pd-stores-title" />
               </section>
             )}
           </div>
 
-          {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md)
-              — carrito de pedido sin precios, no e-commerce; el checkout
-              real pasa por WhatsApp desde el drawer del carrito. Barra fija
-              al pie del diálogo: SIEMPRE visible. La cantidad muestra la unidad elegida ("2 Cajas"). */}
-          <AddNote product={product} selected={selected} state={addState} />
-          {!deliverable && !pickupable ? null : (
-          <div className="flex shrink-0 items-start gap-3 border-t bg-white px-5 py-3 sm:px-6" style={{ borderColor: RULE }}>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                aria-label={tCart("decreaseAria", { name: title })}
-                className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                style={{ borderColor: RULE, color: INK }}
-              >
-                <Minus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
-              </button>
-              <span className="min-w-[64px] text-center leading-tight" aria-live="polite">
-                <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
-                  {quantity}
-                </span>
-                <span className="block min-h-[16px] text-[11.5px] font-medium leading-4" style={{ color: TEXT_SOFT }}>
-                  {quantityUnit ? unitName(quantityUnit, quantity, locale) : " "}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.min(9999, q + 1))}
-                aria-label={tCart("increaseAria", { name: title })}
-                className="flex h-9 w-9 items-center justify-center rounded-full border outline-none transition hover:opacity-70 focus-visible:ring-2 focus-visible:ring-[#075FD8] focus-visible:ring-offset-2"
-                style={{ borderColor: RULE, color: INK }}
-              >
-                <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
-              </button>
-            </div>
-            <AddButtons
-              product={product}
-              state={addState}
-              site={chosenSite ? { id: chosenSite.siteId, name: chosenSite.name } : null}
+          {/* Agregar al carrito (ver montar-carrito-en-base-al-catalogo.md) — carrito de pedido sin precios, no e-commerce; el checkout
+              real pasa por WhatsApp desde el drawer del carrito. Barra fija al pie del diálogo: SIEMPRE visible. */}
+          {canBuy && (
+            <AddBar
+              title={title}
+              quantity={shownQuantity}
+              max={max}
+              unitText={quantityUnit ? unitName(quantityUnit, shownQuantity, locale) : ""}
+              onQuantity={setQuantity}
+              channel={selection.channel}
+              siteName={chosenSite?.name ?? null}
+              enabled={target.ok && max >= 1}
+              needsStore={selection.channel === "pickup" && !target.ok && target.reason === "store"}
               justAdded={justAdded}
               onAdd={handleAddToCart}
-              onClearSite={() => setSiteId(null)}
             />
-          </div>
           )}
         </div>
       </div>
