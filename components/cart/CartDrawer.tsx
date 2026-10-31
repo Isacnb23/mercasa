@@ -28,7 +28,6 @@ import CartLines from "@/components/cart/CartLines";
 import CheckoutStepper from "@/components/cart/CheckoutStepper";
 import ConfirmStep, { type SubmitState } from "@/components/cart/ConfirmStep";
 import DeliveryStep from "@/components/cart/DeliveryStep";
-import GroupTabs, { GROUP_CARD_IDS } from "@/components/cart/GroupTabs";
 import OrderSummary, { GrandTotal } from "@/components/cart/OrderSummary";
 import PickupDates from "@/components/cart/PickupDates";
 import PickupSiteSelector from "@/components/cart/PickupSiteSelector";
@@ -120,8 +119,6 @@ export default function CartDrawer() {
   const deliveryItems = itemsInChannel(items, "delivery");
   const pickupItems = itemsInChannel(items, "pickup");
   const present = { delivery: deliveryItems.length > 0, pickup: pickupItems.length > 0 };
-  const deliveryCount = deliveryItems.reduce((sum, item) => sum + item.quantity, 0);
-  const pickupCount = pickupItems.reduce((sum, item) => sum + item.quantity, 0);
   // Tienda de retiro: la elegida o, sin elección, una propuesta donde haya existencia de lo que lleva el cliente.
   const pickupSite = resolvePickupSite(items, pickupSiteId);
 
@@ -222,7 +219,8 @@ export default function CartDrawer() {
   // Cada grupo es una tarjeta autocontenida.
   //   Domicilio: productos -> fecha de entrega -> mínimo (barra compacta) -> flete -> total del envío.
   //   Retiro:    tienda -> fecha de retiro -> productos -> total del retiro (sin bloque de mínimo cuando es 0).
-  // Con el flujo de pasos las fechas se eligen en el paso "Entrega"; sin él (cotización por WhatsApp) van dentro de la tarjeta.
+  // La fecha de retiro va siempre dentro de la tarjeta de retiro (tras la tienda); la de entrega, dentro de la de domicilio solo sin el
+  // flujo de pasos (cotización por WhatsApp): con el flujo se elige en el paso "Entrega".
   const groupSection = (channel: CartChannel) => {
     const groupItems = channel === "delivery" ? deliveryItems : pickupItems;
     if (groupItems.length === 0) return null;
@@ -234,9 +232,8 @@ export default function CartDrawer() {
     return (
       <section
         key={channel}
-        id={GROUP_CARD_IDS[channel]}
         aria-labelledby={titleId}
-        className="mb-5 scroll-mt-20 rounded-3xl border p-3.5 last:mb-0 sm:p-4"
+        className="mb-5 rounded-3xl border p-3.5 last:mb-0 sm:p-4"
         style={{ borderColor: RULE, background: BEIGE }}
       >
         <h3 id={titleId} className="mb-3 flex items-baseline justify-between gap-3 font-display text-[16px] font-semibold" style={{ color: INK }}>
@@ -254,7 +251,7 @@ export default function CartDrawer() {
               proposed={pickupSiteId === null}
               onSelect={setPickupSite}
             />
-            {!flow && preview.pickupGroup.siteId !== "" && (
+            {preview.pickupGroup.siteId !== "" && (
               <PickupDates
                 dates={pickupDates}
                 selectedDate={selectedPickupDate}
@@ -292,7 +289,6 @@ export default function CartDrawer() {
 
   const cartStep = (
     <>
-      {present.delivery && present.pickup && <GroupTabs deliveryCount={deliveryCount} pickupCount={pickupCount} />}
       {groupSection("delivery")}
       {groupSection("pickup")}
 
