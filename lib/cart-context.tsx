@@ -21,6 +21,7 @@ import {
   addToCart,
   CART_STORAGE_KEY,
   changeLineUnit,
+  changePickupSite,
   loadPersistedCart,
   loadPersistedOwner,
   moveDeliveryToPickup as moveLinesToPickup,
@@ -172,6 +173,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((current) => moveLinesToPickup(current));
   };
 
+  // UNA tienda de retiro por carrito: cambiarla borra la fecha de retiro (la existencia se revalida sola: el pedido se vuelve a pedir al servidor).
+  const setPickupSite = (siteId: string | null) => {
+    const next = changePickupSite({ siteId: pickupSiteId, date: pickupDate }, siteId);
+    setPickupSiteId(next.siteId);
+    setPickupDate(next.date);
+  };
+
   const clear = () => {
     setItems([]);
     setPickupSiteId(null);
@@ -192,7 +200,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     changeUnit,
     moveDeliveryToPickup,
     pickupSiteId,
-    setPickupSite: setPickupSiteId,
+    setPickupSite,
     pickupDate,
     setPickupDate,
     clear,

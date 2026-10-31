@@ -14,6 +14,7 @@ import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { canAddToCart } from "@/lib/catalog-channel";
+import { cartPickupSite, needsStoreChangeConfirmation, siteNameInCart } from "@/lib/cart-logic";
 import {
   addTarget,
   channelOptions,
@@ -29,6 +30,7 @@ import {
 import AddBar from "./AddBar";
 import ChannelStep from "./ChannelStep";
 import PickupStoreChooser from "./PickupStoreChooser";
+import StoreChangeConfirm from "./StoreChangeConfirm";
 
 // Feature simple (ver catalogo-detalle-producto.md): lightbox de un solo
 // producto ENCIMA del catálogo (no reemplaza el flipbook, no navega a otra
@@ -79,7 +81,11 @@ export default function ProductDetailModal({
   const units = rawUnits && (initialUnit || !listingUnit) ? sortUnits(rawUnits) : null;
 
   // ---- La selección: lo que eligió el cliente, normalizado contra lo que informa el servidor ----
-  const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: null, siteId: null });
+  // UNA tienda de retiro por carrito: si el carrito ya tiene retiro con tienda elegida, el modal viene con esa tienda preseleccionada.
+  const cartSite = cartPickupSite(cartItems, pickupSiteId);
+  const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: null, siteId: cartSite });
+  // Tienda distinta a la del carrito pendiente de confirmar ("¿Cambiar todo el retiro a Y?").
+  const [pendingSite, setPendingSite] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -89,21 +95,34 @@ export default function ProductDetailModal({
   const options = channelOptions(product, selected);
   const quantityUnit = selected?.unitId ?? (price.kind === "price" ? price.unit : "");
 
-  // Una sola tienda por pedido: al pasar a retiro se propone la del grupo de retiro del carrito (si tiene la presentación).
-  const cartSite = pickupSiteId && cartItems.some((i) => i.channel === "pickup") ? pickupSiteId : null;
-
+  // Al pasar a retiro se propone la tienda del carrito (si tiene la presentación).
   const onSelectUnit = (unitId: string) => {
     const next = selectUnit(product, units, selection, unitId);
     setChosen(next.selection);
     setNotice(next.notice);
+    setPendingSite(null);
   };
   const onSelectChannel = (channel: "delivery" | "pickup") => {
     setChosen(selectChannel(product, units, selection, channel, cartSite));
     setNotice(null);
+    setPendingSite(null);
   };
+  // Elegir una tienda distinta a la del carrito pide confirmación: cambiarla cambia TODO el retiro del carrito.
   const onSelectSite = (siteId: string) => {
-    setChosen(selectSite(product, units, selection, siteId));
     setNotice(null);
+    if (needsStoreChangeConfirmation(cartSite, siteId)) {
+      setPendingSite(siteId);
+      return;
+    }
+    setPendingSite(null);
+    setChosen(selectSite(product, units, selection, siteId));
+  };
+  // Aceptar: la tienda del grupo cambia (se borra la fecha de retiro y se revalida la existencia de todas las líneas en la nueva tienda).
+  const acceptStoreChange = () => {
+    if (!pendingSite) return;
+    setPickupSite(pendingSite);
+    setChosen(selectSite(product, units, selection, pendingSite));
+    setPendingSite(null);
   };
 
   // La cantidad nunca pasa de lo que se puede saber que hay (sin mostrar el número); se recorta al cambiar la presentación o la tienda.
@@ -252,6 +271,14 @@ export default function ProductDetailModal({
                 <h3 id="pd-stores-title" className="text-[10.5px] font-bold uppercase" style={{ color: MUTED, letterSpacing: "0.12em" }}>
                   {tCart("storesStepTitle")}
                 </h3>
+                {pendingSite && cartSite && (
+                  <StoreChangeConfirm
+                    current={siteNameInCart(cartItems, cartSite) ?? pickupSites.find((s) => s.siteId === cartSite)?.name ?? cartSite}
+                    next={pickupSites.find((s) => s.siteId === pendingSite)?.name ?? pendingSite}
+                    onAccept={acceptStoreChange}
+                    onKeep={() => setPendingSite(null)}
+                  />
+                )}
                 <PickupStoreChooser stores={chooserStores} chosenId={selection.siteId} onChoose={onSelectSite} labelledBy="pd-stores-title" />
               </section>
             )}

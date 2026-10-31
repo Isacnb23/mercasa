@@ -26,6 +26,9 @@ interface Props {
   onChoose: (siteId: string) => void;
   // id del título del paso (nombra el grupo de radios).
   labelledBy: string;
+  // true (modal): una tienda sin existencia de la presentación no se puede elegir. false (carrito): sí se puede (las líneas que no alcanzan
+  // quedan marcadas), porque el estado considera todas las líneas del retiro.
+  blockOut?: boolean;
 }
 
 const STATUS_STYLE: Record<StoreStatus, { bg: string; color: string; key: "storeStatusAvailable" | "storeStatusLow" | "storeStatusOut" }> = {
@@ -38,7 +41,7 @@ const STATUS_STYLE: Record<StoreStatus, { bg: string; color: string; key: "store
 // "Ver todas las tiendas"; sin permiso (o con error), todas. Las sin existencia van al final y deshabilitadas. La dirección y el horario salen
 // SOLO bajo la tienda elegida. La ubicación se pide al montarse (o sea, al abrir el retiro, nunca al cargar la página), se calcula en el
 // navegador y no se envía ni se guarda.
-export default function PickupStoreChooser({ stores, chosenId, onChoose, labelledBy }: Props) {
+export default function PickupStoreChooser({ stores, chosenId, onChoose, labelledBy, blockOut = true }: Props) {
   const t = useTranslations("Cart");
   const tCatalog = useTranslations("Products.catalog");
   const locale = useLocale();
@@ -78,7 +81,7 @@ export default function PickupStoreChooser({ stores, chosenId, onChoose, labelle
         {visible.map(({ store, km }) => {
           const chosen = chosenId !== null && store.siteId.toUpperCase() === chosenId.toUpperCase();
           const status = store.status ?? null;
-          const blocked = status === "out";
+          const blocked = blockOut && status === "out";
           const detail = [store.city?.trim() || null, km !== null ? t("storeDistanceKm", { km: formatKm(km, locale) }) : null].filter(Boolean).join(" · ");
           const details = chosen ? siteDetails({ siteId: store.siteId, name: store.name, address: store.address, hours: store.hours, mapUrl: store.mapUrl }) : null;
           const mapUrl = details ? details.mapUrl : null;

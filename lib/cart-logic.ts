@@ -130,6 +130,42 @@ export function resolvePickupSite(items: readonly CartItem[], chosen: string | n
   return common[0] ?? known[0][0];
 }
 
+const sameSite = (a: string | null | undefined, b: string | null | undefined) => (a ?? "").trim().toUpperCase() === (b ?? "").trim().toUpperCase();
+
+export interface PickupChoice {
+  siteId: string | null;
+  // Fecha de retiro elegida ("yyyy-MM-dd"), solo en memoria.
+  date: string | null;
+}
+
+// UNA tienda de retiro por carrito. Cambiar de tienda borra la fecha de retiro (las fechas y la existencia dependen de la tienda); elegir la
+// misma que ya había no toca nada.
+export function changePickupSite(current: PickupChoice, next: string | null): PickupChoice {
+  if (sameSite(current.siteId, next) && (next ?? "").trim() !== "") return current;
+  if (current.siteId === null && next === null) return current;
+  return { siteId: next && next.trim() !== "" ? next : null, date: null };
+}
+
+// La tienda del retiro del carrito: la elegida, solo si el carrito tiene líneas de retiro. Es la que el modal de los productos siguientes
+// trae preseleccionada.
+export function cartPickupSite(items: readonly CartItem[], chosen: string | null): string | null {
+  return chosen && itemsInChannel(items, "pickup").length > 0 ? chosen : null;
+}
+
+// ¿Hay que pedir confirmación? Sí si el carrito ya tiene tienda de retiro y la elegida es otra: cambiarla cambia TODO el retiro.
+export function needsStoreChangeConfirmation(cartSite: string | null, picked: string): boolean {
+  return !!cartSite && !sameSite(cartSite, picked);
+}
+
+// Nombre de una tienda según lo que traen las líneas del carrito (availability.pickup.sites); null si ninguna la conoce.
+export function siteNameInCart(items: readonly CartItem[], siteId: string): string | null {
+  for (const item of items) {
+    const site = item.availability?.pickup.sites.find((s) => sameSite(s.siteId, siteId));
+    if (site?.name) return site.name;
+  }
+  return null;
+}
+
 // Lee un arreglo de líneas guardado (v1 o la lista de v2). Las líneas viejas no tienen canal: pasan a domicilio sin
 // perderse. Se descarta lo que no tenga la forma esperada y se unen las líneas repetidas.
 export function parseStoredCart(raw: unknown): CartItem[] {
