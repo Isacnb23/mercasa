@@ -25,7 +25,9 @@ import {
   loadPersistedCart,
   loadPersistedOwner,
   moveDeliveryToPickup as moveLinesToPickup,
+  moveLineToDelivery as moveOneLineToDelivery,
   removeLine,
+  resolvePickupSite,
   serializeCart,
   setLineQuantity,
 } from "./cart-logic";
@@ -45,8 +47,13 @@ interface CartContextValue {
   changeUnit: (id: string, fromUnitId: string | undefined, toUnitId: string | undefined, channel?: CartChannel) => void;
   // Pasa a retiro en tienda las líneas de domicilio que también se consiguen en tienda (zona que se coordina con un asesor).
   moveDeliveryToPickup: () => void;
+  // Pasa UNA línea de retiro (la presentación indicada) al grupo de domicilio.
+  moveLineToDelivery: (id: string, unitId?: string) => void;
   // Tienda de retiro elegida por el cliente (una sola para todo el grupo); null = sin elegir (se propone una).
   pickupSiteId: string | null;
+  // LA tienda del retiro del carrito: la elegida o, sin elección, la propuesta; null si no hay líneas de retiro. Es la fuente única que usan el
+  // carrito, el modal de producto y el "+" de las tarjetas (nunca se lee solo `pickupSiteId`).
+  pickupSite: string | null;
   setPickupSite: (siteId: string | null) => void;
   // Fecha de retiro elegida ("yyyy-MM-dd"); null = sin elegir. Solo en memoria (no se guarda): las fechas ofrecidas cambian cada día.
   pickupDate: string | null;
@@ -56,11 +63,18 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  children,
+  initialState,
+}: {
+  children: React.ReactNode;
+  // Estado inicial (solo pruebas): en el navegador el carrito se lee de localStorage tras el primer render.
+  initialState?: { items: CartItem[]; pickupSiteId: string | null };
+}) {
   const { user, isLoading: authLoading } = useAuth();
   const accountNum = user?.accountNum ?? null;
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [pickupSiteId, setPickupSiteId] = useState<string | null>(null);
+  const [items, setItems] = useState<CartItem[]>(initialState?.items ?? []);
+  const [pickupSiteId, setPickupSiteId] = useState<string | null>(initialState?.pickupSiteId ?? null);
   const [pickupDate, setPickupDate] = useState<string | null>(null);
   // Hash de la cuenta dueña del carrito; null = de visitante (o guardado antes de que existiera el dueño).
   const [owner, setOwner] = useState<string | null>(null);
@@ -157,12 +171,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((current) => addToCart(current, product, quantity, unitId, target));
   };
 
+  // LA tienda del retiro: la elegida o, sin elección, la propuesta (la misma regla con la que el carrito valida el pedido).
+  const pickupSite = resolvePickupSite(items, pickupSiteId);
+
+  // Sin líneas de retiro no queda tienda (ni fecha) elegida: un retiro nuevo empieza de cero.
+  const dropStoreWithoutPickupLines = (next: CartItem[]) => {
+    if (pickupSiteId !== null && !next.some((item) => item.channel === "pickup")) {
+      setPickupSiteId(null);
+      setPickupDate(null);
+    }
+  };
+
   const removeItem = (id: string, unitId?: string, channel: CartChannel = "delivery") => {
     setItems((current) => removeLine(current, id, unitId, channel));
+    dropStoreWithoutPickupLines(removeLine(items, id, unitId, channel));
   };
 
   const setQuantity = (id: string, quantity: number, unitId?: string, channel: CartChannel = "delivery") => {
     setItems((current) => setLineQuantity(current, id, quantity, unitId, channel));
+    dropStoreWithoutPickupLines(setLineQuantity(items, id, quantity, unitId, channel));
+  };
+
+  const moveLineToDelivery = (id: string, unitId?: string) => {
+    setItems((current) => moveOneLineToDelivery(current, id, unitId));
+    dropStoreWithoutPickupLines(moveOneLineToDelivery(items, id, unitId));
   };
 
   const changeUnit = (id: string, fromUnitId: string | undefined, toUnitId: string | undefined, channel: CartChannel = "delivery") => {
@@ -175,7 +207,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // UNA tienda de retiro por carrito: cambiarla borra la fecha de retiro (la existencia se revalida sola: el pedido se vuelve a pedir al servidor).
   const setPickupSite = (siteId: string | null) => {
-    const next = changePickupSite({ siteId: pickupSiteId, date: pickupDate }, siteId);
+    const next = changePickupSite({ siteId: pickupSite, date: pickupDate }, siteId);
     setPickupSiteId(next.siteId);
     setPickupDate(next.date);
   };
@@ -199,7 +231,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setQuantity,
     changeUnit,
     moveDeliveryToPickup,
+    moveLineToDelivery,
     pickupSiteId,
+    pickupSite,
     setPickupSite,
     pickupDate,
     setPickupDate,

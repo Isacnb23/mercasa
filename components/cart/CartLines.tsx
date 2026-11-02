@@ -9,6 +9,7 @@ import { unitLabel } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { groupFor, lineErrorsByItem, matchPreviewLines, unitPriceWithTax } from "@/lib/order-logic";
 import { canIncrease, clampToMax, shouldWarnMax } from "@/lib/add-rules";
+import { canMoveToDelivery } from "@/lib/purchase";
 import type { OrderPreview } from "@/lib/order-types";
 import { BEIGE, DANGER_BG, DANGER_TEXT, FOCUS_RING, INK, MUTED, RULE, TEXT_MUTED } from "@/components/ui/drawer-tokens";
 import ProductImage from "@/components/modals/product-catalog/ProductImage";
@@ -25,13 +26,17 @@ interface Props {
   onRemove: (item: CartItem) => void;
   // unitId undefined = la presentación por defecto.
   onChangeUnit: (item: CartItem, unitId: string | undefined) => void;
+  // Solo grupo de retiro: nombre de la tienda elegida y acciones de una línea sin existencia allí.
+  pickupSiteName?: string;
+  onMoveToDelivery?: (item: CartItem) => void;
+  onSeeOtherStores?: () => void;
 }
 
 // Líneas del carrito con precio unitario, cantidad y total de línea. TODO precio viene de `preview` (el
 // servidor); si una línea aún no tiene precio vigente (recién agregada o cambiando la cantidad) se muestra un
 // esqueleto, nunca un valor inventado. Los errores por línea ("No disponible", "Cantidad inválida"...) se
 // muestran junto al producto, que se puede quitar.
-export default function CartLines({ items, channel, preview, expectPrices, onQuantity, onRemove, onChangeUnit }: Props) {
+export default function CartLines({ items, channel, preview, expectPrices, onQuantity, onRemove, onChangeUnit, pickupSiteName, onMoveToDelivery, onSeeOtherStores }: Props) {
   const t = useTranslations("Cart");
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
@@ -80,11 +85,17 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
         // El precio solo vale si el servidor lo calculó para ESTA cantidad.
         const priced = !!line && line.quantity === item.quantity && line.unitPrice > 0;
         const codes = errorsByItem.get(item.id.toLowerCase()) ?? [];
-        const messages = codes.map(errorLabel).filter((m): m is string => !!m);
+        const noStock = codes.includes("item_unavailable") || codes.includes("insufficient_stock");
+        // Retiro sin existencia en la tienda elegida: UN solo aviso ("No hay en <tienda>") con sus acciones, en vez de los textos repetidos.
+        const missingInStore = channel === "pickup" && noStock;
+        const messages = missingInStore ? [] : codes.map(errorLabel).filter((m): m is string => !!m);
         // Sin existencia suficiente: cuánto SÍ se puede pedir de esta presentación (lo calcula el servidor).
-        if ((codes.includes("item_unavailable") || codes.includes("insufficient_stock")) && line?.maxAvailable != null) {
+        if (noStock && !missingInStore && line?.maxAvailable != null) {
           messages.push(tOrder("lineMax", { max: line.maxAvailable }));
         }
+        // "Pasar a domicilio" solo si esa presentación tiene existencia a domicilio (dato del servidor; sin él no se ofrece).
+        const deliveryUnit = allUnitsFor(item.id)?.find((u) => u.unitId === currentUnit) ?? null;
+        const canMove = missingInStore && !!onMoveToDelivery && canMoveToDelivery(item, deliveryUnit);
         // Tope de cantidad: no pasa de lo que el servidor dice que hay (maxAvailable de esta presentación).
         const max = line?.maxAvailable ?? null;
         const name = line?.name || item.name;
@@ -93,7 +104,7 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
           <li
             key={lineKey}
             className="flex flex-col gap-3 rounded-2xl border bg-white p-3 sm:p-3.5"
-            style={{ borderColor: messages.length > 0 ? "#F2B8B5" : RULE }}
+            style={{ borderColor: messages.length > 0 || missingInStore ? "#F2B8B5" : RULE }}
           >
             <div className="flex items-center gap-3.5 sm:gap-4">
               <div
@@ -196,7 +207,7 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
                 </button>
               </div>
 
-              {max !== null && shouldWarnMax(item.quantity, max) && (
+              {!missingInStore && max !== null && shouldWarnMax(item.quantity, max) && (
                 <p role="status" className="min-w-0 flex-1 text-[12px] font-medium leading-snug" style={{ color: "#8A5A00" }}>
                   {tOrder("onlyAvailable", { max })}
                 </p>
@@ -212,6 +223,49 @@ export default function CartLines({ items, channel, preview, expectPrices, onQua
                 </p>
               )}
             </div>
+
+            {missingInStore && (
+              <div
+                role="alert"
+                className="flex flex-col gap-2 rounded-xl px-3 py-2.5"
+                style={{ background: DANGER_BG, color: DANGER_TEXT }}
+              >
+                <p className="flex items-center gap-2 text-[13px] font-medium leading-snug">
+                  <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                  {tOrder("lineNotInStore", { store: pickupSiteName || tOrder("pickupStoreThis") })}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {canMove && (
+                    <button
+                      type="button"
+                      onClick={() => onMoveToDelivery?.(item)}
+                      className={`rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+                      style={{ color: DANGER_TEXT }}
+                    >
+                      {tOrder("lineMoveToDelivery")}
+                    </button>
+                  )}
+                  {onSeeOtherStores && (
+                    <button
+                      type="button"
+                      onClick={onSeeOtherStores}
+                      className={`rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+                      style={{ color: DANGER_TEXT }}
+                    >
+                      {tOrder("lineSeeOtherStores")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(item)}
+                    className={`rounded text-[13px] font-semibold underline underline-offset-4 motion-safe:transition hover:opacity-70 ${FOCUS_RING}`}
+                    style={{ color: DANGER_TEXT }}
+                  >
+                    {tOrder("lineRemove")}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {messages.length > 0 && (
               <div

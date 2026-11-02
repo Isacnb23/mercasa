@@ -14,10 +14,11 @@ import { productTitle } from "@/lib/product-display";
 import { pickInitialUnit, sortUnits, unitName } from "@/lib/presentations";
 import { useCatalogUnits } from "@/lib/hooks/useCatalogUnits";
 import { canAddToCart } from "@/lib/catalog-channel";
-import { cartPickupSite, needsStoreChangeConfirmation, siteNameInCart } from "@/lib/cart-logic";
+import { siteNameInCart } from "@/lib/cart-logic";
 import {
   addTarget,
   channelOptions,
+  chooseSite,
   maxQuantity,
   normalize,
   selectChannel,
@@ -70,7 +71,7 @@ export default function ProductDetailModal({
   // nombre comercial sin el sufijo de empaque ("24U/C 60C/T"), que sugiere presentaciones que pueden no existir.
   const { title, packagingText } = productTitle(product.name);
 
-  const { addItem, items: cartItems, pickupSiteId, setPickupSite } = useCart();
+  const { addItem, items: cartItems, pickupSite: cartSite, setPickupSite } = useCart();
   const deliverable = canAddToCart(product, "delivery");
   const pickupSites = product.availability?.pickup.sites ?? [];
 
@@ -85,7 +86,7 @@ export default function ProductDetailModal({
 
   // ---- La selección: lo que eligió el cliente, normalizado contra lo que informa el servidor ----
   // UNA tienda de retiro por carrito: si el carrito ya tiene retiro con tienda elegida, el modal viene con esa tienda preseleccionada.
-  const cartSite = cartPickupSite(cartItems, pickupSiteId);
+  // `cartSite` es LA tienda del retiro del carrito (elegida o propuesta; la misma que usa el carrito), null si no hay líneas de retiro.
   const [chosen, setChosen] = useState<Selection>({ unitId: null, channel: startAtPickup ? "pickup" : null, siteId: cartSite });
   // Tienda distinta a la del carrito pendiente de confirmar ("¿Cambiar todo el retiro a Y?").
   const [pendingSite, setPendingSite] = useState<string | null>(null);
@@ -113,12 +114,13 @@ export default function ProductDetailModal({
   // Elegir una tienda distinta a la del carrito pide confirmación: cambiarla cambia TODO el retiro del carrito.
   const onSelectSite = (siteId: string) => {
     setNotice(null);
-    if (needsStoreChangeConfirmation(cartSite, siteId)) {
-      setPendingSite(siteId);
+    const choice = chooseSite(product, units, selection, cartSite, siteId);
+    if (choice.kind === "confirm") {
+      setPendingSite(choice.siteId);
       return;
     }
     setPendingSite(null);
-    setChosen(selectSite(product, units, selection, siteId));
+    setChosen(choice.selection);
   };
   // Aceptar: la tienda del grupo cambia (se borra la fecha de retiro y se revalida la existencia de todas las líneas en la nueva tienda).
   const acceptStoreChange = () => {

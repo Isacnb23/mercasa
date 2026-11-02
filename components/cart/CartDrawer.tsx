@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActiveAddress, useAddresses } from "@/lib/addresses-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
-import { itemsInChannel, resolvePickupSite } from "@/lib/cart-logic";
+import { itemsInChannel } from "@/lib/cart-logic";
 import type { CartChannel } from "@/lib/cart-types";
 import { formatColones, formatDeliveryDate } from "@/lib/checkout-format";
 import { ORDERING_ENABLED } from "@/lib/feature-flags";
@@ -77,7 +77,9 @@ export default function CartDrawer() {
   const tOrder = useTranslations("Cart.order");
   const locale = useLocale();
   const { user, openProfile } = useAuth();
-  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, clear, totalCount, pickupSiteId, setPickupSite, pickupDate, setPickupDate } = useCart();
+  const { items, isOpen, closeCart, removeItem, setQuantity, changeUnit, moveLineToDelivery, clear, totalCount, pickupSiteId, pickupSite, setPickupSite, pickupDate, setPickupDate } = useCart();
+  // "Ver otras tiendas" de una línea sin existencia: abre el selector de la tienda del retiro.
+  const [storePickerOpen, setStorePickerOpen] = useState(false);
   const { addressId, revision: addressRevision } = useActiveAddress();
   const { status: addressesStatus } = useAddresses();
 
@@ -120,7 +122,6 @@ export default function CartDrawer() {
   const pickupItems = itemsInChannel(items, "pickup");
   const present = { delivery: deliveryItems.length > 0, pickup: pickupItems.length > 0 };
   // Tienda de retiro: la elegida o, sin elección, una propuesta donde haya existencia de lo que lleva el cliente.
-  const pickupSite = resolvePickupSite(items, pickupSiteId);
 
   // Vista previa del servidor: precios, totales, mínimo y errores por grupo. Sin sesión no se llama; el grupo de
   // domicilio necesita además una dirección y el de retiro, una tienda.
@@ -250,6 +251,9 @@ export default function CartDrawer() {
               selectedId={preview.pickupGroup.siteId}
               proposed={pickupSiteId === null}
               onSelect={setPickupSite}
+              changing={storePickerOpen}
+              onChangingChange={setStorePickerOpen}
+              showFullStores
             />
             {preview.pickupGroup.siteId !== "" && (
               <PickupDates
@@ -270,6 +274,9 @@ export default function CartDrawer() {
           onQuantity={(item, quantity) => setQuantity(item.id, quantity, item.unitId, item.channel)}
           onRemove={(item) => removeItem(item.id, item.unitId, item.channel)}
           onChangeUnit={(item, unitId) => changeUnit(item.id, item.unitId, unitId, item.channel)}
+          pickupSiteName={channel === "pickup" ? preview?.pickupGroup?.sites.find((s) => s.siteId === preview.pickupGroup?.siteId)?.name : undefined}
+          onMoveToDelivery={channel === "pickup" ? (item) => moveLineToDelivery(item.id, item.unitId) : undefined}
+          onSeeOtherStores={channel === "pickup" ? () => setStorePickerOpen(true) : undefined}
         />
 
         {channel === "delivery" && !flow && user && (

@@ -18,22 +18,33 @@ interface Props {
   onSelect: (siteId: string) => void;
   // Con false no se repite la dirección, el horario y el mapa.
   showDetails?: boolean;
+  // Control externo del selector abierto (por ejemplo, "Ver otras tiendas" de una línea sin existencia). Sin ellos, el estado es interno.
+  changing?: boolean;
+  onChangingChange?: (changing: boolean) => void;
+  // Con el selector abierto, indica qué tiendas tienen TODAS las líneas de retiro del carrito (las del servidor con 0 faltantes).
+  showFullStores?: boolean;
 }
 
 // Tienda del retiro del carrito (UNA por carrito). Con tienda ya elegida (por ejemplo, desde el modal del producto) se ve una tarjeta resumen
 // (nombre, ciudad, dirección, horario) con "Cambiar tienda"; el selector (el mismo del modal: cercanas con permiso de ubicación, estado por
 // tienda considerando todas las líneas, "Ver todas las tiendas") solo aparece si no hay tienda o al pedir el cambio. Elegir una tienda que no
 // alcanza para algún producto se permite: esas líneas quedan marcadas en el carrito. Todo dato viene del servidor.
-export default function PickupSiteSelector({ sites, selectedId, proposed, onSelect, showDetails = true }: Props) {
+export default function PickupSiteSelector({ sites, selectedId, proposed, onSelect, showDetails = true, changing: changingProp, onChangingChange, showFullStores = false }: Props) {
   const t = useTranslations("Cart.order");
   const tCatalog = useTranslations("Products.catalog");
   const id = useId();
-  const [changing, setChanging] = useState(false);
+  const [innerChanging, setInnerChanging] = useState(false);
+  const changing = changingProp ?? innerChanging;
+  const setChanging = (value: boolean) => {
+    setInnerChanging(value);
+    onChangingChange?.(value);
+  };
   const selected = sites.find((s) => s.siteId === selectedId) ?? null;
   const mapUrl = safeMapUrl(selected?.mapUrl);
 
   if (sites.length === 0) return null;
 
+  const fullStores = sites.filter((s) => s.unavailableItems === 0).map((s) => s.name || s.siteId);
   const showChooser = proposed || changing || !selected;
   const titleId = `${id}-title`;
   const label = (
@@ -67,6 +78,11 @@ export default function PickupSiteSelector({ sites, selectedId, proposed, onSele
           labelledBy={titleId}
           blockOut={false}
         />
+        {showFullStores && changing && (
+          <p className="text-[12.5px] font-medium leading-snug" style={{ color: INK }} aria-live="polite">
+            {fullStores.length > 0 ? t("pickupStoresWithAll", { stores: fullStores.join(", ") }) : t("pickupNoStoreHasAll")}
+          </p>
+        )}
         {proposed && selected && (
           <p className="text-[12px] leading-snug" style={{ color: TEXT_MUTED }}>
             {t("pickupStoreProposed")}

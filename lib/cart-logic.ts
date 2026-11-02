@@ -64,6 +64,21 @@ export function moveDeliveryToPickup(items: CartItem[]): CartItem[] {
     .reduce((current, item) => addToCart(current, item, item.quantity, item.unitId, "pickup"), items.filter((item) => !movable(item)));
 }
 
+// Pasa UNA línea de retiro al grupo de domicilio (misma presentación). Si ya hay una línea de domicilio del mismo producto y presentación, se
+// suman. La línea deja de llevar las tiendas de retiro. El servidor vuelve a validar existencia y precio.
+export function moveLineToDelivery(items: CartItem[], id: string, unitId?: string | null): CartItem[] {
+  const source = items.find((item) => sameLine(item, id, unitId, "pickup"));
+  if (!source) return items;
+  const target = items.find((item) => item !== source && sameLine(item, id, unitId, "delivery"));
+  if (target) {
+    return items
+      .filter((item) => item !== source)
+      .map((item) => (item === target ? { ...item, quantity: Math.min(MAX_QUANTITY, item.quantity + source.quantity) } : item));
+  }
+  const { pickupSiteIds: _sites, ...rest } = source; // eslint-disable-line @typescript-eslint/no-unused-vars
+  return items.map((item) => (item === source ? { ...rest, channel: "delivery" as const } : item));
+}
+
 export function removeLine(items: CartItem[], id: string, unitId?: string | null, channel: CartChannel = "delivery"): CartItem[] {
   return items.filter((item) => !sameLine(item, id, unitId, channel));
 }
@@ -146,10 +161,11 @@ export function changePickupSite(current: PickupChoice, next: string | null): Pi
   return { siteId: next && next.trim() !== "" ? next : null, date: null };
 }
 
-// La tienda del retiro del carrito: la elegida, solo si el carrito tiene líneas de retiro. Es la que el modal de los productos siguientes
-// trae preseleccionada.
+// La tienda del retiro del carrito: la MISMA que usa el carrito para validar (la elegida o, sin elección, la propuesta con existencia de lo
+// que lleva el cliente), y solo si hay líneas de retiro. Es la que el modal de los productos siguientes trae preseleccionada y contra la que pide
+// confirmación. Antes el modal leía solo la elegida: con una tienda propuesta (líneas agregadas sin elegir tienda) creía que no había ninguna.
 export function cartPickupSite(items: readonly CartItem[], chosen: string | null): string | null {
-  return chosen && itemsInChannel(items, "pickup").length > 0 ? chosen : null;
+  return resolvePickupSite(items, chosen);
 }
 
 // ¿Hay que pedir confirmación? Sí si el carrito ya tiene tienda de retiro y la elegida es otra: cambiarla cambia TODO el retiro.

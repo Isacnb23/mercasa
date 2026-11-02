@@ -28,7 +28,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useCatalogPrices } from "@/lib/hooks/useCatalogPrices";
 import { samePrice, type PickupPriceView, type PriceView } from "@/lib/catalog-prices";
 import { needsUnitsForPlus, plusDecision } from "@/lib/add-rules";
-import { cartPickupSite } from "@/lib/cart-logic";
 import { fetchItemUnits } from "@/lib/fetch-units";
 import { site } from "@/lib/data";
 import PriceTag, { PickupPriceTag } from "./PriceTag";
@@ -2305,7 +2304,7 @@ function ProductCard({
 }) {
   const t = useTranslations("Products");
   const tCart = useTranslations("Cart");
-  const { addItem, items: cartItems, pickupSiteId } = useCart();
+  const { addItem, pickupSite: cartSite } = useCart();
   const { user } = useAuth();
   // Mientras se averigua cuántas presentaciones tiene el producto al tocar el "+" (solo con sesión y un solo canal).
   const [checkingUnits, setCheckingUnits] = useState(false);
@@ -2374,7 +2373,6 @@ function ProductCard({
           // al retiro de esa tienda; si no hay tienda o no hay existencia, se abre el detalle en el paso de retiro (nunca se agrega al
           // retiro sin tienda). Con sesión se consultan las presentaciones (con un solo canal); sin ellas (sin sesión o si falla) se
           // decide con lo que ya trae el producto.
-          const cartSite = cartPickupSite(cartItems, pickupSiteId);
           let units: Awaited<ReturnType<typeof fetchItemUnits>> = null;
           if (user && needsUnitsForPlus(product)) {
             setCheckingUnits(true);

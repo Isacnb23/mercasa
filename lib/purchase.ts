@@ -139,6 +139,31 @@ export function selectSite(product: ProductLike, units: ReadonlyArray<UnitLike> 
   return normalize(product, units, { ...selection, channel: "pickup", siteId }).selection;
 }
 
+export type SiteChoice =
+  // Hay que confirmar antes: el carrito ya tiene tienda de retiro y la elegida es otra (cambiarla cambia TODO el retiro).
+  | { kind: "confirm"; siteId: string }
+  | { kind: "select"; selection: Selection };
+
+// Elegir una tienda en el modal. `cartSiteId` es LA tienda del retiro del carrito (elegida o propuesta, ver cartPickupSite): si existe y es otra,
+// se pide confirmación; si no hay tienda en el carrito, o es la misma, se elige directo.
+export function chooseSite(
+  product: ProductLike,
+  units: ReadonlyArray<UnitLike> | null,
+  selection: Selection,
+  cartSiteId: string | null,
+  pickedSiteId: string
+): SiteChoice {
+  if (cartSiteId && !sameId(cartSiteId, pickedSiteId)) return { kind: "confirm", siteId: pickedSiteId };
+  return { kind: "select", selection: selectSite(product, units, selection, pickedSiteId) };
+}
+
+// ¿Se puede pasar una línea de retiro sin existencia al grupo de domicilio? Solo si el producto se entrega Y esa presentación tiene existencia a
+// domicilio (se sabe por lo que informa el servidor; sin dato de la presentación no se afirma nada).
+export function canMoveToDelivery(product: ProductLike, unit: Pick<UnitLike, "deliveryStatus" | "available"> | null): boolean {
+  if (!sold(product, "delivery") || !unit) return false;
+  return deliveryStatusOf(unit) !== "out";
+}
+
 // Tope de la cantidad. A domicilio, la existencia convertida de la presentación (el navegador solo la usa para limitar, nunca la muestra).
 // En retiro el servidor solo informa el estado: sin existencia en la tienda elegida no se puede pedir nada; en cualquier otro caso no hay un
 // tope que se pueda saber y valida el servidor. Sin canal elegido: 0.
